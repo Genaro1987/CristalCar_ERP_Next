@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@turso/database-js": "^0.10.0",
+    "@libsql/client": "^0.15.0",
     "next": "14.2.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
