@@ -12,14 +12,14 @@ INSERT OR REPLACE INTO CORE_AJUDA_TELA (
 )
 SELECT
   T.ID_TELA,
-  'Centralizar o cadastro e a governanca das empresas que operam no CristalCar ERP, garantindo identificacao juridica correta, status ATIVA/INATIVA e logotipo.',
-  'Usar no onboarding de novas empresas, ajustes cadastrais e desativacao de empresas que nao devem aparecer na operacao do dia a dia.',
-  'Tela que permite incluir e atualizar empresas, definir se estao ativas e associar logotipo. O CNPJ e unico na base para evitar duplicidade de empresas.',
-  '1) Acessar a tela de cadastro de empresa; 2) Preencher NOME_FANTASIA, RAZAO_SOCIAL e CNPJ; 3) Opcionalmente preencher inscricoes, regime tributario e logotipo; 4) Confirmar ATIVA; 5) Salvar.',
-  'Campos obrigatorios: NOME_FANTASIA, RAZAO_SOCIAL, CNPJ.',
-  'Campos opcionais: INSCRICAO_ESTADUAL, INSCRICAO_MUNICIPAL, REGIME_TRIBUTARIO, LOGOTIPO_URL, ATIVA (pode ser ajustada depois).',
-  'Empresas cadastradas alimentam a tela de selecao de empresa e servem de contexto multiempresa para os demais modulos. CNPJ unico evita inconsistencias em relatorios.',
-  'Erros comuns: CNPJ duplicado, CNPJ digitado incorretamente, empresa marcada como inativa por engano ou sem logotipo (impacto apenas visual).',
+  'CADASTRAR E MANTER OS DADOS BASICOS DA EMPRESA NO SISTEMA CRISTALCAR ERP.',
+  'UTILIZAR QUANDO FOR NECESSARIO CADASTRAR UMA NOVA EMPRESA OU AJUSTAR OS DADOS CADASTRAIS DE UMA EMPRESA EXISTENTE.',
+  'TELA RESPONSAVEL POR INCLUIR E ATUALIZAR NOME FANTASIA, RAZAO SOCIAL, CNPJ, INSCRICOES, REGIME TRIBUTARIO, LOGOTIPO E STATUS ATIVA OU INATIVA.',
+  'PREENCHER OS CAMPOS OBRIGATORIOS, CONFERIR AS INFORMACOES, DEFINIR SE A EMPRESA ESTA ATIVA E CLICAR EM SALVAR.',
+  'NOME FANTASIA; RAZAO SOCIAL; CNPJ.',
+  'INSCRICAO ESTADUAL; INSCRICAO MUNICIPAL; REGIME TRIBUTARIO; LOGOTIPO; STATUS ATIVA.',
+  'OS DADOS CADASTRADOS AQUI SERAO UTILIZADOS NA TELA DE SELECAO DE EMPRESA E COMO CONTEXTO PARA TODAS AS OPERACOES MULTIEMPRESA DO ERP.',
+  'ERROS MAIS COMUNS: CNPJ DIGITADO COM QUANTIDADE DE DIGITOS INCORRETA, CNPJ JA CADASTRADO PARA OUTRA EMPRESA OU EMPRESA MARCADA COMO INATIVA POR ENGANO.',
   1
 FROM CORE_TELA T
 WHERE T.CODIGO_TELA = 'CAD001_CORE_EMPRESA';
