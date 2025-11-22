@@ -4,7 +4,7 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { FormEvent, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 function normalizarTextoBasico(valor: string): string {
   return valor
@@ -29,11 +29,14 @@ function formatarCnpj(valor: string): string {
     .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d)/, "$1-$2");
 }
 
-export default function CadastroEmpresaPage() {
+type PageProps = {
+  searchParams?: { [key: string]: string | string[] | undefined };
+};
+
+export default function CadastroEmpresaPage({ searchParams }: PageProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const modo = searchParams.get("modo");
-  const isNovo = modo === "novo";
+  const modoParam = (searchParams?.modo as string | undefined) ?? null;
+  const isNovo = modoParam === "novo";
   const [carregando, setCarregando] = useState(false);
   const [carregandoEmpresa, setCarregandoEmpresa] = useState(false);
   const [modoEdicao, setModoEdicao] = useState(false);
