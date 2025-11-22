@@ -24,6 +24,7 @@ export function HeaderBar({ codigoTela, nomeTela, caminhoRota, modulo }: HeaderB
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ScreenResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const isAjudaGeral = codigoTela === "HELP000_CORE_AJUDA";
 
   useEffect(() => {
     async function registrarTela() {
@@ -88,49 +89,53 @@ export function HeaderBar({ codigoTela, nomeTela, caminhoRota, modulo }: HeaderB
   }
 
   return (
-    <header className="header-bar">
-      <div>
-        <h1 className="header-title">{nomeTela}</h1>
-        <div className="header-subtitle">
-          {codigoTela}
-          {caminhoRota ? ` | ${caminhoRota}` : null}
+    <header className="page-header-wrapper">
+      <div className="page-header-card">
+        <div>
+          <h1 className="header-title">{nomeTela}</h1>
+          <div className="header-subtitle">
+            {codigoTela}
+            {caminhoRota ? ` | ${caminhoRota}` : null}
+          </div>
         </div>
-      </div>
 
-      <div className="header-actions">
-        <div className="screen-search-container">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value.toUpperCase())}
-            placeholder="Pesquisar tela..."
-            className="screen-search-input"
-            onFocus={() => results.length > 0 && setIsOpen(true)}
-          />
-          {isOpen && results.length > 0 && (
-            <div className="screen-search-results">
-              {results.map((tela) => (
-                <button
-                  key={tela.CODIGO_TELA}
-                  type="button"
-                  className="screen-search-item"
-                  onClick={() => handleSelecionarTela(tela)}
-                >
-                  <div className="screen-search-item-code">{tela.CODIGO_TELA}</div>
-                  <div className="screen-search-item-name">{tela.NOME_TELA}</div>
-                </button>
-              ))}
-            </div>
+        <div className="header-actions">
+          <div className="screen-search-container">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value.toUpperCase())}
+              placeholder="Pesquisar tela..."
+              className="screen-search-input"
+              onFocus={() => results.length > 0 && setIsOpen(true)}
+            />
+            {isOpen && results.length > 0 && (
+              <div className="screen-search-results">
+                {results.map((tela) => (
+                  <button
+                    key={tela.CODIGO_TELA}
+                    type="button"
+                    className="screen-search-item"
+                    onClick={() => handleSelecionarTela(tela)}
+                  >
+                    <div className="screen-search-item-name">{tela.NOME_TELA}</div>
+                    <div className="screen-search-item-code">{tela.CODIGO_TELA}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {!isAjudaGeral && (
+            <button
+              type="button"
+              className="header-help-button"
+              onClick={() => abrirAjuda(codigoTela, nomeTela)}
+            >
+              ?
+            </button>
           )}
         </div>
-
-        <button
-          type="button"
-          className="header-help-button"
-          onClick={() => abrirAjuda(codigoTela, nomeTela)}
-        >
-          ?
-        </button>
       </div>
     </header>
   );

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
           AND (
             UPPER(CODIGO_TELA) LIKE '%' || ? || '%'
             OR UPPER(NOME_TELA) LIKE '%' || ? || '%'
-            OR UPPER(MODULO) LIKE '%' || ? || '%'
+            OR UPPER(COALESCE(MODULO, '')) LIKE '%' || ? || '%'
           )
         ORDER BY MODULO, NOME_TELA;`
       : `${baseQuery}

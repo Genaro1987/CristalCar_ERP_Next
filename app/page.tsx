@@ -81,80 +81,82 @@ export default function SelecaoEmpresaPage() {
 
   return (
     <LayoutShell>
-      <HeaderBar
-        codigoTela="CORE010_SELECAO_EMPRESA"
-        nomeTela="INICIAL"
-        caminhoRota="/"
-        modulo="CORE"
-      />
+      <div className="page-container">
+        <HeaderBar
+          codigoTela="CAD001_EMP_SELECAO"
+          nomeTela="INICIAL"
+          caminhoRota="/"
+          modulo="EMPRESA"
+        />
 
-      <div className="page-content">
-        <section className="home-header">
-          <div>
-            <p className="home-greeting">{saudacao},</p>
-            <h2 className="home-subtitle">BEM VINDO AO CRISTALCAR ERP</h2>
+        <main className="page-content-card">
+          <section className="home-header">
+            <div>
+              <p className="home-greeting">{saudacao},</p>
+              <h2 className="home-subtitle">BEM VINDO AO CRISTALCAR ERP</h2>
+            </div>
+            <div className="home-date">{dataHoje}</div>
+          </section>
+
+          <div className="section-actions">
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={() => router.push("/core/empresa/nova?modo=novo")}
+            >
+              CADASTRAR EMPRESA
+            </button>
           </div>
-          <div className="home-date">{dataHoje}</div>
-        </section>
 
-        <div className="section-actions">
-          <button
-            type="button"
-            className="button button-primary"
-            onClick={() => router.push("/core/empresa/nova")}
-          >
-            CADASTRAR EMPRESA
-          </button>
-        </div>
+          {carregando && <p>Carregando empresas...</p>}
+          {erro && <p className="error-text">{erro}</p>}
 
-        {carregando && <p>Carregando empresas...</p>}
-        {erro && <p className="error-text">{erro}</p>}
+          {!carregando && empresas.length === 0 && !erro && (
+            <p className="helper-text">Nenhuma empresa cadastrada.</p>
+          )}
 
-        {!carregando && empresas.length === 0 && !erro && (
-          <p className="helper-text">Nenhuma empresa cadastrada.</p>
-        )}
+          <div>
+            {empresas.map((empresa) => {
+              const ativa = empresa.ATIVA === 1;
 
-        <div>
-          {empresas.map((empresa) => {
-            const ativa = empresa.ATIVA === 1;
-
-            return (
-              <div className="empresa-card" key={empresa.ID_EMPRESA}>
-                <div className="empresa-card-logo">
-                  {empresa.LOGOTIPO_URL && (
-                    <img
-                      src={empresa.LOGOTIPO_URL}
-                      alt={empresa.NOME_FANTASIA}
-                    />
-                  )}
-                </div>
-                <div className="empresa-card-info">
-                  <div className="empresa-nome">{empresa.NOME_FANTASIA}</div>
-                  <div className="empresa-razao">
-                    Razão social: {empresa.RAZAO_SOCIAL}
+              return (
+                <div className="empresa-card" key={empresa.ID_EMPRESA}>
+                  <div className="empresa-card-logo">
+                    {empresa.LOGOTIPO_URL && (
+                      <img
+                        src={empresa.LOGOTIPO_URL}
+                        alt={empresa.NOME_FANTASIA}
+                      />
+                    )}
                   </div>
-                  <div className="empresa-cnpj">CNPJ: {empresa.CNPJ}</div>
-                  <span
-                    className={`empresa-status-pill ${
-                      ativa ? "status-ativa" : "status-inativa"
-                    }`}
-                  >
-                    {ativa ? "ATIVA" : "INATIVA"}
-                  </span>
+                  <div className="empresa-card-info">
+                    <div className="empresa-nome">{empresa.NOME_FANTASIA}</div>
+                    <div className="empresa-razao">
+                      Razão social: {empresa.RAZAO_SOCIAL}
+                    </div>
+                    <div className="empresa-cnpj">CNPJ: {empresa.CNPJ}</div>
+                    <span
+                      className={`empresa-status-pill ${
+                        ativa ? "status-ativa" : "status-inativa"
+                      }`}
+                    >
+                      {ativa ? "ATIVA" : "INATIVA"}
+                    </span>
+                  </div>
+                  <div className="empresa-card-actions">
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      onClick={() => handleSelecionar(empresa)}
+                    >
+                      SELECIONAR
+                    </button>
+                  </div>
                 </div>
-                <div className="empresa-card-actions">
-                  <button
-                    type="button"
-                    className="button button-primary"
-                    onClick={() => handleSelecionar(empresa)}
-                  >
-                    SELECIONAR
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </main>
       </div>
     </LayoutShell>
   );
