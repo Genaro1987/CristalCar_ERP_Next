@@ -3,7 +3,7 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 
 interface Departamento {
   ID_DEPARTAMENTO: number;
@@ -114,6 +114,20 @@ export default function DepartamentoPage() {
     setAtivo(true);
   };
 
+  const handleDescricaoChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value || "";
+
+    const semAcento = raw
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    const apenasPermitidos = semAcento.replace(/[^A-Z0-9 ]/gi, "");
+
+    const valorFinal = apenasPermitidos.toUpperCase();
+
+    setDescricao(valorFinal.trim());
+  };
+
   const preencherParaEdicao = (dep: Departamento) => {
     setDepartamentoEmEdicao(dep);
     setNomeDepartamento(dep.NOME_DEPARTAMENTO ?? "");
@@ -206,21 +220,88 @@ export default function DepartamentoPage() {
         />
 
         <main className="page-content-card">
-          <div className="panel">
+          <div className="departamentos-container">
             {notification && (
               <NotificationBar type={notification.type} message={notification.message} />
             )}
 
-            <div className="departamento-layout">
-              <section className="departamento-section">
-                <div className="departamento-section-header">
+            <div className="departamentos-layout">
+              <section className="departamentos-card departamentos-card-form">
+                <header className="departamentos-card-header">
                   <div>
-                    <h2 className="section-title">Departamentos cadastrados</h2>
-                    <p className="section-subtitle">
-                      Visualize e selecione um departamento para editar.
-                    </p>
+                    <h2>{departamentoEmEdicao ? "Editar departamento" : "Novo departamento"}</h2>
+                    <p>Preencha os campos abaixo para salvar o departamento.</p>
                   </div>
-                </div>
+                </header>
+
+                <form className="form" onSubmit={aoSalvar}>
+                  <div className="departamentos-form-grid">
+                    <div className="form-grid two-columns">
+                      <div className="form-group">
+                        <label htmlFor="codigoDepartamento">Código</label>
+                        <input
+                          id="codigoDepartamento"
+                          name="codigoDepartamento"
+                          value={formatarCodigoDepartamento(departamentoEmEdicao?.ID_DEPARTAMENTO)}
+                          disabled
+                          readOnly
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="nomeDepartamento">Nome do departamento *</label>
+                        <input
+                          id="nomeDepartamento"
+                          name="nomeDepartamento"
+                          value={nomeDepartamento}
+                          onChange={(e) => setNomeDepartamento(normalizarTextoBasico(e.target.value))}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="descricaoDepartamento">Descrição</label>
+                      <input
+                        id="descricaoDepartamento"
+                        name="descricaoDepartamento"
+                        value={descricao}
+                        onChange={handleDescricaoChange}
+                      />
+                    </div>
+
+                    <label className="checkbox-row">
+                      <input
+                        type="checkbox"
+                        name="ativo"
+                        checked={ativo}
+                        onChange={(e) => setAtivo(e.target.checked)}
+                      />
+                      <span>Ativo</span>
+                    </label>
+
+                    <div className="button-row">
+                      <button type="submit" className="button button-primary" disabled={salvando}>
+                        {salvando ? "Salvando..." : "Salvar"}
+                      </button>
+                      <button
+                        type="button"
+                        className="button button-secondary"
+                        onClick={limparFormulario}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </section>
+
+              <section className="departamentos-card departamentos-card-lista">
+                <header className="departamentos-card-header">
+                  <div>
+                    <h2>Departamentos cadastrados</h2>
+                    <p>Visualize e selecione um departamento para editar.</p>
+                  </div>
+                </header>
 
                 {carregandoLista && <p>Carregando departamentos...</p>}
                 {erroLista && <p className="error-text">{erroLista}</p>}
@@ -271,71 +352,6 @@ export default function DepartamentoPage() {
                     </table>
                   </div>
                 )}
-              </section>
-
-              <section className="departamento-section">
-                <h2 className="section-title">{departamentoEmEdicao ? "Editar departamento" : "Novo departamento"}</h2>
-                <p className="section-subtitle">
-                  Preencha os campos abaixo para salvar o departamento.
-                </p>
-
-                <form className="form" onSubmit={aoSalvar}>
-                  <div className="form-grid two-columns">
-                    <div className="form-group">
-                      <label htmlFor="codigoDepartamento">Código</label>
-                      <input
-                        id="codigoDepartamento"
-                        name="codigoDepartamento"
-                        value={formatarCodigoDepartamento(departamentoEmEdicao?.ID_DEPARTAMENTO)}
-                        disabled
-                        readOnly
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="nomeDepartamento">Nome do departamento *</label>
-                      <input
-                        id="nomeDepartamento"
-                        name="nomeDepartamento"
-                        value={nomeDepartamento}
-                        onChange={(e) => setNomeDepartamento(normalizarTextoBasico(e.target.value))}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="descricaoDepartamento">Descrição</label>
-                    <input
-                      id="descricaoDepartamento"
-                      name="descricaoDepartamento"
-                      value={descricao}
-                      onChange={(e) => setDescricao(normalizarDescricao(e.target.value))}
-                    />
-                  </div>
-
-                  <label className="checkbox-row">
-                    <input
-                      type="checkbox"
-                      name="ativo"
-                      checked={ativo}
-                      onChange={(e) => setAtivo(e.target.checked)}
-                    />
-                    <span>Ativo</span>
-                  </label>
-
-                  <div className="button-row">
-                    <button type="submit" className="button button-primary" disabled={salvando}>
-                      {salvando ? "Salvando..." : "Salvar"}
-                    </button>
-                    <button
-                      type="button"
-                      className="button button-secondary"
-                      onClick={limparFormulario}
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
               </section>
             </div>
           </div>
