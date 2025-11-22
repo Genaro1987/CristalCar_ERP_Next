@@ -32,42 +32,52 @@ export function Sidebar() {
 
   const isInicio = pathname === "/";
   const isEmpresa = pathname.startsWith("/core/empresa");
+  const isAjuda = pathname.startsWith("/ajuda");
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-logo-block">
-        {empresaAtual?.logoUrl ? (
-          <img
-            src={empresaAtual.logoUrl}
-            alt={empresaAtual.nomeFantasia ?? "Logo empresa"}
-            className="sidebar-logo-image"
-          />
-        ) : (
-          <div className="sidebar-logo-pill">CristalCar ERP</div>
-        )}
+      <div className="sidebar-top">
+        <div className="sidebar-logo-block">
+          {empresaAtual?.logoUrl ? (
+            <img
+              src={empresaAtual.logoUrl}
+              alt={empresaAtual.nomeFantasia ?? "Logo empresa"}
+              className="sidebar-logo-image"
+            />
+          ) : (
+            <div className="sidebar-logo-pill">CristalCar ERP</div>
+          )}
+        </div>
+
+        <div className="sidebar-section-header">CADASTROS</div>
+
+        <nav className="sidebar-nav">
+          <Link
+            href="/"
+            className={isInicio ? "sidebar-nav-item active" : "sidebar-nav-item"}
+          >
+            INICIAL
+          </Link>
+          <Link
+            href="/core/empresa/nova"
+            className={isEmpresa ? "sidebar-nav-item active" : "sidebar-nav-item"}
+          >
+            EMPRESA
+          </Link>
+          <span className="sidebar-nav-item disabled">FINANCEIRO</span>
+        </nav>
       </div>
 
-      <div className="sidebar-help-link">
-        <Link href="/ajuda">AJUDA</Link>
+      <div className="sidebar-bottom">
+        <Link
+          href="/ajuda"
+          className={
+            isAjuda ? "sidebar-help-link active" : "sidebar-help-link"
+          }
+        >
+          AJUDA
+        </Link>
       </div>
-
-      <div className="sidebar-section-header">CADASTROS</div>
-
-      <nav className="sidebar-nav">
-        <Link
-          href="/"
-          className={isInicio ? "sidebar-nav-item active" : "sidebar-nav-item"}
-        >
-          INICIAL
-        </Link>
-        <Link
-          href="/core/empresa/nova"
-          className={isEmpresa ? "sidebar-nav-item active" : "sidebar-nav-item"}
-        >
-          EMPRESA
-        </Link>
-        <span className="sidebar-nav-item disabled">FINANCEIRO</span>
-      </nav>
     </aside>
   );
 }

@@ -23,7 +23,13 @@ a {
   background-color: #111827;
   color: #f9fafb;
   width: 240px;
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-top {
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
@@ -50,20 +56,31 @@ a {
   font-weight: 600;
 }
 
+.sidebar-bottom {
+  padding: 16px;
+  border-top: 1px solid rgba(148, 163, 184, 0.35);
+}
+
 .sidebar-help-link {
-  padding: 0 16px 8px 16px;
-  margin-top: 20px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: #e5e7eb;
   font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  display: inline-block;
 }
 
-.sidebar-help-link a {
-  color: #f9fafb;
-  text-decoration: none;
-  font-weight: 500;
+.sidebar-help-link.active {
+  font-weight: 600;
+  color: #ffffff;
 }
 
-.sidebar-help-link a:hover {
-  text-decoration: underline;
+.sidebar-help-link:hover {
+  opacity: 0.9;
 }
 
 .sidebar-section-header {
@@ -407,7 +424,7 @@ a {
 }
 
 .header-help-button,
-.sidebar-help-link a,
+.sidebar-help-link,
 .file-upload-button,
 .header-search-results button {
   transition: background-color 0.12s ease, color 0.12s ease;
