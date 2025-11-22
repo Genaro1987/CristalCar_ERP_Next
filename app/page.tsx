@@ -1,6 +1,5 @@
 "use client";
 
-import { HeaderBar } from "@/components/HeaderBar";
 import LayoutShell from "@/components/LayoutShell";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -58,62 +57,111 @@ export default function SelecaoEmpresaPage() {
 
   return (
     <LayoutShell
-      header={
-        <HeaderBar
-          codigoTela="CORE010_SELECAO_EMPRESA"
-          nomeTela="SELECAO DE EMPRESA"
-          caminhoRota="/"
-        />
-      }
+      codigoTela="CORE010_SELECAO_EMPRESA"
+      nomeTela="SELECAO DE EMPRESA"
     >
-      <div className="page-content">
-        <div className="section-actions">
-          <button
-            onClick={() => router.push("/core/empresa/nova")}
-            className="button button-primary"
+      <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
+        <button
+          onClick={() => router.push("/core/empresa/nova")}
+          style={{
+            backgroundColor: "#f97316",
+            color: "#fff",
+            padding: "10px 16px",
+            borderRadius: 8,
+            border: "none",
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          CADASTRAR EMPRESA
+        </button>
+      </div>
+
+      {carregando && <p>Carregando empresas...</p>}
+      {erro && <p style={{ color: "#b91c1c" }}>{erro}</p>}
+
+      {!carregando && empresas.length === 0 && !erro && (
+        <p style={{ color: "#374151" }}>Nenhuma empresa cadastrada.</p>
+      )}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: 16,
+        }}
+      >
+        {empresas.map((empresa) => (
+          <div
+            key={empresa.ID_EMPRESA}
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 12,
+              padding: 16,
+              border: "1px solid #e5e7eb",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+            }}
           >
-            CADASTRAR EMPRESA
-          </button>
-        </div>
-
-        {carregando && <p>Carregando empresas...</p>}
-        {erro && <p className="error-text">{erro}</p>}
-
-        {!carregando && empresas.length === 0 && !erro && (
-          <p className="helper-text">Nenhuma empresa cadastrada.</p>
-        )}
-
-        <div className="company-card-grid">
-          {empresas.map((empresa) => (
-            <div key={empresa.ID_EMPRESA} className="company-card">
-              {empresa.LOGOTIPO_URL ? (
-                <img
-                  src={empresa.LOGOTIPO_URL}
-                  alt={`Logotipo da ${empresa.NOME_FANTASIA}`}
-                  className="company-logo"
-                />
-              ) : (
-                <div className="company-logo-placeholder">Sem logotipo</div>
-              )}
-
-              <div style={{ fontWeight: 700, fontSize: 18 }}>{empresa.NOME_FANTASIA}</div>
-              <div style={{ color: "#374151" }}>CNPJ: {empresa.CNPJ}</div>
-              <div>
-                <span className={`badge ${empresa.ATIVA === 1 ? "badge-success" : "badge-danger"}`}>
-                  {empresa.ATIVA === 1 ? "ATIVA" : "INATIVA"}
-                </span>
-              </div>
-
-              <button
-                onClick={() => aoSelecionar(empresa)}
-                className="button button-primary"
-                style={{ marginTop: "auto" }}
+            {empresa.LOGOTIPO_URL ? (
+              <img
+                src={empresa.LOGOTIPO_URL}
+                alt={`Logotipo da ${empresa.NOME_FANTASIA}`}
+                style={{ width: "100%", height: 120, objectFit: "contain" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: 120,
+                  backgroundColor: "#f3f4f6",
+                  borderRadius: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#6b7280",
+                }}
               >
-                SELECIONAR
-              </button>
+                Sem logotipo
+              </div>
+            )}
+
+            <div style={{ fontWeight: 700, fontSize: 18 }}>{empresa.NOME_FANTASIA}</div>
+            <div style={{ color: "#374151" }}>CNPJ: {empresa.CNPJ}</div>
+            <div>
+              <span
+                style={{
+                  backgroundColor: empresa.ATIVA === 1 ? "#dcfce7" : "#fee2e2",
+                  color: empresa.ATIVA === 1 ? "#166534" : "#991b1b",
+                  padding: "4px 8px",
+                  borderRadius: 9999,
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                {empresa.ATIVA === 1 ? "ATIVA" : "INATIVA"}
+              </span>
             </div>
-          ))}
-        </div>
+
+            <button
+              onClick={() => aoSelecionar(empresa)}
+              style={{
+                marginTop: "auto",
+                backgroundColor: "#2563eb",
+                color: "#fff",
+                padding: "10px 12px",
+                borderRadius: 8,
+                border: "none",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              SELECIONAR
+            </button>
+          </div>
+        ))}
       </div>
     </LayoutShell>
   );

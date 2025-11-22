@@ -15,10 +15,6 @@ const EMPRESA_FIELDS = [
   "DATA_ATUALIZACAO",
 ].join(", ");
 
-function sanitizeCnpj(value: string): string {
-  return value.replace(/\D/g, "");
-}
-
 export async function GET() {
   try {
     const result = await db.execute(`SELECT ${EMPRESA_FIELDS} FROM CORE_EMPRESA`);
@@ -36,30 +32,11 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
 
-    const rawNomeFantasia = formData.get("NOME_FANTASIA");
-    const rawRazaoSocial = formData.get("RAZAO_SOCIAL");
-    const rawCnpj = formData.get("CNPJ");
+    const nomeFantasia = formData.get("NOME_FANTASIA")?.toString().trim();
+    const razaoSocial = formData.get("RAZAO_SOCIAL")?.toString().trim();
+    const cnpj = formData.get("CNPJ")?.toString().trim();
 
-    if (typeof rawCnpj !== "string") {
-      return NextResponse.json(
-        { success: false, error: "CNPJ_OBRIGATORIO" },
-        { status: 400 }
-      );
-    }
-
-    const cleanedCnpj = sanitizeCnpj(rawCnpj);
-
-    if (cleanedCnpj.length !== 14) {
-      return NextResponse.json(
-        { success: false, error: "CNPJ_INVALIDO" },
-        { status: 400 }
-      );
-    }
-
-    const nomeFantasia = rawNomeFantasia?.toString().trim();
-    const razaoSocial = rawRazaoSocial?.toString().trim();
-
-    if (!nomeFantasia || !razaoSocial) {
+    if (!nomeFantasia || !razaoSocial || !cnpj) {
       return NextResponse.json(
         { success: false, error: "DADOS_OBRIGATORIOS_FALTANDO" },
         { status: 400 }
@@ -101,7 +78,7 @@ export async function POST(request: Request) {
       args: [
         nomeFantasia,
         razaoSocial,
-        cleanedCnpj,
+        cnpj,
         inscricaoEstadual,
         inscricaoMunicipal,
         regimeTributario,
