@@ -31,7 +31,7 @@ function normalizarDescricao(valor: string): string {
 
   const apenasPermitidos = semAcento.replace(/[^A-Z0-9 ]/gi, "");
 
-  return apenasPermitidos.toUpperCase().trim();
+  return apenasPermitidos.toUpperCase().slice(0, 100).trim();
 }
 
 function formatarCodigoDepartamento(id?: number) {
@@ -123,15 +123,15 @@ export default function DepartamentoPage() {
 
     const apenasPermitidos = semAcento.replace(/[^A-Z0-9 ]/gi, "");
 
-    const valorFinal = apenasPermitidos.toUpperCase();
+    const valorFinal = apenasPermitidos.toUpperCase().slice(0, 100);
 
-    setDescricao(valorFinal.trim());
+    setDescricao(valorFinal);
   };
 
   const preencherParaEdicao = (dep: Departamento) => {
     setDepartamentoEmEdicao(dep);
     setNomeDepartamento(dep.NOME_DEPARTAMENTO ?? "");
-    setDescricao(dep.DESCRICAO ?? "");
+    setDescricao(normalizarDescricao(dep.DESCRICAO ?? ""));
     setAtivo(dep.ATIVO === 1);
   };
 
@@ -219,141 +219,147 @@ export default function DepartamentoPage() {
           modulo="EMPRESA"
         />
 
-        <main className="page-content-card">
-          <div className="departamentos-container">
+        <main className="page-content-card departamentos-wrapper">
+          <div className="departamentos-page">
             {notification && (
               <NotificationBar type={notification.type} message={notification.message} />
             )}
 
-            <div className="departamentos-layout">
-              <section className="departamentos-card departamentos-card-form">
-                <header className="departamentos-card-header">
-                  <div>
-                    <h2>{departamentoEmEdicao ? "Editar departamento" : "Novo departamento"}</h2>
-                    <p>Preencha os campos abaixo para salvar o departamento.</p>
+            <section className="departamentos-card departamentos-card-form">
+              <header className="departamentos-card-header">
+                <h2>{departamentoEmEdicao ? "Editar departamento" : "Novo departamento"}</h2>
+                <p>
+                  {departamentoEmEdicao
+                    ? "Atualize os dados do departamento selecionado."
+                    : "Informe os dados do departamento para salvar."}
+                </p>
+              </header>
+
+              <form onSubmit={aoSalvar}>
+                <div className="departamentos-form-row">
+                  <div className="departamentos-field">
+                    <label htmlFor="codigoDepartamento">Código</label>
+                    <input
+                      id="codigoDepartamento"
+                      name="codigoDepartamento"
+                      value={formatarCodigoDepartamento(
+                        departamentoEmEdicao?.ID_DEPARTAMENTO ?? undefined
+                      )}
+                      readOnly
+                    />
                   </div>
-                </header>
 
-                <form className="form" onSubmit={aoSalvar}>
-                  <div className="departamentos-form-grid">
-                    <div className="form-grid two-columns">
-                      <div className="form-group">
-                        <label htmlFor="codigoDepartamento">Código</label>
-                        <input
-                          id="codigoDepartamento"
-                          name="codigoDepartamento"
-                          value={formatarCodigoDepartamento(departamentoEmEdicao?.ID_DEPARTAMENTO)}
-                          disabled
-                          readOnly
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="nomeDepartamento">Nome do departamento *</label>
-                        <input
-                          id="nomeDepartamento"
-                          name="nomeDepartamento"
-                          value={nomeDepartamento}
-                          onChange={(e) => setNomeDepartamento(normalizarTextoBasico(e.target.value))}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="descricaoDepartamento">Descrição</label>
-                      <input
-                        id="descricaoDepartamento"
-                        name="descricaoDepartamento"
-                        value={descricao}
-                        onChange={handleDescricaoChange}
-                      />
-                    </div>
-
-                    <label className="checkbox-row">
-                      <input
-                        type="checkbox"
-                        name="ativo"
-                        checked={ativo}
-                        onChange={(e) => setAtivo(e.target.checked)}
-                      />
-                      <span>Ativo</span>
-                    </label>
-
-                    <div className="button-row">
-                      <button type="submit" className="button button-primary" disabled={salvando}>
-                        {salvando ? "Salvando..." : "Salvar"}
-                      </button>
-                      <button
-                        type="button"
-                        className="button button-secondary"
-                        onClick={limparFormulario}
-                      >
-                        Cancelar
-                      </button>
-                    </div>
+                  <div className="departamentos-field">
+                    <label htmlFor="nomeDepartamento">Nome do departamento *</label>
+                    <input
+                      id="nomeDepartamento"
+                      name="nomeDepartamento"
+                      value={nomeDepartamento}
+                      onChange={(e) => setNomeDepartamento(normalizarTextoBasico(e.target.value))}
+                      required
+                    />
                   </div>
-                </form>
-              </section>
 
-              <section className="departamentos-card departamentos-card-lista">
-                <header className="departamentos-card-header">
-                  <div>
-                    <h2>Departamentos cadastrados</h2>
-                    <p>Visualize e selecione um departamento para editar.</p>
+                  <div className="departamentos-field departamentos-field-descricao">
+                    <label htmlFor="descricaoDepartamento">Descrição</label>
+                    <input
+                      id="descricaoDepartamento"
+                      name="descricaoDepartamento"
+                      value={descricao}
+                      onChange={handleDescricaoChange}
+                      maxLength={100}
+                    />
                   </div>
-                </header>
+                </div>
 
-                {carregandoLista && <p>Carregando departamentos...</p>}
-                {erroLista && <p className="error-text">{erroLista}</p>}
+                <div className="departamentos-form-footer">
+                  <label className="checkbox-inline" htmlFor="departamentoAtivo">
+                    <input
+                      type="checkbox"
+                      id="departamentoAtivo"
+                      name="ativo"
+                      checked={ativo}
+                      onChange={(e) => setAtivo(e.target.checked)}
+                    />
+                    Ativo
+                  </label>
 
-                {!carregandoLista && !erroLista && departamentos.length === 0 && (
-                  <p className="helper-text">Nenhum departamento cadastrado.</p>
-                )}
+                  <div className="departamentos-botoes">
+                    <button type="submit" className="button button-primary" disabled={salvando}>
+                      {salvando ? "Salvando..." : "Salvar"}
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-secondary"
+                      onClick={limparFormulario}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </section>
 
-                {!carregandoLista && !erroLista && departamentos.length > 0 && (
-                  <div className="departamento-tabela-wrapper">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Código</th>
-                          <th>Nome</th>
-                          <th>Descrição</th>
-                          <th>Status</th>
-                          <th className="col-acoes">Ações</th>
+            <section className="departamentos-card departamentos-card-lista">
+              <header className="departamentos-card-header">
+                <h2>Departamentos cadastrados</h2>
+                <p>Visualize e selecione um departamento para editar.</p>
+              </header>
+
+              {carregandoLista && <p>Carregando departamentos...</p>}
+              {erroLista && <p className="error-text">{erroLista}</p>}
+
+              {!carregandoLista && !erroLista && departamentos.length === 0 && (
+                <p className="helper-text">Nenhum departamento cadastrado.</p>
+              )}
+
+              {!carregandoLista && !erroLista && departamentos.length > 0 && (
+                <div className="departamento-tabela-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Código</th>
+                        <th>Nome</th>
+                        <th>Descrição</th>
+                        <th>Status</th>
+                        <th className="col-acoes">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {departamentos.map((dep) => (
+                        <tr key={dep.ID_DEPARTAMENTO}>
+                          <td className="tabela-departamentos-codigo">
+                            {formatarCodigoDepartamento(dep.ID_DEPARTAMENTO)}
+                          </td>
+                          <td>{dep.NOME_DEPARTAMENTO}</td>
+                          <td className="tabela-departamentos-descricao">
+                            {dep.DESCRICAO || "-"}
+                          </td>
+                          <td>
+                            <span
+                              className={
+                                dep.ATIVO === 1 ? "badge badge-success" : "badge badge-danger"
+                              }
+                            >
+                              {dep.ATIVO === 1 ? "ATIVO" : "INATIVO"}
+                            </span>
+                          </td>
+                          <td className="col-acoes">
+                            <button
+                              type="button"
+                              className="button button-secondary"
+                              onClick={() => preencherParaEdicao(dep)}
+                            >
+                              Editar
+                            </button>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {departamentos.map((dep) => (
-                          <tr key={dep.ID_DEPARTAMENTO}>
-                            <td>{formatarCodigoDepartamento(dep.ID_DEPARTAMENTO)}</td>
-                            <td>{dep.NOME_DEPARTAMENTO}</td>
-                            <td>{dep.DESCRICAO || "-"}</td>
-                            <td>
-                              <span
-                                className={
-                                  dep.ATIVO === 1 ? "badge badge-success" : "badge badge-danger"
-                                }
-                              >
-                                {dep.ATIVO === 1 ? "ATIVO" : "INATIVO"}
-                              </span>
-                            </td>
-                            <td className="col-acoes">
-                              <button
-                                type="button"
-                                className="button button-secondary"
-                                onClick={() => preencherParaEdicao(dep)}
-                              >
-                                Editar
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </section>
-            </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
           </div>
         </main>
       </div>

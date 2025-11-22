@@ -20,12 +20,17 @@ a {
 }
 
 .sidebar {
-  background-color: #111827;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: #050b18;
   color: #f9fafb;
   width: 240px;
   height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  box-shadow: 8px 0 20px rgba(0, 0, 0, 0.18);
 }
 
 .sidebar-top {
@@ -130,6 +135,8 @@ a {
   flex-direction: column;
   flex: 1;
   min-height: 100vh;
+  margin-left: 240px;
+  width: calc(100% - 240px);
 }
 
 .layout-main {
@@ -307,49 +314,73 @@ a {
   margin: 0 auto;
 }
 
-.departamentos-container {
-  max-width: 1180px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.departamentos-layout {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 32px;
-  align-items: flex-start;
-}
-
-@media (min-width: 1024px) {
-  .departamentos-layout {
-    grid-template-columns: 1fr 1.1fr;
+  .departamentos-page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
   }
-}
 
-.departamentos-card {
-  background-color: #ffffff;
-  border-radius: 16px;
-  padding: 24px 24px 28px;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
-}
+  .departamentos-wrapper {
+    background-color: transparent;
+    box-shadow: none;
+    padding: 0;
+  }
 
-.departamentos-card-header h2 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
+  .departamentos-card {
+    background-color: #ffffff;
+    border-radius: 16px;
+    padding: 24px 24px 28px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  }
 
-.departamentos-card-header p {
-  font-size: 0.9rem;
-  color: #6b7280;
-  margin-bottom: 16px;
-}
+  .departamentos-card-header h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+  }
 
-.departamentos-form-grid > * + * {
-  margin-top: 12px;
-}
+  .departamentos-card-header p {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin: 0 0 16px 0;
+  }
+
+  .departamentos-form-row {
+    display: grid;
+    grid-template-columns: 0.4fr 0.8fr 1.2fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .departamentos-field label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .departamentos-field input {
+    width: 100%;
+  }
+
+  .departamentos-form-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+
+  .departamentos-botoes > * + * {
+    margin-left: 8px;
+  }
+
+  .departamentos-field-descricao input {
+    max-width: 100%;
+  }
+
+  .departamentos-card-lista {
+    margin-top: 8px;
+  }
 
 .departamento-tabela-wrapper {
   overflow-x: auto;
@@ -378,6 +409,15 @@ a {
 .data-table td {
   font-size: 0.95rem;
   color: #374151;
+}
+
+.tabela-departamentos-codigo {
+  white-space: nowrap;
+  width: 120px;
+}
+
+.tabela-departamentos-descricao {
+  width: 40%;
 }
 
 .col-acoes {
@@ -430,6 +470,13 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.checkbox-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
 }
 
 .button-row {
@@ -624,22 +671,21 @@ a {
 }
 
 
-.empresa-status-badge {
-  display: inline-block;
-  margin-top: 8px;
-  padding: 4px 10px;
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
 }
 
-.empresa-status-badge.ativa {
-  background-color: #d1fae5;
-  color: #047857;
+.badge-status-ativa {
+  background-color: #e5fbed;
+  color: #15803d;
 }
 
-.empresa-status-badge.inativa {
+.badge-status-inativa {
   background-color: #fee2e2;
   color: #b91c1c;
 }
