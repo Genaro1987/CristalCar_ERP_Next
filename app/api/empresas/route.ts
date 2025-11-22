@@ -17,7 +17,7 @@ const EMPRESA_FIELDS = [
 
 export async function GET() {
   try {
-    const result = await db.execute(`SELECT ${EMPRESA_FIELDS} FROM CORE_EMPRESA`);
+    const result = await db.execute(`SELECT ${EMPRESA_FIELDS} FROM EMP_EMPRESA`);
     return NextResponse.json({ success: true, data: result.rows });
   } catch (error: any) {
     console.error(error);
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     }
 
     const sql = `
-      INSERT INTO CORE_EMPRESA (
+      INSERT INTO EMP_EMPRESA (
         NOME_FANTASIA,
         RAZAO_SOCIAL,
         CNPJ,
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     const message = error?.message || "";
 
-    if (message.includes("CORE_EMPRESA.CNPJ")) {
+    if (message.includes("EMP_EMPRESA.CNPJ")) {
       return NextResponse.json(
         { success: false, error: "CNPJ_JA_CADASTRADO" },
         { status: 409 }
