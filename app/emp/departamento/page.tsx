@@ -24,6 +24,16 @@ function normalizarTextoBasico(valor: string): string {
     .trim();
 }
 
+function normalizarDescricao(valor: string): string {
+  const semAcento = (valor ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const apenasPermitidos = semAcento.replace(/[^A-Z0-9 ]/gi, "");
+
+  return apenasPermitidos.toUpperCase().trim();
+}
+
 function formatarCodigoDepartamento(id?: number) {
   if (!id) return "DEP-XXX";
   return `DEP-${String(id).padStart(3, "0")}`;
@@ -121,7 +131,7 @@ export default function DepartamentoPage() {
     }
 
     const nomeNormalizado = normalizarTextoBasico(nomeDepartamento);
-    const descricaoNormalizada = normalizarTextoBasico(descricao);
+    const descricaoNormalizada = normalizarDescricao(descricao);
 
     if (!nomeNormalizado) {
       setNotification({
@@ -210,9 +220,6 @@ export default function DepartamentoPage() {
                       Visualize e selecione um departamento para editar.
                     </p>
                   </div>
-                  <button type="button" className="button button-secondary" onClick={limparFormulario}>
-                    Novo departamento
-                  </button>
                 </div>
 
                 {carregandoLista && <p>Carregando departamentos...</p>}
@@ -302,7 +309,7 @@ export default function DepartamentoPage() {
                       id="descricaoDepartamento"
                       name="descricaoDepartamento"
                       value={descricao}
-                      onChange={(e) => setDescricao(normalizarTextoBasico(e.target.value))}
+                      onChange={(e) => setDescricao(normalizarDescricao(e.target.value))}
                     />
                   </div>
 
