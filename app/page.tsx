@@ -14,7 +14,7 @@ interface Empresa {
   INSCRICAO_MUNICIPAL?: string | null;
   REGIME_TRIBUTARIO?: string | null;
   LOGOTIPO_URL?: string | null;
-  ATIVA: number;
+  ATIVA: 0 | 1;
   DATA_CADASTRO: string;
   DATA_ATUALIZACAO?: string | null;
 }
@@ -85,7 +85,7 @@ export default function SelecaoEmpresaPage() {
 
         <div>
           {empresas.map((empresa) => {
-            const ativa = empresa.ATIVA === 1 || empresa.ATIVA === true;
+            const ativa = empresa.ATIVA === 1;
 
             return (
               <div className="empresa-card" key={empresa.ID_EMPRESA}>
