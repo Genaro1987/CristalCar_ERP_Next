@@ -352,12 +352,19 @@ a {
     margin-bottom: 16px;
   }
 
-  .departamentos-field label {
-    display: block;
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
+.departamentos-field label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.hint-caracteres {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #6b7280;
+  margin-left: 4px;
+}
 
   .departamentos-field input {
     width: 100%;
@@ -411,18 +418,27 @@ a {
   color: #374151;
 }
 
-.tabela-departamentos-codigo {
+.col-codigo {
   white-space: nowrap;
-  width: 120px;
+  width: 110px;
 }
 
-.tabela-departamentos-descricao {
-  width: 40%;
+.col-nome {
+  width: 180px;
+}
+
+.col-descricao {
+  width: auto;
+}
+
+.col-status {
+  width: 110px;
+  text-align: center;
 }
 
 .col-acoes {
+  width: 120px;
   text-align: right;
-  min-width: 140px;
 }
 
 .form {

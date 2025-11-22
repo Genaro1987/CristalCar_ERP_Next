@@ -85,7 +85,6 @@ export default function SelecaoEmpresaPage() {
         <HeaderBar
           codigoTela="CAD001_EMP_SELECAO"
           nomeTela="INICIAL"
-          caminhoRota="/"
           modulo="EMPRESA"
         />
 

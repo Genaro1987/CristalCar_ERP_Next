@@ -261,7 +261,9 @@ export default function DepartamentoPage() {
                   </div>
 
                   <div className="departamentos-field departamentos-field-descricao">
-                    <label htmlFor="descricaoDepartamento">Descrição</label>
+                    <label htmlFor="descricaoDepartamento">
+                      Descrição <span className="hint-caracteres">(máx. 100 caracteres)</span>
+                    </label>
                     <input
                       id="descricaoDepartamento"
                       name="descricaoDepartamento"
@@ -318,24 +320,24 @@ export default function DepartamentoPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Código</th>
-                        <th>Nome</th>
-                        <th>Descrição</th>
-                        <th>Status</th>
-                        <th className="col-acoes">Ações</th>
+                        <th className="col-codigo">CÓDIGO</th>
+                        <th className="col-nome">NOME</th>
+                        <th className="col-descricao">DESCRIÇÃO</th>
+                        <th className="col-status">STATUS</th>
+                        <th className="col-acoes">AÇÕES</th>
                       </tr>
                     </thead>
                     <tbody>
                       {departamentos.map((dep) => (
                         <tr key={dep.ID_DEPARTAMENTO}>
-                          <td className="tabela-departamentos-codigo">
+                          <td className="col-codigo">
                             {formatarCodigoDepartamento(dep.ID_DEPARTAMENTO)}
                           </td>
-                          <td>{dep.NOME_DEPARTAMENTO}</td>
-                          <td className="tabela-departamentos-descricao">
+                          <td className="col-nome">{dep.NOME_DEPARTAMENTO}</td>
+                          <td className="col-descricao">
                             {dep.DESCRICAO || "-"}
                           </td>
-                          <td>
+                          <td className="col-status">
                             <span
                               className={
                                 dep.ATIVO === 1 ? "badge badge-success" : "badge badge-danger"

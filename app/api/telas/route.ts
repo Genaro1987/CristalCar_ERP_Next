@@ -22,9 +22,9 @@ export async function GET(request: NextRequest) {
             OR UPPER(NOME_TELA) LIKE '%' || ? || '%'
             OR UPPER(COALESCE(MODULO, '')) LIKE '%' || ? || '%'
           )
-        ORDER BY MODULO, NOME_TELA;`
+        ORDER BY MODULO, CODIGO_TELA;`
       : `${baseQuery}
-        ORDER BY MODULO, NOME_TELA;`;
+        ORDER BY MODULO, CODIGO_TELA;`;
 
     const args = qUpper ? [qUpper, qUpper, qUpper] : [];
 
