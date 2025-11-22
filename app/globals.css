@@ -20,28 +20,11 @@ a {
 }
 
 .sidebar {
-  width: 260px;
-  background-color: #1f2937;
-  color: #e5e7eb;
+  width: 220px;
+  background-color: #e5e7eb;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding-bottom: 24px;
-}
-
-.sidebar-brand {
-  font-weight: 700;
-  font-size: 1.1rem;
-  padding: 20px 16px 12px;
-}
-
-.sidebar-logo-placeholder {
-  margin: 0 16px 16px;
-  padding: 14px 12px;
-  background-color: #111827;
-  border-radius: 10px;
-  text-align: center;
-  font-weight: 600;
-  color: #f3f4f6;
 }
 
 .sidebar-section-header {
@@ -57,18 +40,9 @@ a {
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 16px 20px;
-}
-
-.sidebar-nav a {
-  color: #e5e7eb;
-  font-weight: 500;
-  padding: 6px 0;
-}
-
-.sidebar-nav a:hover {
-  color: #f97316;
+  padding: 8px 16px;
+  gap: 8px;
+  font-size: 0.9rem;
 }
 
 .main-area {
@@ -92,13 +66,13 @@ a {
   background-color: #ffffff;
 }
 
-.header-bar-title h1 {
+.header-title {
+  margin: 0;
   font-size: 1.4rem;
   font-weight: 600;
-  margin: 0;
 }
 
-.header-bar-meta {
+.header-subtitle {
   margin-top: 4px;
   font-size: 0.8rem;
   color: #6b7280;
@@ -311,4 +285,112 @@ a {
 .error-text {
   color: #b91c1c;
   font-weight: 600;
+}
+
+.sidebar-logo-block {
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.sidebar-logo-img {
+  max-width: 140px;
+  max-height: 60px;
+  object-fit: contain;
+}
+
+.sidebar-logo-placeholder {
+  padding: 10px 12px;
+  border-radius: 999px;
+  background-color: #f3f4f6;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.empresa-card {
+  display: grid;
+  grid-template-columns: 140px 1fr 160px;
+  align-items: center;
+  gap: 24px;
+  padding: 24px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+  margin-bottom: 16px;
+}
+
+.empresa-card-logo img {
+  max-width: 120px;
+  max-height: 80px;
+  object-fit: contain;
+}
+
+.empresa-card-info {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.empresa-nome {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.empresa-razao,
+.empresa-cnpj {
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.empresa-status {
+  margin-top: 8px;
+  display: inline-flex;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.status-ativa {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-inativa {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.empresa-card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.notification-bar {
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+}
+
+.notification-success {
+  background-color: #ecfdf3;
+  border: 1px solid #22c55e;
+  color: #166534;
+}
+
+.notification-error {
+  background-color: #fef2f2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+}
+
+.notification-info {
+  background-color: #eff6ff;
+  border: 1px solid #3b82f6;
+  color: #1d4ed8;
 }

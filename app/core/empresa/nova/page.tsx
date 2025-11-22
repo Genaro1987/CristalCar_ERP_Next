@@ -1,17 +1,22 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
-import { CSSProperties, FormEvent, useState } from "react";
+import { HeaderBar } from "@/components/HeaderBar";
+import { NotificationBar } from "@/components/NotificationBar";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function CadastroEmpresaPage() {
   const router = useRouter();
-  const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
+  const [notification, setNotification] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const aoSalvar = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setErro(null);
+    setNotification(null);
     setCarregando(true);
 
     const form = event.currentTarget;
@@ -29,140 +34,132 @@ export default function CadastroEmpresaPage() {
       const json = await resposta.json();
 
       if (resposta.status === 201 && json?.success) {
-        router.push("/");
+        setNotification({
+          type: "success",
+          message: "Empresa cadastrada com sucesso.",
+        });
+        setTimeout(() => router.push("/"), 600);
         return;
       }
 
       if (resposta.status === 409 && json?.error === "CNPJ_JA_CADASTRADO") {
-        setErro("CNPJ já cadastrado");
+        setNotification({ type: "error", message: "CNPJ já cadastrado." });
         return;
       }
 
-      setErro("Não foi possível salvar os dados. Tente novamente.");
+      setNotification({
+        type: "error",
+        message: "Não foi possível salvar os dados. Tente novamente.",
+      });
     } catch (error) {
       console.error(error);
-      setErro("Erro de conexão com o servidor.");
+      setNotification({
+        type: "error",
+        message: "Erro de conexão com o servidor.",
+      });
     } finally {
       setCarregando(false);
     }
   };
 
   return (
-    <LayoutShell codigoTela="CAD001_CORE_EMPRESA" nomeTela="CADASTRO DE EMPRESA">
-      <form
-        onSubmit={aoSalvar}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-          maxWidth: 640,
-          backgroundColor: "#fff",
-          padding: 24,
-          borderRadius: 12,
-          border: "1px solid #e5e7eb",
-          boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
-        }}
-      >
-        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span>Nome fantasia *</span>
-            <input name="NOME_FANTASIA" required style={inputStyle} />
-          </label>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span>Razão social *</span>
-            <input name="RAZAO_SOCIAL" required style={inputStyle} />
-          </label>
-        </div>
+    <LayoutShell>
+      <HeaderBar
+        codigoTela="CAD001_CORE_EMPRESA"
+        nomeTela="CADASTRO DE EMPRESA"
+        caminhoRota="/core/empresa/nova"
+      />
 
-        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span>CNPJ *</span>
-            <input name="CNPJ" required style={inputStyle} />
-          </label>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span>Inscrição estadual</span>
-            <input name="INSCRICAO_ESTADUAL" style={inputStyle} />
-          </label>
-        </div>
-
-        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span>Inscrição municipal</span>
-            <input name="INSCRICAO_MUNICIPAL" style={inputStyle} />
-          </label>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span>Regime tributário</span>
-            <select name="REGIME_TRIBUTARIO" defaultValue="" style={inputStyle}>
-              <option value="">Selecione</option>
-              <option value="SIMPLES_NACIONAL">SIMPLES NACIONAL</option>
-              <option value="LUCRO_PRESUMIDO">LUCRO PRESUMIDO</option>
-              <option value="LUCRO_REAL">LUCRO REAL</option>
-              <option value="MEI">MEI</option>
-            </select>
-          </label>
-        </div>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <span>Logotipo (opcional)</span>
-          <input name="LOGOTIPO" type="file" accept="image/*" style={inputStyle} />
-        </label>
-
-        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <input
-            defaultChecked
-            type="checkbox"
-            name="ATIVA"
-            value="1"
-            style={{ width: 18, height: 18 }}
+      <div className="page-content">
+        {notification && (
+          <NotificationBar
+            type={notification.type}
+            message={notification.message}
           />
-          <span>Ativa</span>
-        </label>
+        )}
 
-        {erro && <p style={{ color: "#b91c1c", fontWeight: 600 }}>{erro}</p>}
+        <div className="panel">
+          <form className="form" onSubmit={aoSalvar}>
+            <div className="form-grid two-columns">
+              <div className="form-group">
+                <label htmlFor="NOME_FANTASIA">Nome fantasia *</label>
+                <input id="NOME_FANTASIA" name="NOME_FANTASIA" required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="RAZAO_SOCIAL">Razão social *</label>
+                <input id="RAZAO_SOCIAL" name="RAZAO_SOCIAL" required />
+              </div>
+            </div>
 
-        <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
-          <button
-            type="submit"
-            disabled={carregando}
-            style={{
-              backgroundColor: "#f97316",
-              color: "#fff",
-              padding: "10px 16px",
-              borderRadius: 8,
-              border: "none",
-              fontWeight: 700,
-              cursor: "pointer",
-              opacity: carregando ? 0.8 : 1,
-            }}
-          >
-            {carregando ? "Salvando..." : "Salvar"}
-          </button>
+            <div className="form-grid two-columns">
+              <div className="form-group">
+                <label htmlFor="CNPJ">CNPJ *</label>
+                <input id="CNPJ" name="CNPJ" required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="INSCRICAO_ESTADUAL">Inscrição estadual</label>
+                <input id="INSCRICAO_ESTADUAL" name="INSCRICAO_ESTADUAL" />
+              </div>
+            </div>
 
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            style={{
-              backgroundColor: "#e5e7eb",
-              color: "#111827",
-              padding: "10px 16px",
-              borderRadius: 8,
-              border: "1px solid #d1d5db",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Cancelar
-          </button>
+            <div className="form-grid two-columns">
+              <div className="form-group">
+                <label htmlFor="INSCRICAO_MUNICIPAL">Inscrição municipal</label>
+                <input id="INSCRICAO_MUNICIPAL" name="INSCRICAO_MUNICIPAL" />
+              </div>
+              <div className="form-group">
+                <label htmlFor="REGIME_TRIBUTARIO">Regime tributário</label>
+                <select id="REGIME_TRIBUTARIO" name="REGIME_TRIBUTARIO" defaultValue="">
+                  <option value="">Selecione</option>
+                  <option value="SIMPLES_NACIONAL">SIMPLES NACIONAL</option>
+                  <option value="LUCRO_PRESUMIDO">LUCRO PRESUMIDO</option>
+                  <option value="LUCRO_REAL">LUCRO REAL</option>
+                  <option value="MEI">MEI</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="LOGOTIPO">Logotipo (opcional)</label>
+              <input
+                id="LOGOTIPO"
+                name="LOGOTIPO"
+                type="file"
+                accept="image/*"
+              />
+            </div>
+
+            <label className="checkbox-row">
+              <input
+                defaultChecked
+                type="checkbox"
+                name="ATIVA"
+                value="1"
+                aria-label="Empresa ativa"
+              />
+              <span>Ativa</span>
+            </label>
+
+            <div className="button-row">
+              <button
+                type="submit"
+                disabled={carregando}
+                className="button button-primary"
+              >
+                {carregando ? "Salvando..." : "Salvar"}
+              </button>
+
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => router.push("/")}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
+      </div>
     </LayoutShell>
   );
 }
-
-const inputStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
-  borderRadius: 8,
-  padding: "10px 12px",
-  outline: "none",
-  fontSize: 14,
-};
