@@ -30,6 +30,9 @@ export function Sidebar() {
     }
   }, []);
 
+  const isInicio = pathname === "/";
+  const isEmpresa = pathname.startsWith("/core/empresa");
+
   return (
     <aside className="sidebar">
       <div className="sidebar-logo-block">
@@ -53,19 +56,13 @@ export function Sidebar() {
       <nav className="sidebar-nav">
         <Link
           href="/"
-          className={
-            pathname === "/" ? "sidebar-nav-item active" : "sidebar-nav-item"
-          }
+          className={isInicio ? "sidebar-nav-item active" : "sidebar-nav-item"}
         >
           INICIAL
         </Link>
         <Link
           href="/core/empresa/nova"
-          className={
-            pathname.startsWith("/core/empresa")
-              ? "sidebar-nav-item active"
-              : "sidebar-nav-item"
-          }
+          className={isEmpresa ? "sidebar-nav-item active" : "sidebar-nav-item"}
         >
           EMPRESA
         </Link>

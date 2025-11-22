@@ -85,6 +85,7 @@ export default function SelecaoEmpresaPage() {
         codigoTela="CORE010_SELECAO_EMPRESA"
         nomeTela="INICIAL"
         caminhoRota="/"
+        modulo="CORE"
       />
 
       <div className="page-content">

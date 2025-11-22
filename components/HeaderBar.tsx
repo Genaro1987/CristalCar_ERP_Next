@@ -1,15 +1,26 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { KeyboardEvent, useState } from "react";
+import { KeyboardEvent, useEffect, useState } from "react";
 
 type HeaderBarProps = {
   codigoTela: string;
   nomeTela: string;
   caminhoRota?: string;
+  modulo?: string;
 };
 
-export function HeaderBar({ codigoTela, nomeTela, caminhoRota }: HeaderBarProps) {
+function HelpSection(props: { titulo: string; texto?: string | null }) {
+  if (!props.texto) return null;
+  return (
+    <div className="help-section">
+      <div className="help-section-title">{props.titulo}</div>
+      <p className="help-section-body">{props.texto}</p>
+    </div>
+  );
+}
+
+export function HeaderBar({ codigoTela, nomeTela, caminhoRota, modulo }: HeaderBarProps) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -17,6 +28,27 @@ export function HeaderBar({ codigoTela, nomeTela, caminhoRota }: HeaderBarProps)
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpData, setHelpData] = useState<any | null>(null);
   const [helpLoading, setHelpLoading] = useState(false);
+
+  useEffect(() => {
+    async function registrarTela() {
+      try {
+        await fetch("/api/telas/registrar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            codigoTela,
+            nomeTela,
+            caminhoRota: caminhoRota ?? "",
+            modulo: modulo ?? "",
+          }),
+        });
+      } catch (error) {
+        console.error("Erro ao registrar tela", error);
+      }
+    }
+
+    registrarTela();
+  }, [codigoTela, nomeTela, caminhoRota, modulo]);
 
   const handleSearch = async (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== "Enter") return;
@@ -103,30 +135,29 @@ export function HeaderBar({ codigoTela, nomeTela, caminhoRota }: HeaderBarProps)
               <>
                 <h2 className="help-title">{helpData.NOME_TELA}</h2>
                 <p className="help-code">{helpData.CODIGO_TELA}</p>
-                <p>
-                  <strong>Objetivo:</strong> {helpData.OBJETIVO_TELA}
-                </p>
-                <p>
-                  <strong>Quando utilizar:</strong> {helpData.QUANDO_UTILIZAR}
-                </p>
-                <p>
-                  <strong>Descricao:</strong> {helpData.DESCRICAO_PROCESSO}
-                </p>
-                <p>
-                  <strong>Passo a passo:</strong> {helpData.PASSO_A_PASSO}
-                </p>
-                <p>
-                  <strong>Campos obrigatorios:</strong> {helpData.CAMPOS_OBRIGATORIOS}
-                </p>
-                <p>
-                  <strong>Campos opcionais:</strong> {helpData.CAMPOS_OPCIONAIS}
-                </p>
-                <p>
-                  <strong>Reflexos no processo:</strong> {helpData.REFLEXOS_PROCESSO}
-                </p>
-                <p>
-                  <strong>Erros comuns:</strong> {helpData.ERROS_COMUNS}
-                </p>
+                <HelpSection titulo="Objetivo" texto={helpData.OBJETIVO_TELA} />
+                <HelpSection
+                  titulo="Quando utilizar"
+                  texto={helpData.QUANDO_UTILIZAR}
+                />
+                <HelpSection
+                  titulo="Descricao"
+                  texto={helpData.DESCRICAO_PROCESSO}
+                />
+                <HelpSection titulo="Passo a passo" texto={helpData.PASSO_A_PASSO} />
+                <HelpSection
+                  titulo="Campos obrigatorios"
+                  texto={helpData.CAMPOS_OBRIGATORIOS}
+                />
+                <HelpSection
+                  titulo="Campos opcionais"
+                  texto={helpData.CAMPOS_OPCIONAIS}
+                />
+                <HelpSection
+                  titulo="Reflexos no processo"
+                  texto={helpData.REFLEXOS_PROCESSO}
+                />
+                <HelpSection titulo="Erros comuns" texto={helpData.ERROS_COMUNS} />
               </>
             )}
 
