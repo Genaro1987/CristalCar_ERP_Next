@@ -4,7 +4,7 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 function normalizarTextoBasico(valor: string): string {
   return valor
@@ -31,6 +31,9 @@ function formatarCnpj(valor: string): string {
 
 export default function CadastroEmpresaPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const modo = searchParams.get("modo");
+  const isNovo = modo === "novo";
   const [carregando, setCarregando] = useState(false);
   const [carregandoEmpresa, setCarregandoEmpresa] = useState(false);
   const [modoEdicao, setModoEdicao] = useState(false);
@@ -51,6 +54,7 @@ export default function CadastroEmpresaPage() {
   const [ativa, setAtiva] = useState(true);
 
   useEffect(() => {
+    if (isNovo) return;
     if (typeof window === "undefined") return;
     const id = localStorage.getItem("EMPRESA_ATUAL_ID");
 
@@ -87,7 +91,7 @@ export default function CadastroEmpresaPage() {
         })
       )
       .finally(() => setCarregandoEmpresa(false));
-  }, []);
+  }, [isNovo]);
 
   const aoSalvar = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -178,157 +182,159 @@ export default function CadastroEmpresaPage() {
 
   return (
     <LayoutShell>
-      <HeaderBar
-        codigoTela="CAD001_CORE_EMPRESA"
-        nomeTela="CADASTRO DE EMPRESA"
-        caminhoRota="/core/empresa/nova"
-        modulo="EMPRESA"
-      />
+      <div className="page-container">
+        <HeaderBar
+          codigoTela="CAD001_CORE_EMPRESA"
+          nomeTela="CADASTRO DE EMPRESA"
+          caminhoRota="/core/empresa/nova"
+          modulo="EMPRESA"
+        />
 
-      <div className="page-content">
-        {notification && (
-          <NotificationBar
-            type={notification.type}
-            message={notification.message}
-          />
-        )}
+        <main className="page-content-card">
+          {notification && (
+            <NotificationBar
+              type={notification.type}
+              message={notification.message}
+            />
+          )}
 
-        <div className="panel">
-          {carregandoEmpresa && <p>Carregando dados da empresa...</p>}
-          <form className="form" onSubmit={aoSalvar}>
-            <div className="form-grid two-columns">
-              <div className="form-group">
-                <label htmlFor="NOME_FANTASIA">Nome fantasia *</label>
-                <input
-                  id="NOME_FANTASIA"
-                  name="NOME_FANTASIA"
-                  required
-                  value={nomeFantasia}
-                  onChange={(e) => setNomeFantasia(normalizarTextoBasico(e.target.value))}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="RAZAO_SOCIAL">Razão social *</label>
-                <input
-                  id="RAZAO_SOCIAL"
-                  name="RAZAO_SOCIAL"
-                  required
-                  value={razaoSocial}
-                  onChange={(e) => setRazaoSocial(normalizarTextoBasico(e.target.value))}
-                />
-              </div>
-            </div>
-
-            <div className="form-grid two-columns">
-              <div className="form-group">
-                <label htmlFor="CNPJ">CNPJ *</label>
-                <input
-                  id="CNPJ"
-                  name="CNPJ"
-                  required
-                  value={formatarCnpj(cnpj)}
-                  onChange={(e) => {
-                    const apenasDigitos = limparCnpj(e.target.value);
-                    setCnpj(apenasDigitos);
-                  }}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="INSCRICAO_ESTADUAL">Inscrição estadual</label>
-                <input
-                  id="INSCRICAO_ESTADUAL"
-                  name="INSCRICAO_ESTADUAL"
-                  value={inscricaoEstadual}
-                  onChange={(e) =>
-                    setInscricaoEstadual(normalizarTextoBasico(e.target.value))
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="form-grid two-columns">
-              <div className="form-group">
-                <label htmlFor="INSCRICAO_MUNICIPAL">Inscrição municipal</label>
-                <input
-                  id="INSCRICAO_MUNICIPAL"
-                  name="INSCRICAO_MUNICIPAL"
-                  value={inscricaoMunicipal}
-                  onChange={(e) =>
-                    setInscricaoMunicipal(normalizarTextoBasico(e.target.value))
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="REGIME_TRIBUTARIO">Regime tributário</label>
-                <select
-                  id="REGIME_TRIBUTARIO"
-                  name="REGIME_TRIBUTARIO"
-                  value={regimeTributario}
-                  onChange={(e) => setRegimeTributario(e.target.value)}
-                >
-                  <option value="">Selecione</option>
-                  <option value="SIMPLES_NACIONAL">SIMPLES NACIONAL</option>
-                  <option value="LUCRO_PRESUMIDO">LUCRO PRESUMIDO</option>
-                  <option value="LUCRO_REAL">LUCRO REAL</option>
-                  <option value="MEI">MEI</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Logotipo (opcional)</label>
-              <div className="file-upload-wrapper">
-                <label className="file-upload-button">
-                  Escolher arquivo
+          <div className="panel">
+            {carregandoEmpresa && <p>Carregando dados da empresa...</p>}
+            <form className="form" onSubmit={aoSalvar}>
+              <div className="form-grid two-columns">
+                <div className="form-group">
+                  <label htmlFor="NOME_FANTASIA">Nome fantasia *</label>
                   <input
-                    type="file"
-                    name="LOGOTIPO"
-                    accept="image/*"
-                    className="file-upload-input"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] || null;
-                      setLogoFile(file);
-                      setLogoFileName(
-                        file ? file.name : "Nenhum arquivo selecionado"
-                      );
+                    id="NOME_FANTASIA"
+                    name="NOME_FANTASIA"
+                    required
+                    value={nomeFantasia}
+                    onChange={(e) => setNomeFantasia(normalizarTextoBasico(e.target.value))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="RAZAO_SOCIAL">Razão social *</label>
+                  <input
+                    id="RAZAO_SOCIAL"
+                    name="RAZAO_SOCIAL"
+                    required
+                    value={razaoSocial}
+                    onChange={(e) => setRazaoSocial(normalizarTextoBasico(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div className="form-grid two-columns">
+                <div className="form-group">
+                  <label htmlFor="CNPJ">CNPJ *</label>
+                  <input
+                    id="CNPJ"
+                    name="CNPJ"
+                    required
+                    value={formatarCnpj(cnpj)}
+                    onChange={(e) => {
+                      const apenasDigitos = limparCnpj(e.target.value);
+                      setCnpj(apenasDigitos);
                     }}
                   />
-                </label>
-                <span className="file-upload-name">{logoFileName}</span>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="INSCRICAO_ESTADUAL">Inscrição estadual</label>
+                  <input
+                    id="INSCRICAO_ESTADUAL"
+                    name="INSCRICAO_ESTADUAL"
+                    value={inscricaoEstadual}
+                    onChange={(e) =>
+                      setInscricaoEstadual(normalizarTextoBasico(e.target.value))
+                    }
+                  />
+                </div>
               </div>
-            </div>
 
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                name="ATIVA"
-                value="1"
-                aria-label="Empresa ativa"
-                checked={ativa}
-                onChange={(e) => setAtiva(e.target.checked)}
-              />
-              <span>Ativa</span>
-            </label>
+              <div className="form-grid two-columns">
+                <div className="form-group">
+                  <label htmlFor="INSCRICAO_MUNICIPAL">Inscrição municipal</label>
+                  <input
+                    id="INSCRICAO_MUNICIPAL"
+                    name="INSCRICAO_MUNICIPAL"
+                    value={inscricaoMunicipal}
+                    onChange={(e) =>
+                      setInscricaoMunicipal(normalizarTextoBasico(e.target.value))
+                    }
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="REGIME_TRIBUTARIO">Regime tributário</label>
+                  <select
+                    id="REGIME_TRIBUTARIO"
+                    name="REGIME_TRIBUTARIO"
+                    value={regimeTributario}
+                    onChange={(e) => setRegimeTributario(e.target.value)}
+                  >
+                    <option value="">Selecione</option>
+                    <option value="SIMPLES_NACIONAL">SIMPLES NACIONAL</option>
+                    <option value="LUCRO_PRESUMIDO">LUCRO PRESUMIDO</option>
+                    <option value="LUCRO_REAL">LUCRO REAL</option>
+                    <option value="MEI">MEI</option>
+                  </select>
+                </div>
+              </div>
 
-            <div className="button-row">
-              <button
-                type="submit"
-                disabled={carregando}
-                className="button button-primary"
-              >
-                {carregando ? "Salvando..." : "Salvar"}
-              </button>
+              <div className="form-group">
+                <label>Logotipo (opcional)</label>
+                <div className="file-upload-wrapper">
+                  <label className="file-upload-button">
+                    Escolher arquivo
+                    <input
+                      type="file"
+                      name="LOGOTIPO"
+                      accept="image/*"
+                      className="file-upload-input"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] || null;
+                        setLogoFile(file);
+                        setLogoFileName(
+                          file ? file.name : "Nenhum arquivo selecionado"
+                        );
+                      }}
+                    />
+                  </label>
+                  <span className="file-upload-name">{logoFileName}</span>
+                </div>
+              </div>
 
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => router.push("/")}
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  name="ATIVA"
+                  value="1"
+                  aria-label="Empresa ativa"
+                  checked={ativa}
+                  onChange={(e) => setAtiva(e.target.checked)}
+                />
+                <span>Ativa</span>
+              </label>
+
+              <div className="button-row">
+                <button
+                  type="submit"
+                  disabled={carregando}
+                  className="button button-primary"
+                >
+                  {carregando ? "Salvando..." : "Salvar"}
+                </button>
+
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => router.push("/")}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </main>
       </div>
     </LayoutShell>
   );

@@ -47,7 +47,10 @@ export default function CentralAjudaPage() {
         const res = await fetch("/api/telas");
         const data = await res.json();
         if (data.success) {
-          setTelas(data.telas);
+          const todas = data.telas.filter(
+            (t: Tela) => t.CODIGO_TELA !== "HELP000_AJUDA_GERAL"
+          );
+          setTelas(todas);
         }
       } catch (error) {
         console.error("Erro ao carregar telas para ajuda", error);
@@ -106,17 +109,19 @@ export default function CentralAjudaPage() {
 
   return (
     <LayoutShell>
-      <div className="help-page">
-        <header className="help-header">
-          <div>
-            <h1>CENTRAL DE AJUDA</h1>
-            <p className="help-header-code">HELP000_AJUDA_GERAL | /AJUDA</p>
+      <div className="page-container help-page">
+        <header className="page-header-wrapper">
+          <div className="page-header-card">
+            <div>
+              <h1>CENTRAL DE AJUDA</h1>
+              <p className="help-header-code">HELP000_AJUDA_GERAL | /AJUDA</p>
+            </div>
           </div>
         </header>
 
-        <div className="help-body">
+        <main className="page-content-card help-body">
           <section className="help-sidebar">
-            <div className="help-modulo-tabs">
+            <div className="help-modulo-column">
               {modulos.map((mod) => (
                 <button
                   key={mod}
@@ -131,38 +136,38 @@ export default function CentralAjudaPage() {
               ))}
             </div>
 
-            <div className="help-search-block">
+            <div className="help-screen-column">
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value.toUpperCase())}
-                placeholder="Pesquisar tela por codigo ou nome..."
+                placeholder="Pesquisar tela por nome ou codigo..."
                 className="help-search-input"
               />
-            </div>
 
-            <div className="help-screen-list">
-              {telasFiltradas.map((tela) => (
-                <button
-                  key={tela.CODIGO_TELA}
-                  type="button"
-                  className={
-                    telaSelecionada?.CODIGO_TELA === tela.CODIGO_TELA
-                      ? "help-screen-item active"
-                      : "help-screen-item"
-                  }
-                  onClick={() => handleSelecionarTela(tela)}
-                >
-                  <span className="help-screen-name">{tela.NOME_TELA}</span>
-                  <span className="help-screen-code">{tela.CODIGO_TELA}</span>
-                </button>
-              ))}
+              <div className="help-screen-list">
+                {telasFiltradas.map((tela) => (
+                  <button
+                    key={tela.CODIGO_TELA}
+                    type="button"
+                    className={
+                      telaSelecionada?.CODIGO_TELA === tela.CODIGO_TELA
+                        ? "help-screen-item active"
+                        : "help-screen-item"
+                    }
+                    onClick={() => handleSelecionarTela(tela)}
+                  >
+                    <span className="help-screen-name">{tela.NOME_TELA}</span>
+                    <span className="help-screen-code">{tela.CODIGO_TELA}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </section>
 
           <section className="help-content">
             {help ? (
-              <div>
+              <>
                 <h2 className="help-title">{help.NOME_TELA}</h2>
                 <p className="help-code">{help.CODIGO_TELA}</p>
 
@@ -174,12 +179,12 @@ export default function CentralAjudaPage() {
                 <HelpSection titulo="Campos opcionais" texto={help.CAMPOS_OPCIONAIS} />
                 <HelpSection titulo="Reflexos no processo" texto={help.REFLEXOS_PROCESSO} />
                 <HelpSection titulo="Erros comuns" texto={help.ERROS_COMUNS} />
-              </div>
+              </>
             ) : (
-              <p>Selecione uma tela no painel ao lado para visualizar o help.</p>
+              <p>Selecione uma tela no modulo ao lado para visualizar o help.</p>
             )}
           </section>
-        </div>
+        </main>
       </div>
     </LayoutShell>
   );
