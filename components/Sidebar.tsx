@@ -32,6 +32,7 @@ export function Sidebar() {
 
   const isInicio = pathname === "/";
   const isEmpresa = pathname.startsWith("/core/empresa");
+  const isDepartamento = pathname.startsWith("/emp/departamento");
   const isAjuda = pathname.startsWith("/ajuda");
 
   return (
@@ -63,6 +64,14 @@ export function Sidebar() {
             className={isEmpresa ? "sidebar-nav-item active" : "sidebar-nav-item"}
           >
             EMPRESA
+          </Link>
+          <Link
+            href="/emp/departamento"
+            className={
+              isDepartamento ? "sidebar-nav-item active" : "sidebar-nav-item"
+            }
+          >
+            DEPARTAMENTOS
           </Link>
         </nav>
       </div>

@@ -19,7 +19,7 @@ const sanitizeCnpj = (value: string) => value.replace(/\D/g, "");
 
 async function buscarEmpresa(id: number) {
   const resultado = await db.execute({
-    sql: `SELECT ${EMPRESA_FIELDS} FROM CORE_EMPRESA WHERE ID_EMPRESA = ?`,
+    sql: `SELECT ${EMPRESA_FIELDS} FROM EMP_EMPRESA WHERE ID_EMPRESA = ?`,
     args: [id],
   });
 
@@ -119,7 +119,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
 
     await db.execute({
       sql: `
-        UPDATE CORE_EMPRESA
+        UPDATE EMP_EMPRESA
         SET NOME_FANTASIA = ?,
             RAZAO_SOCIAL = ?,
             CNPJ = ?,
@@ -148,7 +148,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
   } catch (error: any) {
     const message = error?.message || "";
 
-    if (message.includes("CORE_EMPRESA.CNPJ")) {
+    if (message.includes("EMP_EMPRESA.CNPJ")) {
       return NextResponse.json(
         { success: false, error: "CNPJ_JA_CADASTRADO" },
         { status: 409 }
