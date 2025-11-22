@@ -1,6 +1,7 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
+import { HeaderBar } from "@/components/HeaderBar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -46,122 +47,83 @@ export default function SelecaoEmpresaPage() {
     carregarEmpresas();
   }, []);
 
-  const aoSelecionar = (empresa: Empresa) => {
+  function handleSelecionar(empresa: Empresa) {
     if (typeof window !== "undefined") {
       localStorage.setItem("EMPRESA_ATUAL_ID", String(empresa.ID_EMPRESA));
-      localStorage.setItem("EMPRESA_ATUAL_NOME", empresa.NOME_FANTASIA);
+      localStorage.setItem("EMPRESA_ATUAL_NOME", empresa.NOME_FANTASIA ?? "");
+      localStorage.setItem("EMPRESA_ATUAL_LOGO_URL", empresa.LOGOTIPO_URL ?? "");
     }
 
     router.push("/");
-  };
+  }
 
   return (
-    <LayoutShell
-      codigoTela="CORE010_SELECAO_EMPRESA"
-      nomeTela="SELECAO DE EMPRESA"
-    >
-      <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
-        <button
-          onClick={() => router.push("/core/empresa/nova")}
-          style={{
-            backgroundColor: "#f97316",
-            color: "#fff",
-            padding: "10px 16px",
-            borderRadius: 8,
-            border: "none",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          CADASTRAR EMPRESA
-        </button>
-      </div>
+    <LayoutShell>
+      <HeaderBar
+        codigoTela="CORE010_SELECAO_EMPRESA"
+        nomeTela="SELECAO DE EMPRESA"
+        caminhoRota="/"
+      />
 
-      {carregando && <p>Carregando empresas...</p>}
-      {erro && <p style={{ color: "#b91c1c" }}>{erro}</p>}
-
-      {!carregando && empresas.length === 0 && !erro && (
-        <p style={{ color: "#374151" }}>Nenhuma empresa cadastrada.</p>
-      )}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: 16,
-        }}
-      >
-        {empresas.map((empresa) => (
-          <div
-            key={empresa.ID_EMPRESA}
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: 12,
-              padding: 16,
-              border: "1px solid #e5e7eb",
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
-            }}
+      <div className="page-content">
+        <div className="section-actions">
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={() => router.push("/core/empresa/nova")}
           >
-            {empresa.LOGOTIPO_URL ? (
-              <img
-                src={empresa.LOGOTIPO_URL}
-                alt={`Logotipo da ${empresa.NOME_FANTASIA}`}
-                style={{ width: "100%", height: 120, objectFit: "contain" }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: "100%",
-                  height: 120,
-                  backgroundColor: "#f3f4f6",
-                  borderRadius: 8,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#6b7280",
-                }}
-              >
-                Sem logotipo
+            CADASTRAR EMPRESA
+          </button>
+        </div>
+
+        {carregando && <p>Carregando empresas...</p>}
+        {erro && <p className="error-text">{erro}</p>}
+
+        {!carregando && empresas.length === 0 && !erro && (
+          <p className="helper-text">Nenhuma empresa cadastrada.</p>
+        )}
+
+        <div>
+          {empresas.map((empresa) => {
+            const ativa = empresa.ATIVA === 1;
+
+            return (
+              <div className="empresa-card" key={empresa.ID_EMPRESA}>
+                <div className="empresa-card-logo">
+                  {empresa.LOGOTIPO_URL && (
+                    <img
+                      src={empresa.LOGOTIPO_URL}
+                      alt={empresa.NOME_FANTASIA}
+                    />
+                  )}
+                </div>
+                <div className="empresa-card-info">
+                  <div className="empresa-nome">{empresa.NOME_FANTASIA}</div>
+                  <div className="empresa-razao">
+                    Razão social: {empresa.RAZAO_SOCIAL}
+                  </div>
+                  <div className="empresa-cnpj">CNPJ: {empresa.CNPJ}</div>
+                  <span
+                    className={`empresa-status ${
+                      ativa ? "status-ativa" : "status-inativa"
+                    }`}
+                  >
+                    {ativa ? "ATIVA" : "INATIVA"}
+                  </span>
+                </div>
+                <div className="empresa-card-actions">
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    onClick={() => handleSelecionar(empresa)}
+                  >
+                    SELECIONAR
+                  </button>
+                </div>
               </div>
-            )}
-
-            <div style={{ fontWeight: 700, fontSize: 18 }}>{empresa.NOME_FANTASIA}</div>
-            <div style={{ color: "#374151" }}>CNPJ: {empresa.CNPJ}</div>
-            <div>
-              <span
-                style={{
-                  backgroundColor: empresa.ATIVA === 1 ? "#dcfce7" : "#fee2e2",
-                  color: empresa.ATIVA === 1 ? "#166534" : "#991b1b",
-                  padding: "4px 8px",
-                  borderRadius: 9999,
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
-              >
-                {empresa.ATIVA === 1 ? "ATIVA" : "INATIVA"}
-              </span>
-            </div>
-
-            <button
-              onClick={() => aoSelecionar(empresa)}
-              style={{
-                marginTop: "auto",
-                backgroundColor: "#2563eb",
-                color: "#fff",
-                padding: "10px 12px",
-                borderRadius: 8,
-                border: "none",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              SELECIONAR
-            </button>
-          </div>
-        ))}
+            );
+          })}
+        </div>
       </div>
     </LayoutShell>
   );
