@@ -85,7 +85,7 @@ export default function SelecaoEmpresaPage() {
 
         <div>
           {empresas.map((empresa) => {
-            const ativa = empresa.ATIVA === 1;
+            const ativa = empresa.ATIVA === 1 || empresa.ATIVA === true;
 
             return (
               <div className="empresa-card" key={empresa.ID_EMPRESA}>
