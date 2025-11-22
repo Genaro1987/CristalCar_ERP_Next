@@ -91,7 +91,7 @@ export default function SelecaoEmpresaPage() {
         <section className="home-header">
           <div>
             <p className="home-greeting">{saudacao},</p>
-            <h2 className="home-subtitle">bem-vindo ao CristalCar ERP</h2>
+            <h2 className="home-subtitle">BEM VINDO AO CRISTALCAR ERP</h2>
           </div>
           <div className="home-date">{dataHoje}</div>
         </section>
