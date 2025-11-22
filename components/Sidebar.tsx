@@ -34,11 +34,14 @@ export function Sidebar() {
         )}
       </div>
 
-      <div className="sidebar-section-header">MÓDULOS</div>
+      <div className="sidebar-help-link">
+        <Link href="/ajuda">Ajuda</Link>
+      </div>
+
+      <div className="sidebar-section-header">CADASTROS</div>
 
       <nav className="sidebar-nav">
-        <Link href="/">CORE</Link>
-        <Link href="/core/empresa/nova">CADASTROS</Link>
+        <Link href="/core/empresa/nova">EMPRESA</Link>
         <span>FINANCEIRO</span>
       </nav>
     </aside>
