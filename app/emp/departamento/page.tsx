@@ -58,10 +58,10 @@ export default function DepartamentoPage() {
     }
   }, []);
 
-  const headersPadrao = useMemo(() => {
-    if (!empresaId) return {};
-    return { "x-empresa-id": String(empresaId) };
-  }, [empresaId]);
+  const headersPadrao: HeadersInit = useMemo(
+    () => (empresaId ? { "x-empresa-id": String(empresaId) } : {}),
+    [empresaId]
+  );
 
   const carregarDepartamentos = async () => {
     if (!empresaId) return;
