@@ -16,7 +16,8 @@ export function Sidebar() {
     const nome = localStorage.getItem("EMPRESA_ATUAL_NOME");
     const logo = localStorage.getItem("EMPRESA_ATUAL_LOGO_URL");
     if (nome) {
-      setEmpresa({ nomeFantasia: nome, logoUrl: logo });
+      const logoUrl = logo && logo !== "null" && logo !== "undefined" ? logo : undefined;
+      setEmpresa({ nomeFantasia: nome, logoUrl });
     }
   }, []);
 
@@ -35,12 +36,13 @@ export function Sidebar() {
       </div>
 
       <div className="sidebar-help-link">
-        <Link href="/ajuda">Ajuda</Link>
+        <Link href="/ajuda">AJUDA</Link>
       </div>
 
       <div className="sidebar-section-header">CADASTROS</div>
 
       <nav className="sidebar-nav">
+        <Link href="/">INICIAL</Link>
         <Link href="/core/empresa/nova">EMPRESA</Link>
         <span>FINANCEIRO</span>
       </nav>

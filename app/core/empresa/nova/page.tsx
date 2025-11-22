@@ -6,6 +6,14 @@ import { NotificationBar } from "@/components/NotificationBar";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+function normalizarTextoBasico(valor: string): string {
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9 ]/g, "");
+}
+
 export default function CadastroEmpresaPage() {
   const router = useRouter();
   const [carregando, setCarregando] = useState(false);
@@ -31,36 +39,39 @@ export default function CadastroEmpresaPage() {
     if (typeof window === "undefined") return;
     const id = localStorage.getItem("EMPRESA_ATUAL_ID");
 
-    if (id) {
-      setModoEdicao(true);
-      setIdEmpresaAtual(Number(id));
-      setCarregandoEmpresa(true);
+    if (!id) return;
 
-      fetch(`/api/empresas/${id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.empresa) {
-            const empresa = data.empresa;
-            setNomeFantasia(empresa.NOME_FANTASIA ?? "");
-            setRazaoSocial(empresa.RAZAO_SOCIAL ?? "");
-            setCnpj(empresa.CNPJ ?? "");
-            setInscricaoEstadual(empresa.INSCRICAO_ESTADUAL ?? "");
-            setInscricaoMunicipal(empresa.INSCRICAO_MUNICIPAL ?? "");
-            setRegimeTributario(empresa.REGIME_TRIBUTARIO ?? "");
-            setAtiva(empresa.ATIVA === 1);
-            setLogoFileName(
-              empresa.LOGOTIPO_URL ? "Logotipo já cadastrado" : "Nenhum arquivo selecionado"
-            );
-          }
+    const idNum = Number(id);
+    if (!idNum) return;
+
+    setModoEdicao(true);
+    setIdEmpresaAtual(idNum);
+    setCarregandoEmpresa(true);
+
+    fetch(`/api/empresas/${idNum}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.empresa) {
+          const empresa = data.empresa;
+          setNomeFantasia(normalizarTextoBasico(empresa.NOME_FANTASIA ?? ""));
+          setRazaoSocial(normalizarTextoBasico(empresa.RAZAO_SOCIAL ?? ""));
+          setCnpj(String(empresa.CNPJ ?? "").replace(/\D/g, "").slice(0, 14));
+          setInscricaoEstadual(normalizarTextoBasico(empresa.INSCRICAO_ESTADUAL ?? ""));
+          setInscricaoMunicipal(normalizarTextoBasico(empresa.INSCRICAO_MUNICIPAL ?? ""));
+          setRegimeTributario(empresa.REGIME_TRIBUTARIO ?? "");
+          setAtiva(empresa.ATIVA === 1);
+          setLogoFileName(
+            empresa.LOGOTIPO_URL ? "Logotipo já cadastrado" : "Nenhum arquivo selecionado"
+          );
+        }
+      })
+      .catch(() =>
+        setNotification({
+          type: "error",
+          message: "Não foi possível carregar os dados da empresa selecionada.",
         })
-        .catch(() =>
-          setNotification({
-            type: "error",
-            message: "Não foi possível carregar os dados da empresa selecionada.",
-          })
-        )
-        .finally(() => setCarregandoEmpresa(false));
-    }
+      )
+      .finally(() => setCarregandoEmpresa(false));
   }, []);
 
   const aoSalvar = async (event: FormEvent<HTMLFormElement>) => {
@@ -68,10 +79,21 @@ export default function CadastroEmpresaPage() {
     setNotification(null);
     setCarregando(true);
 
+    if (cnpj.length !== 14) {
+      setNotification({
+        type: "error",
+        message: "CNPJ deve conter exatamente 14 digitos numericos.",
+      });
+      setCarregando(false);
+      return;
+    }
+
+    const cnpjLimpo = cnpj.trim();
+
     const formData = new FormData();
     formData.append("NOME_FANTASIA", nomeFantasia.trim());
     formData.append("RAZAO_SOCIAL", razaoSocial.trim());
-    formData.append("CNPJ", cnpj.trim());
+    formData.append("CNPJ", cnpjLimpo);
     formData.append("INSCRICAO_ESTADUAL", inscricaoEstadual.trim());
     formData.append("INSCRICAO_MUNICIPAL", inscricaoMunicipal.trim());
     formData.append("REGIME_TRIBUTARIO", regimeTributario.trim());
@@ -166,7 +188,7 @@ export default function CadastroEmpresaPage() {
                   name="NOME_FANTASIA"
                   required
                   value={nomeFantasia}
-                  onChange={(e) => setNomeFantasia(e.target.value)}
+                  onChange={(e) => setNomeFantasia(normalizarTextoBasico(e.target.value))}
                 />
               </div>
               <div className="form-group">
@@ -176,7 +198,7 @@ export default function CadastroEmpresaPage() {
                   name="RAZAO_SOCIAL"
                   required
                   value={razaoSocial}
-                  onChange={(e) => setRazaoSocial(e.target.value)}
+                  onChange={(e) => setRazaoSocial(normalizarTextoBasico(e.target.value))}
                 />
               </div>
             </div>
@@ -189,7 +211,11 @@ export default function CadastroEmpresaPage() {
                   name="CNPJ"
                   required
                   value={cnpj}
-                  onChange={(e) => setCnpj(e.target.value)}
+                  maxLength={14}
+                  onChange={(e) => {
+                    const apenasDigitos = e.target.value.replace(/\D/g, "").slice(0, 14);
+                    setCnpj(apenasDigitos);
+                  }}
                 />
               </div>
               <div className="form-group">
@@ -198,7 +224,9 @@ export default function CadastroEmpresaPage() {
                   id="INSCRICAO_ESTADUAL"
                   name="INSCRICAO_ESTADUAL"
                   value={inscricaoEstadual}
-                  onChange={(e) => setInscricaoEstadual(e.target.value)}
+                  onChange={(e) =>
+                    setInscricaoEstadual(normalizarTextoBasico(e.target.value))
+                  }
                 />
               </div>
             </div>
@@ -210,7 +238,9 @@ export default function CadastroEmpresaPage() {
                   id="INSCRICAO_MUNICIPAL"
                   name="INSCRICAO_MUNICIPAL"
                   value={inscricaoMunicipal}
-                  onChange={(e) => setInscricaoMunicipal(e.target.value)}
+                  onChange={(e) =>
+                    setInscricaoMunicipal(normalizarTextoBasico(e.target.value))
+                  }
                 />
               </div>
               <div className="form-group">
