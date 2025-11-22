@@ -3,40 +3,104 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function CadastroEmpresaPage() {
   const router = useRouter();
   const [carregando, setCarregando] = useState(false);
+  const [carregandoEmpresa, setCarregandoEmpresa] = useState(false);
+  const [modoEdicao, setModoEdicao] = useState(false);
+  const [idEmpresaAtual, setIdEmpresaAtual] = useState<number | null>(null);
   const [notification, setNotification] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  const [nomeFantasia, setNomeFantasia] = useState("");
+  const [razaoSocial, setRazaoSocial] = useState("");
+  const [cnpj, setCnpj] = useState("");
+  const [inscricaoEstadual, setInscricaoEstadual] = useState("");
+  const [inscricaoMunicipal, setInscricaoMunicipal] = useState("");
+  const [regimeTributario, setRegimeTributario] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoFileName, setLogoFileName] = useState("Nenhum arquivo selecionado");
+  const [ativa, setAtiva] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = localStorage.getItem("EMPRESA_ATUAL_ID");
+
+    if (id) {
+      setModoEdicao(true);
+      setIdEmpresaAtual(Number(id));
+      setCarregandoEmpresa(true);
+
+      fetch(`/api/empresas/${id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.empresa) {
+            const empresa = data.empresa;
+            setNomeFantasia(empresa.NOME_FANTASIA ?? "");
+            setRazaoSocial(empresa.RAZAO_SOCIAL ?? "");
+            setCnpj(empresa.CNPJ ?? "");
+            setInscricaoEstadual(empresa.INSCRICAO_ESTADUAL ?? "");
+            setInscricaoMunicipal(empresa.INSCRICAO_MUNICIPAL ?? "");
+            setRegimeTributario(empresa.REGIME_TRIBUTARIO ?? "");
+            setAtiva(empresa.ATIVA === 1);
+            setLogoFileName(
+              empresa.LOGOTIPO_URL ? "Logotipo já cadastrado" : "Nenhum arquivo selecionado"
+            );
+          }
+        })
+        .catch(() =>
+          setNotification({
+            type: "error",
+            message: "Não foi possível carregar os dados da empresa selecionada.",
+          })
+        )
+        .finally(() => setCarregandoEmpresa(false));
+    }
+  }, []);
 
   const aoSalvar = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setNotification(null);
     setCarregando(true);
 
-    const form = event.currentTarget;
-    const formData = new FormData(form);
+    const formData = new FormData();
+    formData.append("NOME_FANTASIA", nomeFantasia.trim());
+    formData.append("RAZAO_SOCIAL", razaoSocial.trim());
+    formData.append("CNPJ", cnpj.trim());
+    formData.append("INSCRICAO_ESTADUAL", inscricaoEstadual.trim());
+    formData.append("INSCRICAO_MUNICIPAL", inscricaoMunicipal.trim());
+    formData.append("REGIME_TRIBUTARIO", regimeTributario.trim());
+    formData.append("ATIVA", ativa ? "1" : "0");
 
-    const ativaInput = form.elements.namedItem("ATIVA") as HTMLInputElement | null;
-    formData.set("ATIVA", ativaInput?.checked ? "1" : "0");
+    if (logoFile) {
+      formData.append("LOGOTIPO", logoFile);
+    }
+
+    const url =
+      modoEdicao && idEmpresaAtual
+        ? `/api/empresas/${idEmpresaAtual}`
+        : "/api/empresas";
+    const method = modoEdicao && idEmpresaAtual ? "PUT" : "POST";
 
     try {
-      const resposta = await fetch("/api/empresas", {
-        method: "POST",
+      const resposta = await fetch(url, {
+        method,
         body: formData,
       });
 
       const json = await resposta.json();
 
-      if (resposta.status === 201 && json?.success) {
+      if ((resposta.status === 201 || resposta.status === 200) && json?.success) {
         setNotification({
           type: "success",
-          message: "Empresa cadastrada com sucesso.",
+          message: modoEdicao
+            ? "Empresa atualizada com sucesso."
+            : "Empresa cadastrada com sucesso.",
         });
         setTimeout(() => router.push("/"), 600);
         return;
@@ -44,6 +108,19 @@ export default function CadastroEmpresaPage() {
 
       if (resposta.status === 409 && json?.error === "CNPJ_JA_CADASTRADO") {
         setNotification({ type: "error", message: "CNPJ já cadastrado." });
+        return;
+      }
+
+      if (resposta.status === 400 && json?.error === "CNPJ_INVALIDO") {
+        setNotification({ type: "error", message: "CNPJ inválido." });
+        return;
+      }
+
+      if (resposta.status === 404 && json?.error === "EMPRESA_NAO_ENCONTRADA") {
+        setNotification({
+          type: "error",
+          message: "Empresa selecionada não encontrada.",
+        });
         return;
       }
 
@@ -79,37 +156,71 @@ export default function CadastroEmpresaPage() {
         )}
 
         <div className="panel">
+          {carregandoEmpresa && <p>Carregando dados da empresa...</p>}
           <form className="form" onSubmit={aoSalvar}>
             <div className="form-grid two-columns">
               <div className="form-group">
                 <label htmlFor="NOME_FANTASIA">Nome fantasia *</label>
-                <input id="NOME_FANTASIA" name="NOME_FANTASIA" required />
+                <input
+                  id="NOME_FANTASIA"
+                  name="NOME_FANTASIA"
+                  required
+                  value={nomeFantasia}
+                  onChange={(e) => setNomeFantasia(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label htmlFor="RAZAO_SOCIAL">Razão social *</label>
-                <input id="RAZAO_SOCIAL" name="RAZAO_SOCIAL" required />
+                <input
+                  id="RAZAO_SOCIAL"
+                  name="RAZAO_SOCIAL"
+                  required
+                  value={razaoSocial}
+                  onChange={(e) => setRazaoSocial(e.target.value)}
+                />
               </div>
             </div>
 
             <div className="form-grid two-columns">
               <div className="form-group">
                 <label htmlFor="CNPJ">CNPJ *</label>
-                <input id="CNPJ" name="CNPJ" required />
+                <input
+                  id="CNPJ"
+                  name="CNPJ"
+                  required
+                  value={cnpj}
+                  onChange={(e) => setCnpj(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label htmlFor="INSCRICAO_ESTADUAL">Inscrição estadual</label>
-                <input id="INSCRICAO_ESTADUAL" name="INSCRICAO_ESTADUAL" />
+                <input
+                  id="INSCRICAO_ESTADUAL"
+                  name="INSCRICAO_ESTADUAL"
+                  value={inscricaoEstadual}
+                  onChange={(e) => setInscricaoEstadual(e.target.value)}
+                />
               </div>
             </div>
 
             <div className="form-grid two-columns">
               <div className="form-group">
                 <label htmlFor="INSCRICAO_MUNICIPAL">Inscrição municipal</label>
-                <input id="INSCRICAO_MUNICIPAL" name="INSCRICAO_MUNICIPAL" />
+                <input
+                  id="INSCRICAO_MUNICIPAL"
+                  name="INSCRICAO_MUNICIPAL"
+                  value={inscricaoMunicipal}
+                  onChange={(e) => setInscricaoMunicipal(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label htmlFor="REGIME_TRIBUTARIO">Regime tributário</label>
-                <select id="REGIME_TRIBUTARIO" name="REGIME_TRIBUTARIO" defaultValue="">
+                <select
+                  id="REGIME_TRIBUTARIO"
+                  name="REGIME_TRIBUTARIO"
+                  value={regimeTributario}
+                  onChange={(e) => setRegimeTributario(e.target.value)}
+                >
                   <option value="">Selecione</option>
                   <option value="SIMPLES_NACIONAL">SIMPLES NACIONAL</option>
                   <option value="LUCRO_PRESUMIDO">LUCRO PRESUMIDO</option>
@@ -120,22 +231,36 @@ export default function CadastroEmpresaPage() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="LOGOTIPO">Logotipo (opcional)</label>
-              <input
-                id="LOGOTIPO"
-                name="LOGOTIPO"
-                type="file"
-                accept="image/*"
-              />
+              <label>Logotipo (opcional)</label>
+              <div className="file-upload-wrapper">
+                <label className="file-upload-button">
+                  Escolher arquivo
+                  <input
+                    type="file"
+                    name="LOGOTIPO"
+                    accept="image/*"
+                    className="file-upload-input"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      setLogoFile(file);
+                      setLogoFileName(
+                        file ? file.name : "Nenhum arquivo selecionado"
+                      );
+                    }}
+                  />
+                </label>
+                <span className="file-upload-name">{logoFileName}</span>
+              </div>
             </div>
 
             <label className="checkbox-row">
               <input
-                defaultChecked
                 type="checkbox"
                 name="ATIVA"
                 value="1"
                 aria-label="Empresa ativa"
+                checked={ativa}
+                onChange={(e) => setAtiva(e.target.checked)}
               />
               <span>Ativa</span>
             </label>

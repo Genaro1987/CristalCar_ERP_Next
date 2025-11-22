@@ -54,7 +54,7 @@ export default function SelecaoEmpresaPage() {
       localStorage.setItem("EMPRESA_ATUAL_LOGO_URL", empresa.LOGOTIPO_URL ?? "");
     }
 
-    router.push("/");
+    router.push("/core/empresa/nova");
   }
 
   return (
