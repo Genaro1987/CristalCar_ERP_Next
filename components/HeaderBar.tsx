@@ -101,9 +101,8 @@ export function HeaderBar({ codigoTela, nomeTela, caminhoRota }: HeaderBarProps)
 
             {!helpLoading && helpData && (
               <>
-                <h2>
-                  {helpData.CODIGO_TELA} - {helpData.NOME_TELA}
-                </h2>
+                <h2 className="help-title">{helpData.NOME_TELA}</h2>
+                <p className="help-code">{helpData.CODIGO_TELA}</p>
                 <p>
                   <strong>Objetivo:</strong> {helpData.OBJETIVO_TELA}
                 </p>

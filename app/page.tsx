@@ -24,6 +24,8 @@ export default function SelecaoEmpresaPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [saudacao, setSaudacao] = useState("");
+  const [dataHoje, setDataHoje] = useState("");
 
   useEffect(() => {
     const carregarEmpresas = async () => {
@@ -47,11 +49,31 @@ export default function SelecaoEmpresaPage() {
     carregarEmpresas();
   }, []);
 
+  useEffect(() => {
+    const agora = new Date();
+    const hora = agora.getHours();
+
+    let saud = "Boa noite";
+    if (hora < 12) saud = "Bom dia";
+    else if (hora < 18) saud = "Boa tarde";
+
+    const formatador = new Intl.DateTimeFormat("pt-BR", {
+      weekday: "long",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+
+    setSaudacao(saud);
+    setDataHoje(formatador.format(agora));
+  }, []);
+
   function handleSelecionar(empresa: Empresa) {
     if (typeof window !== "undefined") {
       localStorage.setItem("EMPRESA_ATUAL_ID", String(empresa.ID_EMPRESA));
       localStorage.setItem("EMPRESA_ATUAL_NOME", empresa.NOME_FANTASIA ?? "");
-      localStorage.setItem("EMPRESA_ATUAL_LOGO_URL", empresa.LOGOTIPO_URL ?? "");
+      const logoUrl = empresa.LOGOTIPO_URL ?? "";
+      localStorage.setItem("EMPRESA_ATUAL_LOGO_URL", logoUrl);
     }
 
     router.push("/core/empresa/nova");
@@ -61,11 +83,19 @@ export default function SelecaoEmpresaPage() {
     <LayoutShell>
       <HeaderBar
         codigoTela="CORE010_SELECAO_EMPRESA"
-        nomeTela="SELECAO DE EMPRESA"
+        nomeTela="INICIAL"
         caminhoRota="/"
       />
 
       <div className="page-content">
+        <section className="home-header">
+          <div>
+            <p className="home-greeting">{saudacao},</p>
+            <h2 className="home-subtitle">BEM VINDO AO CRISTALCAR ERP</h2>
+          </div>
+          <div className="home-date">{dataHoje}</div>
+        </section>
+
         <div className="section-actions">
           <button
             type="button"

@@ -20,32 +20,33 @@ a {
 }
 
 .sidebar {
-  width: 220px;
-  background-color: #e5e7eb;
+  background-color: #111827;
+  color: #f9fafb;
+  width: 240px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 .sidebar-logo-block {
-  padding: 20px 16px;
-  min-height: 80px;
+  padding: 24px 16px 16px 16px;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.sidebar-logo-img {
-  max-width: 140px;
+.sidebar-logo-image {
+  max-width: 160px;
   max-height: 60px;
   object-fit: contain;
 }
 
-.sidebar-logo-placeholder {
-  padding: 10px 12px;
+.sidebar-logo-pill {
+  padding: 8px 16px;
   border-radius: 999px;
-  background-color: #f3f4f6;
-  font-size: 0.8rem;
+  background-color: #f9fafb;
+  color: #111827;
+  font-size: 0.85rem;
   font-weight: 600;
 }
 
@@ -55,7 +56,7 @@ a {
 }
 
 .sidebar-help-link a {
-  color: #111827;
+  color: #f9fafb;
   text-decoration: none;
   font-weight: 500;
 }
@@ -65,21 +66,43 @@ a {
 }
 
 .sidebar-section-header {
-  background-color: #f97316; /* laranja CristalCar */
-  color: #111827; /* cinza escuro para fonte */
+  background-color: #f97316;
+  color: #ffffff;
   font-weight: 600;
   padding: 10px 16px;
   text-transform: uppercase;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   letter-spacing: 0.08em;
+  text-align: center;
 }
 
 .sidebar-nav {
+  padding: 12px 0;
   display: flex;
   flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-nav-item {
   padding: 8px 16px;
-  gap: 8px;
   font-size: 0.9rem;
+  text-decoration: none;
+  color: #e5e7eb;
+  display: block;
+}
+
+.sidebar-nav-item:hover {
+  background-color: #1f2937;
+}
+
+.sidebar-nav-item.active {
+  background-color: #374151;
+  color: #ffffff;
+}
+
+.sidebar-nav-item.disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 .main-area {
@@ -187,6 +210,22 @@ a {
 .help-panel-content {
   padding: 16px;
   overflow-y: auto;
+}
+
+.help-title {
+  margin: 0 0 4px 0;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.help-code {
+  margin: 0 0 16px 0;
+  text-align: center;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b7280;
 }
 
 .help-panel-close {
@@ -474,6 +513,32 @@ a {
 .empresa-card-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 16px 24px 8px 24px;
+}
+
+.home-greeting {
+  margin: 0;
+  font-size: 1rem;
+  color: #9ca3af;
+  text-transform: none;
+}
+
+.home-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.home-date {
+  font-size: 0.9rem;
+  color: #d1d5db;
 }
 
 .notification-bar {
