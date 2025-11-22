@@ -1,116 +1,186 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
-import { HeaderBar } from "@/components/HeaderBar";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-export default function AjudaPage() {
-  const [term, setTerm] = useState("");
-  const [results, setResults] = useState<any[]>([]);
-  const [help, setHelp] = useState<any | null>(null);
+type Tela = {
+  ID_TELA: number;
+  CODIGO_TELA: string;
+  NOME_TELA: string;
+  MODULO: string | null;
+  CAMINHO_ROTA: string | null;
+};
 
-  const buscarTelas = async () => {
-    const query = term.trim();
-    const url = query ? `/api/telas?q=${encodeURIComponent(query)}` : "/api/telas";
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.success) {
-      setResults(data.telas);
-    }
-  };
+type HelpData = {
+  CODIGO_TELA: string;
+  NOME_TELA: string;
+  OBJETIVO_TELA?: string | null;
+  QUANDO_UTILIZAR?: string | null;
+  DESCRICAO_PROCESSO?: string | null;
+  PASSO_A_PASSO?: string | null;
+  CAMPOS_OBRIGATORIOS?: string | null;
+  CAMPOS_OPCIONAIS?: string | null;
+  REFLEXOS_PROCESSO?: string | null;
+  ERROS_COMUNS?: string | null;
+};
 
-  const carregarHelp = async (codigoTela: string) => {
-    const res = await fetch(`/api/ajuda?tela=${codigoTela}`);
-    const data = await res.json();
-    if (data.success) {
-      setHelp(data.help);
-    } else {
-      setHelp(null);
-    }
-  };
+function HelpSection(props: { titulo: string; texto?: string | null }) {
+  if (!props.texto) return null;
+  return (
+    <div className="help-section">
+      <div className="help-section-title">{props.titulo}</div>
+      <p className="help-section-body">{props.texto}</p>
+    </div>
+  );
+}
+
+export default function CentralAjudaPage() {
+  const [telas, setTelas] = useState<Tela[]>([]);
+  const [query, setQuery] = useState("");
+  const [moduloSelecionado, setModuloSelecionado] = useState<string | null>(null);
+  const [telaSelecionada, setTelaSelecionada] = useState<Tela | null>(null);
+  const [help, setHelp] = useState<HelpData | null>(null);
 
   useEffect(() => {
-    buscarTelas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    async function carregarTelas() {
+      try {
+        const res = await fetch("/api/telas");
+        const data = await res.json();
+        if (data.success) {
+          setTelas(data.telas);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar telas para ajuda", error);
+      }
+    }
+
+    carregarTelas();
   }, []);
+
+  const modulos = useMemo(() => {
+    const set = new Set<string>();
+    telas.forEach((t) => {
+      if (t.MODULO) {
+        set.add(t.MODULO.toUpperCase());
+      }
+    });
+    return Array.from(set).sort();
+  }, [telas]);
+
+  useEffect(() => {
+    if (modulos.length > 0 && !moduloSelecionado) {
+      setModuloSelecionado(modulos[0]);
+    }
+  }, [modulos, moduloSelecionado]);
+
+  const telasFiltradas = useMemo(() => {
+    const q = query.trim().toUpperCase();
+    return telas.filter((t) => {
+      if (moduloSelecionado && (t.MODULO ?? "").toUpperCase() !== moduloSelecionado) {
+        return false;
+      }
+      if (!q) return true;
+      const nome = (t.NOME_TELA ?? "").toUpperCase();
+      const cod = (t.CODIGO_TELA ?? "").toUpperCase();
+      return nome.includes(q) || cod.includes(q);
+    });
+  }, [telas, moduloSelecionado, query]);
+
+  async function handleSelecionarTela(tela: Tela) {
+    setTelaSelecionada(tela);
+    try {
+      const res = await fetch(`/api/ajuda?tela=${encodeURIComponent(tela.CODIGO_TELA)}`);
+      const data = await res.json();
+      if (data.success && data.help) {
+        setHelp(data.help);
+      } else {
+        setHelp({
+          CODIGO_TELA: tela.CODIGO_TELA,
+          NOME_TELA: tela.NOME_TELA,
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao carregar ajuda da tela", error);
+    }
+  }
 
   return (
     <LayoutShell>
-      <HeaderBar
-        codigoTela="HELP000_AJUDA_GERAL"
-        nomeTela="CENTRAL DE AJUDA"
-        caminhoRota="/ajuda"
-        modulo="CORE"
-      />
-      <main className="page-content">
-        <section className="panel">
-          <div className="ajuda-search-block">
-            <input
-              type="text"
-              placeholder="Pesquisar tela por codigo ou nome..."
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-            />
-            <button
-              type="button"
-              className="button button-primary"
-              onClick={buscarTelas}
-            >
-              Buscar
-            </button>
+      <div className="help-page">
+        <header className="help-header">
+          <div>
+            <h1>CENTRAL DE AJUDA</h1>
+            <p className="help-header-code">HELP000_AJUDA_GERAL | /AJUDA</p>
           </div>
+        </header>
 
-          <div className="ajuda-layout">
-            <div className="ajuda-telas-lista">
-              {results.map((tela) => (
+        <div className="help-body">
+          <section className="help-sidebar">
+            <div className="help-modulo-tabs">
+              {modulos.map((mod) => (
                 <button
-                  key={tela.ID_TELA}
+                  key={mod}
                   type="button"
-                  onClick={() => carregarHelp(tela.CODIGO_TELA)}
+                  className={
+                    moduloSelecionado === mod ? "help-modulo-tab active" : "help-modulo-tab"
+                  }
+                  onClick={() => setModuloSelecionado(mod)}
                 >
-                  {tela.CODIGO_TELA} - {tela.NOME_TELA}
+                  {mod}
                 </button>
               ))}
             </div>
 
-            <div className="ajuda-detalhe">
-              {help ? (
-                <>
-                  <h2>
-                    {help.CODIGO_TELA} - {help.NOME_TELA}
-                  </h2>
-                  <p>
-                    <strong>Objetivo:</strong> {help.OBJETIVO_TELA}
-                  </p>
-                  <p>
-                    <strong>Quando utilizar:</strong> {help.QUANDO_UTILIZAR}
-                  </p>
-                  <p>
-                    <strong>Descricao:</strong> {help.DESCRICAO_PROCESSO}
-                  </p>
-                  <p>
-                    <strong>Passo a passo:</strong> {help.PASSO_A_PASSO}
-                  </p>
-                  <p>
-                    <strong>Campos obrigatorios:</strong> {help.CAMPOS_OBRIGATORIOS}
-                  </p>
-                  <p>
-                    <strong>Campos opcionais:</strong> {help.CAMPOS_OPCIONAIS}
-                  </p>
-                  <p>
-                    <strong>Reflexos no processo:</strong> {help.REFLEXOS_PROCESSO}
-                  </p>
-                  <p>
-                    <strong>Erros comuns:</strong> {help.ERROS_COMUNS}
-                  </p>
-                </>
-              ) : (
-                <p>Selecione uma tela para visualizar o help.</p>
-              )}
+            <div className="help-search-block">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value.toUpperCase())}
+                placeholder="Pesquisar tela por codigo ou nome..."
+                className="help-search-input"
+              />
             </div>
-          </div>
-        </section>
-      </main>
+
+            <div className="help-screen-list">
+              {telasFiltradas.map((tela) => (
+                <button
+                  key={tela.CODIGO_TELA}
+                  type="button"
+                  className={
+                    telaSelecionada?.CODIGO_TELA === tela.CODIGO_TELA
+                      ? "help-screen-item active"
+                      : "help-screen-item"
+                  }
+                  onClick={() => handleSelecionarTela(tela)}
+                >
+                  <span className="help-screen-name">{tela.NOME_TELA}</span>
+                  <span className="help-screen-code">{tela.CODIGO_TELA}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="help-content">
+            {help ? (
+              <div>
+                <h2 className="help-title">{help.NOME_TELA}</h2>
+                <p className="help-code">{help.CODIGO_TELA}</p>
+
+                <HelpSection titulo="Objetivo" texto={help.OBJETIVO_TELA} />
+                <HelpSection titulo="Quando utilizar" texto={help.QUANDO_UTILIZAR} />
+                <HelpSection titulo="Descricao" texto={help.DESCRICAO_PROCESSO} />
+                <HelpSection titulo="Passo a passo" texto={help.PASSO_A_PASSO} />
+                <HelpSection titulo="Campos obrigatorios" texto={help.CAMPOS_OBRIGATORIOS} />
+                <HelpSection titulo="Campos opcionais" texto={help.CAMPOS_OPCIONAIS} />
+                <HelpSection titulo="Reflexos no processo" texto={help.REFLEXOS_PROCESSO} />
+                <HelpSection titulo="Erros comuns" texto={help.ERROS_COMUNS} />
+              </div>
+            ) : (
+              <p>Selecione uma tela no painel ao lado para visualizar o help.</p>
+            )}
+          </section>
+        </div>
+      </div>
     </LayoutShell>
   );
 }

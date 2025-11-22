@@ -107,16 +107,22 @@ a {
   opacity: 0.6;
 }
 
-.main-area {
-  flex: 1;
+.layout-body {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 100vh;
 }
 
-.main-content {
+.layout-main {
+  display: flex;
   flex: 1;
-  padding: 0;
+  padding: 16px 24px;
+  position: relative;
+}
+
+.layout-with-help {
+  column-gap: 16px;
 }
 
 .header-bar {
@@ -148,41 +154,63 @@ a {
   gap: 12px;
 }
 
-.header-search {
+.screen-search-container {
   position: relative;
 }
 
-.header-search input {
-  padding: 6px 10px;
+.screen-search-input {
+  width: 260px;
+  padding: 8px 12px;
   border-radius: 999px;
   border: 1px solid #d1d5db;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
-.header-search-results {
+.screen-search-input:focus {
+  outline: none;
+  border-color: #f97316;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.25);
+}
+
+.screen-search-results {
   position: absolute;
   top: 110%;
   left: 0;
-  right: 0;
+  width: 320px;
+  max-height: 260px;
+  overflow-y: auto;
   background-color: #ffffff;
-  border: 1px solid #e5e7eb;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
-  z-index: 20;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.25);
+  z-index: 40;
 }
 
-.header-search-results button {
+.screen-search-item {
   width: 100%;
-  padding: 6px 10px;
-  text-align: left;
-  font-size: 0.85rem;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   border: none;
-  background: none;
+  background: transparent;
   cursor: pointer;
+  text-align: left;
 }
 
-.header-search-results button:hover {
+.screen-search-item:hover {
   background-color: #f3f4f6;
+}
+
+.screen-search-item-code {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #f97316;
+}
+
+.screen-search-item-name {
+  font-size: 0.9rem;
+  color: #111827;
+  word-break: break-word;
 }
 
 .header-help-button {
@@ -197,33 +225,29 @@ a {
 }
 
 .help-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
   width: 360px;
+  max-width: 100%;
   background-color: #f9fafb;
-  box-shadow: -2px 0 8px rgba(15, 23, 42, 0.2);
-  z-index: 40;
-  display: flex;
-  flex-direction: column;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  padding: 16px 16px 20px 16px;
+  overflow-y: auto;
 }
 
 .help-panel-content {
-  padding: 16px;
-  overflow-y: auto;
+  padding: 0;
 }
 
 .help-title {
   margin: 0 0 4px 0;
-  text-align: center;
+  text-align: left;
   font-size: 1.1rem;
   font-weight: 700;
 }
 
 .help-code {
   margin: 0 0 16px 0;
-  text-align: center;
+  text-align: left;
   font-size: 0.8rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -261,7 +285,8 @@ a {
 }
 
 .page-content {
-  padding: 24px;
+  flex: 1;
+  min-width: 0;
 }
 
 .panel {
@@ -390,12 +415,10 @@ a {
   color: #4b5563;
 }
 
-.header-search,
 .header-help-button,
 .sidebar-help-link a,
 .file-upload-button,
-.header-search-results button,
-.ajuda-telas-lista button {
+.header-search-results button {
   transition: background-color 0.12s ease, color 0.12s ease;
 }
 
@@ -593,51 +616,138 @@ a {
   color: #1d4ed8;
 }
 
-.ajuda-search-block {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+.help-page {
+  padding: 16px 24px;
+  min-height: 100vh;
 }
 
-.ajuda-search-block input {
-  flex: 1;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  font-size: 0.95rem;
+.help-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
 }
 
-.ajuda-layout {
+.help-header-code {
+  margin: 2px 0 0 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.help-body {
+  margin-top: 16px;
   display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 16px;
+  grid-template-columns: 320px minmax(0, 1fr);
+  column-gap: 16px;
 }
 
-.ajuda-telas-lista {
+.help-sidebar {
+  background-color: #f3f4f6;
+  border-radius: 12px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.ajuda-telas-lista button {
-  border: 1px solid #e5e7eb;
-  background-color: #ffffff;
-  border-radius: 8px;
-  padding: 10px 12px;
-  text-align: left;
+.help-modulo-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.help-modulo-tab {
+  border: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background-color: #e5e7eb;
+  color: #111827;
   cursor: pointer;
-  font-size: 0.95rem;
 }
 
-.ajuda-telas-lista button:hover {
-  background-color: #f3f4f6;
+.help-modulo-tab.active {
+  background-color: #f97316;
+  color: #ffffff;
 }
 
-.ajuda-detalhe {
-  border: 1px solid #e5e7eb;
+.help-search-block {
+  margin-top: 4px;
+}
+
+.help-search-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  font-size: 0.85rem;
+}
+
+.help-search-input:focus {
+  outline: none;
+  border-color: #f97316;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.25);
+}
+
+.help-screen-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+}
+
+.help-screen-item {
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background-color: #ffffff;
+  cursor: pointer;
+}
+
+.help-screen-item:hover {
+  background-color: #e5e7eb;
+}
+
+.help-screen-item.active {
+  border-left: 3px solid #f97316;
+  background-color: #e5e7eb;
+}
+
+.help-screen-name {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.help-screen-code {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.help-content {
+  background-color: #ffffff;
   border-radius: 12px;
-  padding: 16px;
-  min-height: 260px;
-  background-color: #fafafa;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+  padding: 16px 18px 20px 18px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.help-title {
+  margin: 0 0 4px 0;
+  text-align: left;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.help-code {
+  margin: 0 0 16px 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
 }
