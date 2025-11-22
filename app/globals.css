@@ -28,8 +28,8 @@ a {
 }
 
 .sidebar-section-header {
-  background-color: #111827;
-  color: #f97316;
+  background-color: #f97316; /* laranja CristalCar */
+  color: #111827; /* cinza escuro para fonte */
   font-weight: 600;
   padding: 10px 16px;
   text-transform: uppercase;
@@ -344,13 +344,16 @@ a {
   color: #4b5563;
 }
 
-.empresa-status {
-  margin-top: 8px;
+
+.empresa-status-pill {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 2px 10px;
   border-radius: 999px;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
+  margin-top: 8px;
 }
 
 .status-ativa {
