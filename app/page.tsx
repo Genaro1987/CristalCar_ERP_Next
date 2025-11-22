@@ -136,8 +136,8 @@ export default function SelecaoEmpresaPage() {
                     </div>
                     <div className="empresa-cnpj">CNPJ: {empresa.CNPJ}</div>
                     <span
-                      className={`empresa-status-badge ${
-                        ativa ? "ativa" : "inativa"
+                      className={`badge-status ${
+                        ativa ? "badge-status-ativa" : "badge-status-inativa"
                       }`}
                     >
                       {ativa ? "ATIVA" : "INATIVA"}
