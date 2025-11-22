@@ -64,7 +64,6 @@ export function Sidebar() {
           >
             EMPRESA
           </Link>
-          <span className="sidebar-nav-item disabled">FINANCEIRO</span>
         </nav>
       </div>
 
