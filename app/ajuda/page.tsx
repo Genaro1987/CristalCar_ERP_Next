@@ -2,7 +2,7 @@
 
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function AjudaPage() {
   const [term, setTerm] = useState("");
@@ -10,8 +10,9 @@ export default function AjudaPage() {
   const [help, setHelp] = useState<any | null>(null);
 
   const buscarTelas = async () => {
-    if (!term.trim()) return;
-    const res = await fetch(`/api/telas?q=${encodeURIComponent(term.trim())}`);
+    const query = term.trim();
+    const url = query ? `/api/telas?q=${encodeURIComponent(query)}` : "/api/telas";
+    const res = await fetch(url);
     const data = await res.json();
     if (data.success) {
       setResults(data.telas);
@@ -28,12 +29,18 @@ export default function AjudaPage() {
     }
   };
 
+  useEffect(() => {
+    buscarTelas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <LayoutShell>
       <HeaderBar
         codigoTela="HELP000_AJUDA_GERAL"
         nomeTela="CENTRAL DE AJUDA"
         caminhoRota="/ajuda"
+        modulo="CORE"
       />
       <main className="page-content">
         <section className="panel">

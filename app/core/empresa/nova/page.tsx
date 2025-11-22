@@ -14,6 +14,21 @@ function normalizarTextoBasico(valor: string): string {
     .replace(/[^A-Z0-9 ]/g, "");
 }
 
+function limparCnpj(valor: string): string {
+  return valor.replace(/\D/g, "").slice(0, 14);
+}
+
+function formatarCnpj(valor: string): string {
+  const v = limparCnpj(valor);
+  if (!v) return "";
+
+  return v
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2}\.\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/, "$1/$2")
+    .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d)/, "$1-$2");
+}
+
 export default function CadastroEmpresaPage() {
   const router = useRouter();
   const [carregando, setCarregando] = useState(false);
@@ -167,6 +182,7 @@ export default function CadastroEmpresaPage() {
         codigoTela="CAD001_CORE_EMPRESA"
         nomeTela="CADASTRO DE EMPRESA"
         caminhoRota="/core/empresa/nova"
+        modulo="EMPRESA"
       />
 
       <div className="page-content">
@@ -210,10 +226,9 @@ export default function CadastroEmpresaPage() {
                   id="CNPJ"
                   name="CNPJ"
                   required
-                  value={cnpj}
-                  maxLength={14}
+                  value={formatarCnpj(cnpj)}
                   onChange={(e) => {
-                    const apenasDigitos = e.target.value.replace(/\D/g, "").slice(0, 14);
+                    const apenasDigitos = limparCnpj(e.target.value);
                     setCnpj(apenasDigitos);
                   }}
                 />
