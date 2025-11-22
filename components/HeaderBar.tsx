@@ -24,7 +24,7 @@ export function HeaderBar({ codigoTela, nomeTela, caminhoRota, modulo }: HeaderB
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ScreenResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const isAjudaGeral = codigoTela === "HELP000_AJUDA_GERAL";
+  const isAjudaGeral = codigoTela === "HELP000_CORE_AJUDA";
 
   useEffect(() => {
     async function registrarTela() {

@@ -187,7 +187,7 @@ export default function CadastroEmpresaPage({ searchParams }: PageProps) {
     <LayoutShell>
       <div className="page-container">
         <HeaderBar
-          codigoTela="CAD001_CORE_EMPRESA"
+          codigoTela="CAD002_EMP_EMPRESA"
           nomeTela="CADASTRO DE EMPRESA"
           caminhoRota="/core/empresa/nova"
           modulo="EMPRESA"

@@ -48,7 +48,7 @@ export default function CentralAjudaPage() {
         const data = await res.json();
         if (data.success) {
           const todas = data.telas.filter(
-            (t: Tela) => t.CODIGO_TELA !== "HELP000_AJUDA_GERAL"
+            (t: Tela) => t.CODIGO_TELA !== "HELP000_CORE_AJUDA"
           );
           setTelas(todas);
         }
@@ -114,7 +114,7 @@ export default function CentralAjudaPage() {
           <div className="page-header-card">
             <div>
               <h1>CENTRAL DE AJUDA</h1>
-              <p className="help-header-code">HELP000_AJUDA_GERAL | /AJUDA</p>
+              <p className="help-header-code">HELP000_CORE_AJUDA | /AJUDA</p>
             </div>
           </div>
         </header>

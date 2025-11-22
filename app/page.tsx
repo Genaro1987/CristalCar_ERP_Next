@@ -83,7 +83,7 @@ export default function SelecaoEmpresaPage() {
     <LayoutShell>
       <div className="page-container">
         <HeaderBar
-          codigoTela="CORE010_SELECAO_EMPRESA"
+          codigoTela="CAD001_EMP_SELECAO"
           nomeTela="INICIAL"
           caminhoRota="/"
           modulo="EMPRESA"
