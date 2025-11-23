@@ -305,6 +305,7 @@ a {
   min-width: 0;
 }
 
+
 .panel {
   background-color: #ffffff;
   border-radius: 12px;
@@ -314,73 +315,38 @@ a {
   margin: 0 auto;
 }
 
-  .departamentos-page {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
+.departamentos-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
 
-  .departamentos-wrapper {
-    background-color: transparent;
-    box-shadow: none;
-    padding: 0;
-  }
+.form-section-header h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
 
-  .departamentos-card {
-    background-color: #ffffff;
-    border-radius: 16px;
-    padding: 24px 24px 28px;
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
-  }
+.form-section-header p {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin: 0 0 16px 0;
+}
 
-  .departamentos-card-header h2 {
-    font-size: 1.05rem;
-    font-weight: 600;
-    margin: 0 0 4px 0;
-  }
+.form-grid.three-columns {
+  grid-template-columns: minmax(140px, 0.4fr) minmax(220px, 0.8fr) 1fr;
+}
 
-  .departamentos-card-header p {
-    font-size: 0.9rem;
-    color: #6b7280;
-    margin: 0 0 16px 0;
-  }
+.departamentos-grid {
+  align-items: end;
+}
 
-  .departamentos-form-row {
-    display: grid;
-    grid-template-columns: 0.4fr 0.8fr 1.2fr;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-
-  .departamentos-field label {
-    display: block;
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-
-  .departamentos-field input {
-    width: 100%;
-  }
-
-  .departamentos-form-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 8px;
-  }
-
-  .departamentos-botoes > * + * {
-    margin-left: 8px;
-  }
-
-  .departamentos-field-descricao input {
-    max-width: 100%;
-  }
-
-  .departamentos-card-lista {
-    margin-top: 8px;
-  }
+.hint-caracteres {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #6b7280;
+  margin-left: 4px;
+}
 
 .departamento-tabela-wrapper {
   overflow-x: auto;
@@ -411,18 +377,27 @@ a {
   color: #374151;
 }
 
-.tabela-departamentos-codigo {
+.col-codigo {
   white-space: nowrap;
-  width: 120px;
+  width: 110px;
 }
 
-.tabela-departamentos-descricao {
-  width: 40%;
+.col-nome {
+  width: 180px;
+}
+
+.col-descricao {
+  width: auto;
+}
+
+.col-status {
+  width: 110px;
+  text-align: center;
 }
 
 .col-acoes {
+  width: 120px;
   text-align: right;
-  min-width: 140px;
 }
 
 .form {
@@ -687,6 +662,21 @@ a {
 
 .badge-status-inativa {
   background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-empresa-ativa,
+.status-empresa-inativa {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-empresa-ativa {
+  color: #16a34a;
+}
+
+.status-empresa-inativa {
   color: #b91c1c;
 }
 

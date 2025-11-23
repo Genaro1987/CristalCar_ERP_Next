@@ -85,7 +85,6 @@ export default function SelecaoEmpresaPage() {
         <HeaderBar
           codigoTela="CAD001_EMP_SELECAO"
           nomeTela="INICIAL"
-          caminhoRota="/"
           modulo="EMPRESA"
         />
 
@@ -135,13 +134,13 @@ export default function SelecaoEmpresaPage() {
                       Razão social: {empresa.RAZAO_SOCIAL}
                     </div>
                     <div className="empresa-cnpj">CNPJ: {empresa.CNPJ}</div>
-                    <span
-                      className={`badge-status ${
-                        ativa ? "badge-status-ativa" : "badge-status-inativa"
-                      }`}
-                    >
-                      {ativa ? "ATIVA" : "INATIVA"}
-                    </span>
+                  <span
+                    className={
+                      ativa ? "status-empresa-ativa" : "status-empresa-inativa"
+                    }
+                  >
+                    {ativa ? "ATIVA" : "INATIVA"}
+                  </span>
                   </div>
                   <div className="empresa-card-actions">
                     <button

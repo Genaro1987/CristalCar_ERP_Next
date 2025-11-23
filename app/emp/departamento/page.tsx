@@ -219,14 +219,14 @@ export default function DepartamentoPage() {
           modulo="EMPRESA"
         />
 
-        <main className="page-content-card departamentos-wrapper">
-          <div className="departamentos-page">
-            {notification && (
-              <NotificationBar type={notification.type} message={notification.message} />
-            )}
+        <main className="page-content-card">
+          {notification && (
+            <NotificationBar type={notification.type} message={notification.message} />
+          )}
 
-            <section className="departamentos-card departamentos-card-form">
-              <header className="departamentos-card-header">
+          <div className="departamentos-page">
+            <section className="panel">
+              <header className="form-section-header">
                 <h2>{departamentoEmEdicao ? "Editar departamento" : "Novo departamento"}</h2>
                 <p>
                   {departamentoEmEdicao
@@ -235,9 +235,9 @@ export default function DepartamentoPage() {
                 </p>
               </header>
 
-              <form onSubmit={aoSalvar}>
-                <div className="departamentos-form-row">
-                  <div className="departamentos-field">
+              <form className="form" onSubmit={aoSalvar}>
+                <div className="form-grid three-columns departamentos-grid">
+                  <div className="form-group">
                     <label htmlFor="codigoDepartamento">Código</label>
                     <input
                       id="codigoDepartamento"
@@ -249,7 +249,7 @@ export default function DepartamentoPage() {
                     />
                   </div>
 
-                  <div className="departamentos-field">
+                  <div className="form-group">
                     <label htmlFor="nomeDepartamento">Nome do departamento *</label>
                     <input
                       id="nomeDepartamento"
@@ -260,8 +260,10 @@ export default function DepartamentoPage() {
                     />
                   </div>
 
-                  <div className="departamentos-field departamentos-field-descricao">
-                    <label htmlFor="descricaoDepartamento">Descrição</label>
+                  <div className="form-group">
+                    <label htmlFor="descricaoDepartamento">
+                      Descrição <span className="hint-caracteres">(máx. 100 caracteres)</span>
+                    </label>
                     <input
                       id="descricaoDepartamento"
                       name="descricaoDepartamento"
@@ -272,36 +274,34 @@ export default function DepartamentoPage() {
                   </div>
                 </div>
 
-                <div className="departamentos-form-footer">
-                  <label className="checkbox-inline" htmlFor="departamentoAtivo">
-                    <input
-                      type="checkbox"
-                      id="departamentoAtivo"
-                      name="ativo"
-                      checked={ativo}
-                      onChange={(e) => setAtivo(e.target.checked)}
-                    />
-                    Ativo
-                  </label>
+                <label className="checkbox-row" htmlFor="departamentoAtivo">
+                  <input
+                    type="checkbox"
+                    id="departamentoAtivo"
+                    name="ativo"
+                    checked={ativo}
+                    onChange={(e) => setAtivo(e.target.checked)}
+                  />
+                  <span>Ativo</span>
+                </label>
 
-                  <div className="departamentos-botoes">
-                    <button type="submit" className="button button-primary" disabled={salvando}>
-                      {salvando ? "Salvando..." : "Salvar"}
-                    </button>
-                    <button
-                      type="button"
-                      className="button button-secondary"
-                      onClick={limparFormulario}
-                    >
-                      Cancelar
-                    </button>
-                  </div>
+                <div className="button-row">
+                  <button type="submit" className="button button-primary" disabled={salvando}>
+                    {salvando ? "Salvando..." : "Salvar"}
+                  </button>
+                  <button
+                    type="button"
+                    className="button button-secondary"
+                    onClick={limparFormulario}
+                  >
+                    Cancelar
+                  </button>
                 </div>
               </form>
             </section>
 
-            <section className="departamentos-card departamentos-card-lista">
-              <header className="departamentos-card-header">
+            <section className="panel">
+              <header className="form-section-header">
                 <h2>Departamentos cadastrados</h2>
                 <p>Visualize e selecione um departamento para editar.</p>
               </header>
@@ -318,24 +318,22 @@ export default function DepartamentoPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Código</th>
-                        <th>Nome</th>
-                        <th>Descrição</th>
-                        <th>Status</th>
-                        <th className="col-acoes">Ações</th>
+                        <th className="col-codigo">CÓDIGO</th>
+                        <th className="col-nome">NOME</th>
+                        <th className="col-descricao">DESCRIÇÃO</th>
+                        <th className="col-status">STATUS</th>
+                        <th className="col-acoes">AÇÕES</th>
                       </tr>
                     </thead>
                     <tbody>
                       {departamentos.map((dep) => (
                         <tr key={dep.ID_DEPARTAMENTO}>
-                          <td className="tabela-departamentos-codigo">
+                          <td className="col-codigo">
                             {formatarCodigoDepartamento(dep.ID_DEPARTAMENTO)}
                           </td>
-                          <td>{dep.NOME_DEPARTAMENTO}</td>
-                          <td className="tabela-departamentos-descricao">
-                            {dep.DESCRICAO || "-"}
-                          </td>
-                          <td>
+                          <td className="col-nome">{dep.NOME_DEPARTAMENTO}</td>
+                          <td className="col-descricao">{dep.DESCRICAO || "-"}</td>
+                          <td className="col-status">
                             <span
                               className={
                                 dep.ATIVO === 1 ? "badge badge-success" : "badge badge-danger"

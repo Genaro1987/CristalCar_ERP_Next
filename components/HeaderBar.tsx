@@ -88,6 +88,9 @@ export function HeaderBar({ codigoTela, nomeTela, caminhoRota, modulo }: HeaderB
     }
   }
 
+  const caminhoVisivel = caminhoRota?.trim();
+  const exibirCaminho = Boolean(caminhoVisivel && caminhoVisivel !== "/");
+
   return (
     <header className="page-header-wrapper">
       <div className="page-header-card">
@@ -95,7 +98,7 @@ export function HeaderBar({ codigoTela, nomeTela, caminhoRota, modulo }: HeaderB
           <h1 className="header-title">{nomeTela}</h1>
           <div className="header-subtitle">
             {codigoTela}
-            {caminhoRota ? ` | ${caminhoRota}` : null}
+            {exibirCaminho ? ` | ${caminhoVisivel}` : null}
           </div>
         </div>
 
