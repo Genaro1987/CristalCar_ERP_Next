@@ -48,7 +48,14 @@ async function runMigrations() {
     }
 
     const sql = fs.readFileSync(fullPath, "utf8");
-    const statements = sql
+
+    // Remove linhas de comentario para evitar que sejam tratadas como comandos SQL
+    const sanitizedSql = sql
+      .split("\n")
+      .map((line) => (line.trimStart().startsWith("--") ? "" : line))
+      .join("\n");
+
+    const statements = sanitizedSql
       .split(";")
       .map((s) => s.trim())
       .filter(Boolean);
