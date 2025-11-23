@@ -424,7 +424,8 @@ a {
 }
 
 .form-group input,
-.form-group select {
+.form-group select,
+.form-input {
   width: 100%;
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -436,7 +437,8 @@ a {
 }
 
 .form-group input:focus,
-.form-group select:focus {
+.form-group select:focus,
+.form-input:focus {
   border-color: #f97316;
   box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35);
 }
