@@ -2,7 +2,12 @@ import { db } from "@/db/client";
 import { NextRequest, NextResponse } from "next/server";
 
 type TelaPerfilPayload = {
-  telas?: { ID_TELA: number; PODE_ACESSAR?: boolean | number }[];
+  telas?: {
+    ID_TELA: number;
+    PODE_ACESSAR?: boolean | number;
+    PODE_CONSULTAR?: boolean | number;
+    PODE_EDITAR?: boolean | number;
+  }[];
 };
 
 function obterEmpresaId(request: NextRequest): number | null {
@@ -74,20 +79,30 @@ export async function GET(
 
     const permissoes = await db.execute({
       sql: `
-        SELECT ID_TELA, PODE_ACESSAR
+        SELECT ID_TELA, PODE_ACESSAR, PODE_CONSULTAR, PODE_EDITAR
         FROM SEG_PERFIL_TELA
         WHERE ID_PERFIL = ?
       `,
       args: [idPerfil],
     });
 
-    const mapaPermissoes = new Map<number, boolean>();
+    const mapaPermissoes = new Map<
+      number,
+      { PODE_ACESSAR: boolean; PODE_CONSULTAR: boolean; PODE_EDITAR: boolean }
+    >();
 
     for (const row of permissoes.rows ?? []) {
       const idTela = Number(row.ID_TELA);
-      const pode = row.PODE_ACESSAR === 1 || row.PODE_ACESSAR === "1";
+      const podeAcessar = row.PODE_ACESSAR === 1 || row.PODE_ACESSAR === "1";
+      const podeConsultar =
+        row.PODE_CONSULTAR === 1 || row.PODE_CONSULTAR === "1";
+      const podeEditar = row.PODE_EDITAR === 1 || row.PODE_EDITAR === "1";
       if (Number.isFinite(idTela)) {
-        mapaPermissoes.set(idTela, pode);
+        mapaPermissoes.set(idTela, {
+          PODE_ACESSAR: podeAcessar,
+          PODE_CONSULTAR: podeConsultar,
+          PODE_EDITAR: podeEditar,
+        });
       }
     }
 
@@ -96,7 +111,12 @@ export async function GET(
       CODIGO_TELA: tela.CODIGO_TELA as string,
       NOME_TELA: tela.NOME_TELA as string,
       MODULO: tela.MODULO as string,
-      PODE_ACESSAR: mapaPermissoes.get(Number(tela.ID_TELA)) ?? false,
+      ...
+        mapaPermissoes.get(Number(tela.ID_TELA)) ?? {
+          PODE_ACESSAR: false,
+          PODE_CONSULTAR: false,
+          PODE_EDITAR: false,
+        },
     }));
 
     return NextResponse.json({ success: true, data });
@@ -163,9 +183,30 @@ export async function PUT(
 
     for (const tela of telasPayload) {
       const idTela = Number(tela.ID_TELA);
-      const podeAcessar = tela.PODE_ACESSAR === true || tela.PODE_ACESSAR === 1;
+      const acessoMarcado = tela.PODE_ACESSAR === true || tela.PODE_ACESSAR === 1;
+      const consultaMarcada =
+        tela.PODE_CONSULTAR === true || tela.PODE_CONSULTAR === 1;
+      const edicaoMarcada = tela.PODE_EDITAR === true || tela.PODE_EDITAR === 1;
 
-      if (!podeAcessar || !idsValidos.has(idTela)) {
+      if (!idsValidos.has(idTela)) {
+        continue;
+      }
+
+      let podeAcessar = acessoMarcado || consultaMarcada || edicaoMarcada;
+      let podeConsultar = podeAcessar ? consultaMarcada : false;
+      let podeEditar = podeAcessar ? edicaoMarcada : false;
+
+      if (podeEditar) {
+        podeConsultar = true;
+        podeAcessar = true;
+      }
+
+      if (!podeAcessar) {
+        podeConsultar = false;
+        podeEditar = false;
+      }
+
+      if (!podeAcessar) {
         continue;
       }
 
@@ -175,11 +216,19 @@ export async function PUT(
             ID_PERFIL,
             ID_TELA,
             PODE_ACESSAR,
+            PODE_CONSULTAR,
+            PODE_EDITAR,
             CRIADO_EM,
             ATUALIZADO_EM
-          ) VALUES (?, ?, 1, datetime('now'), datetime('now'))
+          ) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
         `,
-        args: [idPerfil, idTela],
+        args: [
+          idPerfil,
+          idTela,
+          podeAcessar ? 1 : 0,
+          podeConsultar ? 1 : 0,
+          podeEditar ? 1 : 0,
+        ],
       });
     }
 
