@@ -272,7 +272,7 @@ export default function JornadaPage() {
     <LayoutShell>
       <div className="page-container">
         <HeaderBar
-          codigoTela="CAD005_RH_JORNADA"
+          codigoTela="CAD004_RH_JORNADA"
           nomeTela="CADASTRO DE JORNADA"
           caminhoRota="/rh/jornada"
           modulo="RH"
