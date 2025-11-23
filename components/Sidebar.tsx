@@ -35,6 +35,7 @@ export function Sidebar() {
   const isDepartamento = pathname.startsWith("/emp/departamento");
   const isJornada = pathname.startsWith("/rh/jornada");
   const isFuncionario = pathname.startsWith("/rh/funcionario");
+  const isPerfil = pathname.startsWith("/seg/perfil");
   const isAjuda = pathname.startsWith("/ajuda");
 
   return (
@@ -86,6 +87,12 @@ export function Sidebar() {
             className={isFuncionario ? "sidebar-nav-item active" : "sidebar-nav-item"}
           >
             FUNCIONARIOS
+          </Link>
+          <Link
+            href="/seg/perfil"
+            className={isPerfil ? "sidebar-nav-item active" : "sidebar-nav-item"}
+          >
+            PERFIS DE ACESSO
           </Link>
         </nav>
       </div>
