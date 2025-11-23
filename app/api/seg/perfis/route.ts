@@ -2,7 +2,6 @@ import { db } from "@/db/client";
 import { NextRequest, NextResponse } from "next/server";
 
 type PerfilPayload = {
-  ID_PERFIL?: string;
   NOME_PERFIL?: string;
   DESCRICAO?: string | null;
   ATIVO?: number;

@@ -21,7 +21,11 @@ interface TelaPermitida {
   NOME_TELA: string;
   MODULO: string;
   PODE_ACESSAR: boolean;
+  PODE_CONSULTAR: boolean;
+  PODE_EDITAR: boolean;
 }
+
+const CODIGO_PADRAO_PERFIL = "PER-XXX";
 
 function removerAcentosPreservandoEspaco(valor: string): string {
   return valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -46,7 +50,7 @@ export default function PerfilPage() {
   const [perfilSelecionado, setPerfilSelecionado] = useState<Perfil | null>(null);
   const [perfilEmEdicao, setPerfilEmEdicao] = useState<Perfil | null>(null);
 
-  const [codigoPerfil, setCodigoPerfil] = useState("");
+  const [codigoPerfil, setCodigoPerfil] = useState(CODIGO_PADRAO_PERFIL);
   const [nomePerfil, setNomePerfil] = useState("");
   const [descricao, setDescricao] = useState("");
   const [ativo, setAtivo] = useState(true);
@@ -113,7 +117,7 @@ export default function PerfilPage() {
 
   const limparFormulario = () => {
     setPerfilEmEdicao(null);
-    setCodigoPerfil("");
+    setCodigoPerfil(CODIGO_PADRAO_PERFIL);
     setNomePerfil("");
     setDescricao("");
     setAtivo(true);
@@ -122,7 +126,7 @@ export default function PerfilPage() {
   const preencherParaEdicao = async (perfil: Perfil) => {
     setPerfilEmEdicao(perfil);
     setPerfilSelecionado(perfil);
-    setCodigoPerfil(perfil.ID_PERFIL ?? "");
+    setCodigoPerfil(perfil.ID_PERFIL ?? CODIGO_PADRAO_PERFIL);
     setNomePerfil(normalizarTextoBasico(perfil.NOME_PERFIL ?? ""));
     setDescricao(normalizarDescricao(perfil.DESCRICAO ?? ""));
     setAtivo(perfil.ATIVO === 1);
@@ -141,7 +145,16 @@ export default function PerfilPage() {
       const json = await resposta.json();
 
       if (json?.success) {
-        setTelasPerfil(json.data ?? []);
+        const telasNormalizadas: TelaPermitida[] = (json.data ?? []).map(
+          (tela: TelaPermitida) => ({
+            ...tela,
+            PODE_ACESSAR: Boolean(tela.PODE_ACESSAR),
+            PODE_CONSULTAR: Boolean(tela.PODE_CONSULTAR),
+            PODE_EDITAR: Boolean(tela.PODE_EDITAR),
+          })
+        );
+
+        setTelasPerfil(telasNormalizadas);
       } else {
         setErroTelas("Não foi possível carregar as telas permitidas.");
       }
@@ -226,11 +239,60 @@ export default function PerfilPage() {
     }
   };
 
-  const atualizarTelaPerfil = (idTela: number, podeAcessar: boolean) => {
+  const atualizarPermissaoTela = (
+    idTela: number,
+    campo: "acesso" | "consulta" | "edicao",
+    valor: boolean
+  ) => {
     setTelasPerfil((prev) =>
-      prev.map((tela) =>
-        tela.ID_TELA === idTela ? { ...tela, PODE_ACESSAR: podeAcessar } : tela
-      )
+      prev.map((tela) => {
+        if (tela.ID_TELA !== idTela) return tela;
+
+        let podeAcessar = tela.PODE_ACESSAR;
+        let podeConsultar = tela.PODE_CONSULTAR;
+        let podeEditar = tela.PODE_EDITAR;
+
+        if (campo === "acesso") {
+          podeAcessar = valor;
+          if (!podeAcessar) {
+            podeConsultar = false;
+            podeEditar = false;
+          } else if (!podeConsultar && !podeEditar) {
+            podeConsultar = true;
+          }
+        }
+
+        if (campo === "consulta") {
+          podeConsultar = valor;
+          if (podeConsultar) {
+            podeAcessar = true;
+          } else if (!podeAcessar) {
+            podeConsultar = false;
+          }
+        }
+
+        if (campo === "edicao") {
+          podeEditar = valor;
+          if (podeEditar) {
+            podeAcessar = true;
+            podeConsultar = true;
+          } else if (!podeAcessar) {
+            podeEditar = false;
+          }
+        }
+
+        if (!podeAcessar) {
+          podeConsultar = false;
+          podeEditar = false;
+        }
+
+        return {
+          ...tela,
+          PODE_ACESSAR: podeAcessar,
+          PODE_CONSULTAR: podeConsultar,
+          PODE_EDITAR: podeEditar,
+        };
+      })
     );
   };
 
@@ -259,6 +321,8 @@ export default function PerfilPage() {
             telas: telasPerfil.map((tela) => ({
               ID_TELA: tela.ID_TELA,
               PODE_ACESSAR: tela.PODE_ACESSAR,
+              PODE_CONSULTAR: tela.PODE_CONSULTAR,
+              PODE_EDITAR: tela.PODE_EDITAR,
             })),
           }),
         }
@@ -287,6 +351,10 @@ export default function PerfilPage() {
       if (!grupos[modulo]) grupos[modulo] = [];
       grupos[modulo].push(tela);
     }
+
+    Object.values(grupos).forEach((lista) =>
+      lista.sort((a, b) => a.CODIGO_TELA.localeCompare(b.CODIGO_TELA))
+    );
 
     return Object.entries(grupos);
   }, [telasPerfil]);
@@ -325,9 +393,10 @@ export default function PerfilPage() {
                       id="codigoPerfil"
                       name="codigoPerfil"
                       className="form-input"
-                      value={codigoPerfil}
-                      placeholder="PER-XXX"
+                      value={codigoPerfil || CODIGO_PADRAO_PERFIL}
+                      placeholder={CODIGO_PADRAO_PERFIL}
                       disabled
+                      readOnly
                     />
                   </div>
 
@@ -474,15 +543,49 @@ export default function PerfilPage() {
                           <div className="perfil-telas-lista">
                             {telas.map((tela) => (
                               <div key={tela.ID_TELA} className="perfil-tela-linha">
-                                <div className="perfil-tela-codigo">{tela.CODIGO_TELA}</div>
-                                <div className="perfil-tela-nome">{tela.NOME_TELA}</div>
-                                <label className="checkbox-row">
+                                <div className="perfil-tela-info">
+                                  <span className="perfil-tela-codigo">{tela.CODIGO_TELA}</span>
+                                  <span className="perfil-tela-nome">{tela.NOME_TELA}</span>
+                                </div>
+                                <label className="checkbox-row perfil-tela-permissao">
                                   <input
                                     type="checkbox"
                                     checked={tela.PODE_ACESSAR}
-                                    onChange={(e) => atualizarTelaPerfil(tela.ID_TELA, e.target.checked)}
+                                    onChange={(e) =>
+                                      atualizarPermissaoTela(tela.ID_TELA, "acesso", e.target.checked)
+                                    }
                                   />
                                   <span>Pode acessar</span>
+                                </label>
+                                <label className="checkbox-row perfil-tela-permissao">
+                                  <input
+                                    type="checkbox"
+                                    checked={tela.PODE_CONSULTAR}
+                                    disabled={!tela.PODE_ACESSAR}
+                                    onChange={(e) =>
+                                      atualizarPermissaoTela(
+                                        tela.ID_TELA,
+                                        "consulta",
+                                        e.target.checked
+                                      )
+                                    }
+                                  />
+                                  <span>Pode consultar</span>
+                                </label>
+                                <label className="checkbox-row perfil-tela-permissao">
+                                  <input
+                                    type="checkbox"
+                                    checked={tela.PODE_EDITAR}
+                                    disabled={!tela.PODE_ACESSAR}
+                                    onChange={(e) =>
+                                      atualizarPermissaoTela(
+                                        tela.ID_TELA,
+                                        "edicao",
+                                        e.target.checked
+                                      )
+                                    }
+                                  />
+                                  <span>Pode editar</span>
                                 </label>
                               </div>
                             ))}
@@ -495,6 +598,18 @@ export default function PerfilPage() {
                   <div className="form-actions departamentos-actions">
                     <div />
                     <div className="button-row">
+                      <button
+                        type="button"
+                        className="button button-secondary"
+                        disabled={carregandoTelas || salvandoTelas}
+                        onClick={() =>
+                          perfilSelecionado
+                            ? carregarTelasPerfil(perfilSelecionado.ID_PERFIL)
+                            : undefined
+                        }
+                      >
+                        Cancelar
+                      </button>
                       <button
                         type="button"
                         className="button button-primary"
