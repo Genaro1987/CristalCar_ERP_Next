@@ -42,23 +42,20 @@ function obterEmpresaId(request: NextRequest): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+function removerAcentosPreservandoEspaco(valor: string): string {
+  return valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 function normalizarTextoBasico(valor: string): string {
-  return valor
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9 ]/g, "")
-    .trim();
+  const semAcento = removerAcentosPreservandoEspaco(valor ?? "");
+
+  return semAcento.toUpperCase().replace(/[^A-Z0-9 ]/g, "").trim();
 }
 
 function normalizarDescricao(valor: string): string {
-  const semAcento = valor
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+  const semAcento = removerAcentosPreservandoEspaco(valor ?? "");
 
-  const apenasPermitidos = semAcento.replace(/[^A-Z0-9 ]/gi, "");
-
-  return apenasPermitidos.toUpperCase().slice(0, 100).trim();
+  return semAcento.toUpperCase().replace(/[^A-Z0-9 ]/gi, "").slice(0, 100).trim();
 }
 
 function interpretarAtivo(valor: unknown): 0 | 1 {

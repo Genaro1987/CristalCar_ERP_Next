@@ -349,9 +349,7 @@ a {
 }
 
 .jornadas-grid {
-  grid-template-columns:
-    minmax(130px, 0.28fr) minmax(260px, 0.95fr) minmax(180px, 0.5fr)
-    minmax(260px, 1fr);
+  grid-template-columns: minmax(130px, 0.28fr) minmax(260px, 0.95fr) minmax(180px, 0.5fr);
   align-items: flex-end;
 }
 
@@ -464,6 +462,10 @@ a {
 
 .form-grid.two-columns {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.form-grid.single-column {
+  grid-template-columns: 1fr;
 }
 
 .form-actions {

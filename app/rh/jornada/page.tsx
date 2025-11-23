@@ -22,23 +22,20 @@ interface Jornada {
   ATUALIZADO_EM?: string;
 }
 
+function removerAcentosPreservandoEspaco(valor: string): string {
+  return valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 function normalizarTextoBasico(valor: string): string {
-  return valor
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9 ]/g, "")
-    .trim();
+  const semAcento = removerAcentosPreservandoEspaco(valor ?? "");
+
+  return semAcento.toUpperCase().replace(/[^A-Z0-9 ]/g, "").trim();
 }
 
 function normalizarDescricao(valor: string): string {
-  const semAcento = valor
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+  const semAcento = removerAcentosPreservandoEspaco(valor ?? "");
 
-  const apenasPermitidos = semAcento.replace(/[^A-Z0-9 ]/gi, "");
-
-  return apenasPermitidos.toUpperCase().slice(0, 100).trim();
+  return semAcento.toUpperCase().replace(/[^A-Z0-9 ]/gi, "").slice(0, 100).trim();
 }
 
 function formatarCodigoJornada(codigo?: string) {
@@ -153,16 +150,7 @@ export default function JornadaPage() {
 
   const handleDescricaoChange = (e: ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value || "";
-
-    const semAcento = raw
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-
-    const apenasPermitidos = semAcento.replace(/[^A-Z0-9 ]/gi, "");
-
-    const valorFinal = apenasPermitidos.toUpperCase().slice(0, 100);
-
-    setDescricao(valorFinal);
+    setDescricao(normalizarDescricao(raw));
   };
 
   const preencherParaEdicao = (jornada: Jornada) => {
@@ -347,7 +335,9 @@ export default function JornadaPage() {
                       required
                     />
                   </div>
+                </div>
 
+                <div className="form-grid single-column">
                   <div className="form-group">
                     <label htmlFor="descricaoJornada">Descrição (máx. 100 caracteres)</label>
                     <input
