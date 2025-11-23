@@ -29,13 +29,13 @@ function removerAcentosPreservandoEspaco(valor: string): string {
 function normalizarTextoBasico(valor: string): string {
   const semAcento = removerAcentosPreservandoEspaco(valor ?? "");
 
-  return semAcento.toUpperCase().replace(/[^A-Z0-9 ]/g, "").trim();
+  return semAcento.toUpperCase().replace(/[^A-Z0-9 ]/g, "");
 }
 
 function normalizarDescricao(valor: string): string {
   const semAcento = removerAcentosPreservandoEspaco(valor ?? "");
 
-  return semAcento.toUpperCase().replace(/[^A-Z0-9 ]/gi, "").slice(0, 100).trim();
+  return semAcento.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 100);
 }
 
 function formatarCodigoJornada(codigo?: string) {
