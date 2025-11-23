@@ -243,6 +243,7 @@ export default function DepartamentoPage() {
                       id="codigoDepartamento"
                       name="codigoDepartamento"
                       className="form-input"
+                      placeholder="DEP-XXX"
                       value={formatarCodigoDepartamento(
                         departamentoEmEdicao?.ID_DEPARTAMENTO ?? undefined
                       )}
@@ -264,9 +265,7 @@ export default function DepartamentoPage() {
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="descricaoDepartamento">
-                      Descrição <span className="hint-caracteres">(máx. 100 caracteres)</span>
-                    </label>
+                    <label htmlFor="descricaoDepartamento">Descrição (máx. 100 caracteres)</label>
                     <input
                       id="descricaoDepartamento"
                       name="descricaoDepartamento"
@@ -279,7 +278,7 @@ export default function DepartamentoPage() {
                   </div>
                 </div>
 
-                <div className="form-actions">
+                <div className="form-actions departamentos-actions">
                   <label className="checkbox-row" htmlFor="departamentoAtivo">
                     <input
                       type="checkbox"
