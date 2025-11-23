@@ -348,6 +348,32 @@ a {
   align-items: flex-end;
 }
 
+.jornadas-grid {
+  grid-template-columns:
+    minmax(130px, 0.28fr) minmax(260px, 0.95fr) minmax(180px, 0.5fr)
+    minmax(260px, 1fr);
+  align-items: flex-end;
+}
+
+.horarios-bloco {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.horarios-bloco h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.horarios-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: flex-end;
+}
+
 .hint-caracteres {
   font-size: 0.75rem;
   font-weight: 400;
@@ -401,6 +427,16 @@ a {
 .col-descricao {
   min-width: 320px;
   width: 100%;
+}
+
+.col-carga {
+  min-width: 110px;
+  width: 130px;
+}
+
+.col-horarios {
+  min-width: 240px;
+  width: 280px;
 }
 
 .col-status {
