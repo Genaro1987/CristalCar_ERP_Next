@@ -1,17 +1,33 @@
--- Ajuste para consolidar a tela de Jornada no código definitivo
--- Atualiza a referência de ajuda para o código correto
-UPDATE CORE_AJUDA_TELA
-   SET ID_TELA = (
-     SELECT ID_TELA
-       FROM CORE_TELA
-      WHERE CODIGO_TELA = 'CAD004_RH_JORNADA'
-   )
- WHERE ID_TELA = (
-   SELECT ID_TELA
-     FROM CORE_TELA
-    WHERE CODIGO_TELA = 'CAD005_RH_JORNADA'
- );
+BEGIN TRANSACTION;
 
--- Remove o registro legado da tela de Jornada
+-- Atualiza referencias em SEG_PERFIL_TELA para usar CAD004_RH_JORNADA
+UPDATE SEG_PERFIL_TELA
+SET ID_TELA = (
+    SELECT ID_TELA
+    FROM CORE_TELA
+    WHERE CODIGO_TELA = 'CAD004_RH_JORNADA'
+)
+WHERE ID_TELA = (
+    SELECT ID_TELA
+    FROM CORE_TELA
+    WHERE CODIGO_TELA = 'CAD005_RH_JORNADA'
+)
+  AND EXISTS (SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'CAD004_RH_JORNADA')
+  AND EXISTS (SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'CAD005_RH_JORNADA');
+
+-- Remove ajuda vinculada à tela duplicada CAD005_RH_JORNADA, se existir
+DELETE FROM CORE_AJUDA_TELA
+WHERE ID_TELA = (
+    SELECT ID_TELA
+    FROM CORE_TELA
+    WHERE CODIGO_TELA = 'CAD005_RH_JORNADA'
+)
+  AND EXISTS (SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'CAD005_RH_JORNADA');
+
+-- Por segurança, se algum outro relacionamento estiver usando ID_TELA, 
+-- ja foi atualizado ou removido acima. Agora podemos remover a tela duplicada.
 DELETE FROM CORE_TELA
- WHERE CODIGO_TELA = 'CAD005_RH_JORNADA';
+WHERE CODIGO_TELA = 'CAD005_RH_JORNADA'
+  AND EXISTS (SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'CAD004_RH_JORNADA');
+
+COMMIT;
