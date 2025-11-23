@@ -39,11 +39,6 @@ function normalizarDescricao(valor: string): string {
   return semAcento.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 100);
 }
 
-function formatarCodigoPerfil(codigo?: string) {
-  if (!codigo) return "Gerado automaticamente";
-  return codigo;
-}
-
 export default function PerfilPage() {
   const [empresaId, setEmpresaId] = useState<number | null>(null);
   const [perfis, setPerfis] = useState<Perfil[]>([]);
@@ -51,6 +46,7 @@ export default function PerfilPage() {
   const [perfilSelecionado, setPerfilSelecionado] = useState<Perfil | null>(null);
   const [perfilEmEdicao, setPerfilEmEdicao] = useState<Perfil | null>(null);
 
+  const [codigoPerfil, setCodigoPerfil] = useState("");
   const [nomePerfil, setNomePerfil] = useState("");
   const [descricao, setDescricao] = useState("");
   const [ativo, setAtivo] = useState(true);
@@ -117,6 +113,7 @@ export default function PerfilPage() {
 
   const limparFormulario = () => {
     setPerfilEmEdicao(null);
+    setCodigoPerfil("");
     setNomePerfil("");
     setDescricao("");
     setAtivo(true);
@@ -125,6 +122,7 @@ export default function PerfilPage() {
   const preencherParaEdicao = async (perfil: Perfil) => {
     setPerfilEmEdicao(perfil);
     setPerfilSelecionado(perfil);
+    setCodigoPerfil(perfil.ID_PERFIL ?? "");
     setNomePerfil(normalizarTextoBasico(perfil.NOME_PERFIL ?? ""));
     setDescricao(normalizarDescricao(perfil.DESCRICAO ?? ""));
     setAtivo(perfil.ATIVO === 1);
@@ -327,9 +325,9 @@ export default function PerfilPage() {
                       id="codigoPerfil"
                       name="codigoPerfil"
                       className="form-input"
-                      value={formatarCodigoPerfil(perfilEmEdicao?.ID_PERFIL)}
-                      placeholder="Gerado automaticamente"
-                      readOnly
+                      value={codigoPerfil}
+                      placeholder="PER-XXX"
+                      disabled
                     />
                   </div>
 
