@@ -352,6 +352,10 @@ a {
   overflow-x: auto;
 }
 
+.departamentos-page .panel + .panel {
+  margin-top: 8px;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -391,12 +395,12 @@ a {
 }
 
 .col-status {
-  width: 110px;
-  text-align: center;
+  width: 120px;
+  text-align: right;
 }
 
 .col-acoes {
-  width: 120px;
+  width: 140px;
   text-align: right;
 }
 
@@ -413,6 +417,20 @@ a {
 
 .form-grid.two-columns {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.form-actions .button-row {
+  margin-top: 0;
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .form-group label {

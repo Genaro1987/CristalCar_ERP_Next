@@ -257,6 +257,7 @@ export default function DepartamentoPage() {
                       name="nomeDepartamento"
                       className="form-input"
                       value={nomeDepartamento}
+                      placeholder="Nome do departamento"
                       onChange={(e) => setNomeDepartamento(normalizarTextoBasico(e.target.value))}
                       required
                     />
@@ -271,34 +272,37 @@ export default function DepartamentoPage() {
                       name="descricaoDepartamento"
                       className="form-input"
                       value={descricao}
+                      placeholder="Descrição"
                       onChange={handleDescricaoChange}
                       maxLength={100}
                     />
                   </div>
                 </div>
 
-                <label className="checkbox-row" htmlFor="departamentoAtivo">
-                  <input
-                    type="checkbox"
-                    id="departamentoAtivo"
-                    name="ativo"
-                    checked={ativo}
-                    onChange={(e) => setAtivo(e.target.checked)}
-                  />
-                  <span>Ativo</span>
-                </label>
+                <div className="form-actions">
+                  <label className="checkbox-row" htmlFor="departamentoAtivo">
+                    <input
+                      type="checkbox"
+                      id="departamentoAtivo"
+                      name="ativo"
+                      checked={ativo}
+                      onChange={(e) => setAtivo(e.target.checked)}
+                    />
+                    <span>Ativo</span>
+                  </label>
 
-                <div className="button-row">
-                  <button type="submit" className="button button-primary" disabled={salvando}>
-                    {salvando ? "Salvando..." : "Salvar"}
-                  </button>
-                  <button
-                    type="button"
-                    className="button button-secondary"
-                    onClick={limparFormulario}
-                  >
-                    Cancelar
-                  </button>
+                  <div className="button-row">
+                    <button type="submit" className="button button-primary" disabled={salvando}>
+                      {salvando ? "Salvando..." : "Salvar"}
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-secondary"
+                      onClick={limparFormulario}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
               </form>
             </section>
