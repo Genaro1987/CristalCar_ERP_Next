@@ -242,6 +242,7 @@ export default function DepartamentoPage() {
                     <input
                       id="codigoDepartamento"
                       name="codigoDepartamento"
+                      className="form-input"
                       value={formatarCodigoDepartamento(
                         departamentoEmEdicao?.ID_DEPARTAMENTO ?? undefined
                       )}
@@ -254,6 +255,7 @@ export default function DepartamentoPage() {
                     <input
                       id="nomeDepartamento"
                       name="nomeDepartamento"
+                      className="form-input"
                       value={nomeDepartamento}
                       onChange={(e) => setNomeDepartamento(normalizarTextoBasico(e.target.value))}
                       required
@@ -267,6 +269,7 @@ export default function DepartamentoPage() {
                     <input
                       id="descricaoDepartamento"
                       name="descricaoDepartamento"
+                      className="form-input"
                       value={descricao}
                       onChange={handleDescricaoChange}
                       maxLength={100}
