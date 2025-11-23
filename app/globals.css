@@ -321,6 +321,12 @@ a {
   gap: 24px;
 }
 
+.departamentos-page .panel {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
 .form-section-header h2 {
   font-size: 1.05rem;
   font-weight: 600;
@@ -334,11 +340,12 @@ a {
 }
 
 .form-grid.three-columns {
-  grid-template-columns: minmax(140px, 0.4fr) minmax(220px, 0.8fr) 1fr;
+  grid-template-columns: minmax(130px, 0.32fr) minmax(260px, 0.9fr) minmax(260px, 1fr);
 }
 
 .departamentos-grid {
-  align-items: end;
+  grid-template-columns: minmax(130px, 0.32fr) minmax(280px, 0.95fr) minmax(280px, 1fr);
+  align-items: flex-end;
 }
 
 .hint-caracteres {
@@ -350,6 +357,10 @@ a {
 
 .departamento-tabela-wrapper {
   overflow-x: auto;
+}
+
+.departamentos-page .panel + .panel {
+  margin-top: 8px;
 }
 
 .data-table {
@@ -379,24 +390,28 @@ a {
 
 .col-codigo {
   white-space: nowrap;
-  width: 110px;
+  width: 130px;
 }
 
 .col-nome {
-  width: 180px;
+  min-width: 220px;
+  width: 260px;
 }
 
 .col-descricao {
-  width: auto;
+  min-width: 320px;
+  width: 100%;
 }
 
 .col-status {
-  width: 110px;
-  text-align: center;
+  min-width: 110px;
+  width: 120px;
+  text-align: right;
 }
 
 .col-acoes {
-  width: 120px;
+  min-width: 120px;
+  width: 140px;
   text-align: right;
 }
 
@@ -413,6 +428,24 @@ a {
 
 .form-grid.two-columns {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.departamentos-actions {
+  gap: 12px;
+}
+
+.form-actions .button-row {
+  margin-top: 0;
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .form-group label {

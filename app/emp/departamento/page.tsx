@@ -243,6 +243,7 @@ export default function DepartamentoPage() {
                       id="codigoDepartamento"
                       name="codigoDepartamento"
                       className="form-input"
+                      placeholder="DEP-XXX"
                       value={formatarCodigoDepartamento(
                         departamentoEmEdicao?.ID_DEPARTAMENTO ?? undefined
                       )}
@@ -257,48 +258,50 @@ export default function DepartamentoPage() {
                       name="nomeDepartamento"
                       className="form-input"
                       value={nomeDepartamento}
+                      placeholder="Nome do departamento"
                       onChange={(e) => setNomeDepartamento(normalizarTextoBasico(e.target.value))}
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="descricaoDepartamento">
-                      Descrição <span className="hint-caracteres">(máx. 100 caracteres)</span>
-                    </label>
+                    <label htmlFor="descricaoDepartamento">Descrição (máx. 100 caracteres)</label>
                     <input
                       id="descricaoDepartamento"
                       name="descricaoDepartamento"
                       className="form-input"
                       value={descricao}
+                      placeholder="Descrição"
                       onChange={handleDescricaoChange}
                       maxLength={100}
                     />
                   </div>
                 </div>
 
-                <label className="checkbox-row" htmlFor="departamentoAtivo">
-                  <input
-                    type="checkbox"
-                    id="departamentoAtivo"
-                    name="ativo"
-                    checked={ativo}
-                    onChange={(e) => setAtivo(e.target.checked)}
-                  />
-                  <span>Ativo</span>
-                </label>
+                <div className="form-actions departamentos-actions">
+                  <label className="checkbox-row" htmlFor="departamentoAtivo">
+                    <input
+                      type="checkbox"
+                      id="departamentoAtivo"
+                      name="ativo"
+                      checked={ativo}
+                      onChange={(e) => setAtivo(e.target.checked)}
+                    />
+                    <span>Ativo</span>
+                  </label>
 
-                <div className="button-row">
-                  <button type="submit" className="button button-primary" disabled={salvando}>
-                    {salvando ? "Salvando..." : "Salvar"}
-                  </button>
-                  <button
-                    type="button"
-                    className="button button-secondary"
-                    onClick={limparFormulario}
-                  >
-                    Cancelar
-                  </button>
+                  <div className="button-row">
+                    <button type="submit" className="button button-primary" disabled={salvando}>
+                      {salvando ? "Salvando..." : "Salvar"}
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-secondary"
+                      onClick={limparFormulario}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
               </form>
             </section>
