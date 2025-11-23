@@ -1,6 +1,37 @@
-BEGIN TRANSACTION;
+-- 023_CORE_TELA_FIX_RH_JORNADA.sql
+-- Consolidação da tela de jornada (CAD004_RH_JORNADA) e limpeza da antiga CAD005_RH_JORNADA
 
--- Atualiza referencias em SEG_PERFIL_TELA para usar CAD004_RH_JORNADA
+-- 1) Remover duplicidades em SEG_PERFIL_TELA:
+--    se já existe uma linha (ID_PERFIL, CAD004_RH_JORNADA),
+--    apagamos a linha com (ID_PERFIL, CAD005_RH_JORNADA) antes do UPDATE.
+
+DELETE FROM SEG_PERFIL_TELA
+WHERE ID_TELA = (
+        SELECT ID_TELA
+        FROM CORE_TELA
+        WHERE CODIGO_TELA = 'CAD005_RH_JORNADA'
+    )
+  AND ID_PERFIL IN (
+        SELECT s1.ID_PERFIL
+        FROM SEG_PERFIL_TELA s1
+        JOIN SEG_PERFIL_TELA s2
+          ON s1.ID_PERFIL = s2.ID_PERFIL
+         AND s2.ID_TELA = (
+                SELECT ID_TELA
+                FROM CORE_TELA
+                WHERE CODIGO_TELA = 'CAD004_RH_JORNADA'
+            )
+        WHERE s1.ID_TELA = (
+                SELECT ID_TELA
+                FROM CORE_TELA
+                WHERE CODIGO_TELA = 'CAD005_RH_JORNADA'
+            )
+    )
+  AND EXISTS (SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'CAD005_RH_JORNADA')
+  AND EXISTS (SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'CAD004_RH_JORNADA');
+
+-- 2) Atualizar referências restantes de CAD005_RH_JORNADA -> CAD004_RH_JORNADA
+
 UPDATE SEG_PERFIL_TELA
 SET ID_TELA = (
     SELECT ID_TELA
@@ -15,7 +46,8 @@ WHERE ID_TELA = (
   AND EXISTS (SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'CAD004_RH_JORNADA')
   AND EXISTS (SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'CAD005_RH_JORNADA');
 
--- Remove ajuda vinculada à tela duplicada CAD005_RH_JORNADA, se existir
+-- 3) Remover ajuda vinculada à tela duplicada, se ainda existir
+
 DELETE FROM CORE_AJUDA_TELA
 WHERE ID_TELA = (
     SELECT ID_TELA
@@ -24,10 +56,11 @@ WHERE ID_TELA = (
 )
   AND EXISTS (SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'CAD005_RH_JORNADA');
 
--- Por segurança, se algum outro relacionamento estiver usando ID_TELA, 
--- ja foi atualizado ou removido acima. Agora podemos remover a tela duplicada.
+-- 4) Remover a tela duplicada CAD005_RH_JORNADA de CORE_TELA, se a nova já existir
+
 DELETE FROM CORE_TELA
 WHERE CODIGO_TELA = 'CAD005_RH_JORNADA'
-  AND EXISTS (SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'CAD004_RH_JORNADA');
-
-COMMIT;
+  AND EXISTS (
+        SELECT 1 FROM CORE_TELA
+        WHERE CODIGO_TELA = 'CAD004_RH_JORNADA'
+    );
