@@ -73,12 +73,14 @@ export function HeaderBar({ codigoTela, nomeTela, caminhoRota, modulo }: HeaderB
   function handleSelecionarTela(tela: ScreenResult) {
     if (typeof window !== "undefined") {
       const rotaAlvo = tela.CAMINHO_ROTA || "/";
-      const rotasLivres = ["/", "/ajuda"];
+      const rotasLivres = ["/", "/ajuda", "/emp/selecao", "/core/empresa/nova"];
       const empresaId = window.localStorage.getItem("EMPRESA_ATUAL_ID");
 
       if (!empresaId && !rotasLivres.includes(rotaAlvo)) {
-        console.warn("Nenhuma empresa selecionada. Redirecionando para a tela inicial.");
-        router.push("/");
+        console.warn(
+          "Nenhuma empresa selecionada. Redirecionando para a seleção de empresa."
+        );
+        router.push("/emp/selecao");
         return;
       }
 

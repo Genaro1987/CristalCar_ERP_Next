@@ -4,6 +4,7 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { useEmpresaObrigatoria } from "@/hooks/useEmpresaObrigatoria";
 
 interface Jornada {
   ID_JORNADA: string;
@@ -62,6 +63,8 @@ function montarResumoHorarios(jornada: Jornada) {
 }
 
 export default function JornadaPage() {
+  useEmpresaObrigatoria();
+
   const [empresaId, setEmpresaId] = useState<number | null>(null);
   const [jornadas, setJornadas] = useState<Jornada[]>([]);
   const [carregandoLista, setCarregandoLista] = useState(false);

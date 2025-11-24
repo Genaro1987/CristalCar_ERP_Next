@@ -1,10 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
-import { usePathname, useRouter } from "next/navigation";
 import { HelpPanel, type HelpData } from "./HelpPanel";
+import { useEmpresaObrigatoria } from "@/hooks/useEmpresaObrigatoria";
 
 interface LayoutShellProps {
   children: ReactNode;
@@ -29,30 +29,11 @@ export function useHelpContext() {
 }
 
 export default function LayoutShell({ children }: LayoutShellProps) {
-  const pathname = usePathname();
-  const router = useRouter();
   const [ajudaAberta, setAjudaAberta] = useState(false);
   const [ajudaCarregando, setAjudaCarregando] = useState(false);
   const [dadosAjuda, setDadosAjuda] = useState<HelpData | null>(null);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const rotasLivres = ["/", "/ajuda"];
-
-    if (rotasLivres.includes(pathname)) {
-      return;
-    }
-
-    const empresaId = window.localStorage.getItem("EMPRESA_ATUAL_ID");
-
-    if (!empresaId) {
-      console.warn(
-        "Nenhuma empresa selecionada. Redirecionando para a tela inicial."
-      );
-      router.push("/");
-    }
-  }, [pathname, router]);
+  useEmpresaObrigatoria();
 
   const abrirAjuda = useMemo(
     () =>

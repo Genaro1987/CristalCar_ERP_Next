@@ -3,10 +3,8 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
+import { useEmpresaObrigatoria } from "@/hooks/useEmpresaObrigatoria";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
-
-const GRID_COLS =
-  "grid grid-cols-[minmax(180px,260px)_minmax(320px,1fr)_140px_150px_130px] items-center gap-4";
 
 interface Perfil {
   ID_PERFIL: string;
@@ -27,6 +25,20 @@ interface TelaPermitida {
   PODE_CONSULTAR: boolean;
   PODE_EDITAR: boolean;
 }
+
+type TelaPerfil = {
+  idTela: number;
+  codigoTela: string;
+  nomeTela: string;
+  podeAcessar: boolean;
+  podeConsultar: boolean;
+  podeEditar: boolean;
+};
+
+type ModuloAgrupado = {
+  modulo: string;
+  telas: TelaPerfil[];
+};
 
 const CODIGO_PADRAO_PERFIL = "PER-XXX";
 
@@ -51,7 +63,137 @@ function normalizarDescricao(valor: string): string {
   return semAcento.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 100);
 }
 
+function SelecaoTelasPorModulo({
+  modulos,
+  onTogglePermissao,
+  somenteConsulta,
+  perfilSelecionadoLabel,
+}: {
+  modulos: ModuloAgrupado[];
+  onTogglePermissao: (
+    idTela: number,
+    tipo: "ACESSAR" | "CONSULTAR" | "EDITAR",
+    value: boolean
+  ) => void;
+  somenteConsulta: boolean;
+  perfilSelecionadoLabel?: string;
+}) {
+  if (!modulos.length) return null;
+
+  return (
+    <section className="mt-8 space-y-6">
+      <h2 className="text-base font-semibold text-slate-900">
+        Telas permitidas para o perfil selecionado
+      </h2>
+      <p className="text-xs text-slate-500">
+        Configure abaixo as permissões de cada tela para o perfil em edição.
+      </p>
+
+      {perfilSelecionadoLabel ? (
+        <p className="text-xs font-medium text-slate-700">{perfilSelecionadoLabel}</p>
+      ) : null}
+
+      {modulos.map((modulo) => (
+        <div
+          key={modulo.modulo}
+          className="overflow-hidden rounded-2xl bg-white shadow-sm"
+        >
+          <div className="bg-[#ff7a1a] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white">
+            {modulo.modulo}
+          </div>
+
+          <div className="overflow-x-auto px-4 pb-3 pt-2">
+            <table className="w-full border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-[11px] font-semibold uppercase text-slate-500">
+                  <th className="w-52 py-2 pr-4 text-left whitespace-nowrap">
+                    Código tela
+                  </th>
+                  <th className="w-[45%] py-2 pr-4 text-left whitespace-nowrap">
+                    Nome da tela
+                  </th>
+                  <th className="w-28 py-2 text-center whitespace-nowrap">
+                    Pode acessar
+                  </th>
+                  <th className="w-28 py-2 text-center whitespace-nowrap">
+                    Pode consultar
+                  </th>
+                  <th className="w-28 py-2 text-center whitespace-nowrap">
+                    Pode editar
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {modulo.telas.map((tela) => (
+                  <tr
+                    key={tela.idTela}
+                    className="border-b border-slate-100 last:border-0"
+                  >
+                    <td className="py-2 pr-4 font-mono text-[11px] text-slate-700 whitespace-nowrap">
+                      {tela.codigoTela}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-900 whitespace-nowrap">
+                      {tela.nomeTela}
+                    </td>
+                    <td className="py-2 text-center">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300"
+                        disabled={somenteConsulta}
+                        checked={tela.podeAcessar}
+                        onChange={(e) =>
+                          onTogglePermissao(
+                            tela.idTela,
+                            "ACESSAR",
+                            e.target.checked
+                          )
+                        }
+                      />
+                    </td>
+                    <td className="py-2 text-center">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300"
+                        disabled={somenteConsulta || !tela.podeAcessar}
+                        checked={tela.podeConsultar}
+                        onChange={(e) =>
+                          onTogglePermissao(
+                            tela.idTela,
+                            "CONSULTAR",
+                            e.target.checked
+                          )
+                        }
+                      />
+                    </td>
+                    <td className="py-2 text-center">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300"
+                        disabled={somenteConsulta || !tela.podeAcessar}
+                        checked={tela.podeEditar}
+                        onChange={(e) =>
+                          onTogglePermissao(
+                            tela.idTela,
+                            "EDITAR",
+                            e.target.checked
+                          )
+                        }
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 export default function PerfilPage() {
+  useEmpresaObrigatoria();
+
   const [empresaId, setEmpresaId] = useState<number | null>(null);
   const [perfis, setPerfis] = useState<Perfil[]>([]);
   const [telasPerfil, setTelasPerfil] = useState<TelaPermitida[]>([]);
@@ -256,7 +398,7 @@ export default function PerfilPage() {
 
   const atualizarPermissaoTela = (
     idTela: number,
-    campo: "acesso" | "consulta" | "edicao",
+    tipo: "ACESSAR" | "CONSULTAR" | "EDITAR",
     valor: boolean
   ) => {
     setTelasPerfil((prev) =>
@@ -267,7 +409,7 @@ export default function PerfilPage() {
         let podeConsultar = tela.PODE_CONSULTAR;
         let podeEditar = tela.PODE_EDITAR;
 
-        if (campo === "acesso") {
+        if (tipo === "ACESSAR") {
           podeAcessar = valor;
           if (!podeAcessar) {
             podeConsultar = false;
@@ -277,7 +419,7 @@ export default function PerfilPage() {
           }
         }
 
-        if (campo === "consulta") {
+        if (tipo === "CONSULTAR") {
           podeConsultar = valor;
           if (podeConsultar) {
             podeAcessar = true;
@@ -286,7 +428,7 @@ export default function PerfilPage() {
           }
         }
 
-        if (campo === "edicao") {
+        if (tipo === "EDITAR") {
           podeEditar = valor;
           if (podeEditar) {
             podeAcessar = true;
@@ -372,7 +514,7 @@ export default function PerfilPage() {
     setPerfilEmEdicao(null);
   };
 
-  const gruposDeTelas = useMemo(() => {
+  const modulosAgrupados = useMemo<ModuloAgrupado[]>(() => {
     const grupos: Record<string, TelaPermitida[]> = {};
 
     for (const tela of telasPerfil) {
@@ -381,11 +523,20 @@ export default function PerfilPage() {
       grupos[modulo].push(tela);
     }
 
-    Object.values(grupos).forEach((lista) =>
-      lista.sort((a, b) => a.CODIGO_TELA.localeCompare(b.CODIGO_TELA))
-    );
-
-    return Object.entries(grupos);
+    return Object.entries(grupos).map(([modulo, telas]) => ({
+      modulo,
+      telas: telas
+        .slice()
+        .sort((a, b) => a.CODIGO_TELA.localeCompare(b.CODIGO_TELA))
+        .map((tela) => ({
+          idTela: tela.ID_TELA,
+          codigoTela: tela.CODIGO_TELA,
+          nomeTela: tela.NOME_TELA,
+          podeAcessar: tela.PODE_ACESSAR,
+          podeConsultar: tela.PODE_CONSULTAR,
+          podeEditar: tela.PODE_EDITAR,
+        })),
+    }));
   }, [telasPerfil]);
 
   const podeEditarPermissoes = useMemo(
@@ -566,11 +717,10 @@ export default function PerfilPage() {
 
             <section className="panel">
               <header className="form-section-header">
-                <h2>Telas permitidas para o perfil selecionado</h2>
+                <h2>Permissões por tela</h2>
                 <p>
-                  {perfilSelecionado
-                    ? `Configurando acessos para: ${formatarCodigoPerfil(perfilSelecionado.ID_PERFIL)} - ${perfilSelecionado.NOME_PERFIL}`
-                    : "Selecione um perfil acima para configurar as telas permitidas."}
+                  Selecione um perfil na tabela acima e ajuste as permissões nas telas
+                  permitidas do módulo correspondente.
                 </p>
               </header>
 
@@ -581,89 +731,17 @@ export default function PerfilPage() {
                   {carregandoTelas && <p>Carregando telas...</p>}
                   {erroTelas && <p className="error-text">{erroTelas}</p>}
 
-                  {!carregandoTelas && !erroTelas && gruposDeTelas.length === 0 && (
+                  {!carregandoTelas && !erroTelas && modulosAgrupados.length === 0 && (
                     <p className="helper-text">Nenhuma tela cadastrada.</p>
                   )}
 
-                  {!carregandoTelas && !erroTelas && gruposDeTelas.length > 0 && (
-                    <div className="perfil-modulos-wrapper w-full space-y-6">
-                      {gruposDeTelas.map(([modulo, telas]) => (
-                        <div key={modulo} className="perfil-modulo-bloco w-full">
-                          <div className="perfil-modulo-cabecalho">{modulo}</div>
-                          <div className="perfil-telas-lista w-full">
-                            <div className="overflow-hidden rounded-md border border-gray-100 bg-white">
-                              <div
-                                className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-700 bg-gray-50 ${GRID_COLS}`}
-                              >
-                                <span className="whitespace-nowrap">Código tela</span>
-                                <span className="whitespace-nowrap">Nome da tela</span>
-                                <span className="whitespace-nowrap text-center">Pode acessar</span>
-                                <span className="whitespace-nowrap text-center">Pode consultar</span>
-                                <span className="whitespace-nowrap text-center">Pode editar</span>
-                              </div>
-                              <div>
-                                {telas.map((tela) => (
-                                  <div
-                                    key={tela.ID_TELA}
-                                    className={`px-4 py-2 border-t border-gray-100 text-sm bg-white ${GRID_COLS}`}
-                                  >
-                                    <span className="font-mono text-xs text-gray-800">{tela.CODIGO_TELA}</span>
-                                    <span
-                                      className="text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis"
-                                      title={tela.NOME_TELA}
-                                    >
-                                      {tela.NOME_TELA}
-                                    </span>
-                                    <div className="flex justify-center">
-                                      <input
-                                        type="checkbox"
-                                        checked={tela.PODE_ACESSAR}
-                                        disabled={!podeEditarPermissoes}
-                                        onChange={(e) =>
-                                          atualizarPermissaoTela(
-                                            tela.ID_TELA,
-                                            "acesso",
-                                            e.target.checked
-                                          )
-                                        }
-                                      />
-                                    </div>
-                                    <div className="flex justify-center">
-                                      <input
-                                        type="checkbox"
-                                        checked={tela.PODE_CONSULTAR}
-                                        disabled={!podeEditarPermissoes || !tela.PODE_ACESSAR}
-                                        onChange={(e) =>
-                                          atualizarPermissaoTela(
-                                            tela.ID_TELA,
-                                            "consulta",
-                                            e.target.checked
-                                          )
-                                        }
-                                      />
-                                    </div>
-                                    <div className="flex justify-center">
-                                      <input
-                                        type="checkbox"
-                                        checked={tela.PODE_EDITAR}
-                                        disabled={!podeEditarPermissoes || !tela.PODE_ACESSAR}
-                                        onChange={(e) =>
-                                          atualizarPermissaoTela(
-                                            tela.ID_TELA,
-                                            "edicao",
-                                            e.target.checked
-                                          )
-                                        }
-                                      />
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  {!carregandoTelas && !erroTelas && modulosAgrupados.length > 0 && (
+                    <SelecaoTelasPorModulo
+                      modulos={modulosAgrupados}
+                      onTogglePermissao={atualizarPermissaoTela}
+                      somenteConsulta={!podeEditarPermissoes}
+                      perfilSelecionadoLabel={`Configurando acessos para ${formatarCodigoPerfil(perfilSelecionado.ID_PERFIL)} - ${perfilSelecionado.NOME_PERFIL}`}
+                    />
                   )}
 
                   <div className="form-actions departamentos-actions">
