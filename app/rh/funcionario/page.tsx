@@ -4,6 +4,7 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { useEmpresaObrigatoria } from "@/hooks/useEmpresaObrigatoria";
 
 type Funcionario = {
   ID_FUNCIONARIO: string;
@@ -85,6 +86,8 @@ function formatarCodigoFuncionario(valor?: string) {
 }
 
 export default function FuncionarioPage() {
+  useEmpresaObrigatoria();
+
   const [empresaId, setEmpresaId] = useState<number | null>(null);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
