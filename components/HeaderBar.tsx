@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useHelpContext } from "./LayoutShell";
+import { ROTAS_LIVRES } from "@/hooks/useEmpresaObrigatoria";
 
 type HeaderBarProps = {
   codigoTela: string;
@@ -73,10 +74,9 @@ export function HeaderBar({ codigoTela, nomeTela, caminhoRota, modulo }: HeaderB
   function handleSelecionarTela(tela: ScreenResult) {
     if (typeof window !== "undefined") {
       const rotaAlvo = tela.CAMINHO_ROTA || "/";
-      const rotasLivres = ["/", "/ajuda", "/emp/selecao", "/core/empresa/nova"];
       const empresaId = window.localStorage.getItem("EMPRESA_ATUAL_ID");
 
-      if (!empresaId && !rotasLivres.includes(rotaAlvo)) {
+      if (!empresaId && !ROTAS_LIVRES.has(rotaAlvo)) {
         console.warn(
           "Nenhuma empresa selecionada. Redirecionando para a seleção de empresa."
         );

@@ -4,7 +4,7 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { useEmpresaObrigatoria } from "@/hooks/useEmpresaObrigatoria";
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 interface Perfil {
   ID_PERFIL: string;
@@ -237,7 +237,7 @@ export default function PerfilPage() {
     return headers;
   }, [empresaId]);
 
-  const carregarPerfis = async () => {
+  const carregarPerfis = useCallback(async () => {
     if (!empresaId) return;
 
     setCarregandoPerfis(true);
@@ -258,12 +258,12 @@ export default function PerfilPage() {
     } finally {
       setCarregandoPerfis(false);
     }
-  };
+  }, [empresaId, headersPadrao]);
 
   useEffect(() => {
     if (!empresaId) return;
     carregarPerfis();
-  }, [empresaId]);
+  }, [carregarPerfis, empresaId]);
 
   const limparFormulario = () => {
     setPerfilEmEdicao(null);

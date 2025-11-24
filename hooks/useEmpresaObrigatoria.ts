@@ -3,7 +3,12 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-const ROTAS_LIVRES = new Set(["/", "/ajuda", "/emp/selecao", "/core/empresa/nova"]);
+export const ROTAS_LIVRES = new Set([
+  "/",
+  "/ajuda",
+  "/emp/selecao",
+  "/core/empresa/nova",
+]);
 
 export function useEmpresaObrigatoria() {
   const router = useRouter();
