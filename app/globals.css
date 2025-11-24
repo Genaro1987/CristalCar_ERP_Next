@@ -1122,22 +1122,22 @@ a {
 .permissoes-grid {
   display: grid;
   align-items: center;
-  column-gap: 32px;
+  column-gap: 48px;
 }
 
 .permissoes-grid-template {
   grid-template-columns:
-    minmax(180px, 0.23fr)
-    minmax(360px, 0.48fr)
-    minmax(140px, 0.1fr)
-    minmax(160px, 0.11fr)
-    minmax(140px, 0.11fr);
+    minmax(210px, 0.24fr)
+    minmax(400px, 0.46fr)
+    minmax(150px, 0.1fr)
+    minmax(170px, 0.11fr)
+    minmax(150px, 0.11fr);
 }
 
 .permissoes-grid-row {
   display: grid;
   align-items: center;
-  column-gap: 32px;
+  column-gap: 48px;
   padding: 10px 0;
   border-bottom: 1px solid #e2e8f0;
   font-size: 0.95rem;
