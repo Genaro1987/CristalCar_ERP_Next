@@ -590,74 +590,72 @@ export default function PerfilPage() {
                       {gruposDeTelas.map(([modulo, telas]) => (
                         <div key={modulo} className="perfil-modulo-bloco w-full">
                           <div className="perfil-modulo-cabecalho">{modulo}</div>
-                          <div className="perfil-telas-lista w-full space-y-0">
-                            <div
-                              className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-700 bg-gray-50 ${GRID_COLS}`}
-                            >
-                              <span>Código tela</span>
-                              <span>Nome da tela</span>
-                              <span className="text-center">Pode acessar</span>
-                              <span className="text-center">Pode consultar</span>
-                              <span className="text-center">Pode editar</span>
-                            </div>
-                            <div className="border border-gray-100">
-                              {telas.map((tela, index) => (
-                                <div
-                                  key={tela.ID_TELA}
-                                  className={`px-4 py-2 text-sm bg-white ${GRID_COLS} ${
-                                    index === 0 ? "" : "border-t border-gray-100"
-                                  }`}
-                                >
-                                  <span className="font-mono text-xs text-gray-800">
-                                    {tela.CODIGO_TELA}
-                                  </span>
-                                  <span className="text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {tela.NOME_TELA}
-                                  </span>
-                                  <div className="flex justify-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={tela.PODE_ACESSAR}
-                                      disabled={!podeEditarPermissoes}
-                                      onChange={(e) =>
-                                        atualizarPermissaoTela(
-                                          tela.ID_TELA,
-                                          "acesso",
-                                          e.target.checked
-                                        )
-                                      }
-                                    />
+                          <div className="perfil-telas-lista w-full">
+                            <div className="overflow-hidden rounded-md border border-gray-100 bg-white">
+                              <div
+                                className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-700 bg-gray-50 ${GRID_COLS}`}
+                              >
+                                <span>Código tela</span>
+                                <span className="whitespace-nowrap">Nome da tela</span>
+                                <span className="text-center">Pode acessar</span>
+                                <span className="text-center">Pode consultar</span>
+                                <span className="text-center">Pode editar</span>
+                              </div>
+                              <div className="divide-y divide-gray-100">
+                                {telas.map((tela) => (
+                                  <div key={tela.ID_TELA} className={`px-4 py-2 text-sm ${GRID_COLS}`}>
+                                    <span className="font-mono text-xs text-gray-800">{tela.CODIGO_TELA}</span>
+                                    <span
+                                      className="text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis"
+                                      title={tela.NOME_TELA}
+                                    >
+                                      {tela.NOME_TELA}
+                                    </span>
+                                    <div className="flex justify-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={tela.PODE_ACESSAR}
+                                        disabled={!podeEditarPermissoes}
+                                        onChange={(e) =>
+                                          atualizarPermissaoTela(
+                                            tela.ID_TELA,
+                                            "acesso",
+                                            e.target.checked
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                    <div className="flex justify-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={tela.PODE_CONSULTAR}
+                                        disabled={!podeEditarPermissoes || !tela.PODE_ACESSAR}
+                                        onChange={(e) =>
+                                          atualizarPermissaoTela(
+                                            tela.ID_TELA,
+                                            "consulta",
+                                            e.target.checked
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                    <div className="flex justify-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={tela.PODE_EDITAR}
+                                        disabled={!podeEditarPermissoes || !tela.PODE_ACESSAR}
+                                        onChange={(e) =>
+                                          atualizarPermissaoTela(
+                                            tela.ID_TELA,
+                                            "edicao",
+                                            e.target.checked
+                                          )
+                                        }
+                                      />
+                                    </div>
                                   </div>
-                                  <div className="flex justify-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={tela.PODE_CONSULTAR}
-                                      disabled={!podeEditarPermissoes || !tela.PODE_ACESSAR}
-                                      onChange={(e) =>
-                                        atualizarPermissaoTela(
-                                          tela.ID_TELA,
-                                          "consulta",
-                                          e.target.checked
-                                        )
-                                      }
-                                    />
-                                  </div>
-                                  <div className="flex justify-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={tela.PODE_EDITAR}
-                                      disabled={!podeEditarPermissoes || !tela.PODE_ACESSAR}
-                                      onChange={(e) =>
-                                        atualizarPermissaoTela(
-                                          tela.ID_TELA,
-                                          "edicao",
-                                          e.target.checked
-                                        )
-                                      }
-                                    />
-                                  </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
                           </div>
                         </div>
