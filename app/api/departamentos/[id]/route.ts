@@ -1,6 +1,10 @@
 import { db } from "@/db/client";
 import { NextRequest, NextResponse } from "next/server";
-import { interpretarAtivo, normalizarTextoBasico, obterEmpresaId } from "../utils";
+import { interpretarAtivo, normalizarTextoBasico } from "../utils";
+import {
+  obterEmpresaIdDaRequest,
+  respostaEmpresaNaoSelecionada,
+} from "@/app/api/_utils/empresa";
 
 const CAMPOS_DEPARTAMENTO = [
   "ID_DEPARTAMENTO",
@@ -16,14 +20,11 @@ export async function GET(
   request: NextRequest,
   context: { params: { id: string } }
 ) {
-  const empresaId = obterEmpresaId(request);
+  const empresaId = obterEmpresaIdDaRequest(request);
   const idDepartamento = Number(context.params.id);
 
   if (!empresaId) {
-    return NextResponse.json(
-      { success: false, error: "EMPRESA_NAO_INFORMADA" },
-      { status: 400 }
-    );
+    return respostaEmpresaNaoSelecionada();
   }
 
   if (!Number.isFinite(idDepartamento) || idDepartamento <= 0) {
@@ -66,14 +67,11 @@ export async function PUT(
   request: NextRequest,
   context: { params: { id: string } }
 ) {
-  const empresaId = obterEmpresaId(request);
+  const empresaId = obterEmpresaIdDaRequest(request);
   const idDepartamento = Number(context.params.id);
 
   if (!empresaId) {
-    return NextResponse.json(
-      { success: false, error: "EMPRESA_NAO_INFORMADA" },
-      { status: 400 }
-    );
+    return respostaEmpresaNaoSelecionada();
   }
 
   if (!Number.isFinite(idDepartamento) || idDepartamento <= 0) {

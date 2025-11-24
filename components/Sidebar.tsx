@@ -2,50 +2,76 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 
-type EmpresaSidebar = {
-  nomeFantasia: string | null;
-  logoUrl?: string | null;
-};
+type ModuloSistema = "CORE" | "EMPRESA" | "RH" | "SEGURANCA";
+
+interface ItemMenu {
+  label: string;
+  rota: string;
+  modulo: ModuloSistema;
+  requerEmpresa?: boolean;
+}
 
 export function Sidebar() {
-  const [empresaAtual, setEmpresaAtual] = useState<EmpresaSidebar | null>(null);
   const pathname = usePathname();
+  const { empresa } = useEmpresaSelecionada();
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  const itensMenu: ItemMenu[] = useMemo(
+    () => [
+      { label: "INICIAL", rota: "/", modulo: "CORE" },
+      {
+        label: "EMPRESA",
+        rota: "/core/empresa/nova",
+        modulo: "EMPRESA",
+        requerEmpresa: true,
+      },
+      {
+        label: "DEPARTAMENTOS",
+        rota: "/emp/departamento",
+        modulo: "EMPRESA",
+        requerEmpresa: true,
+      },
+      {
+        label: "JORNADAS",
+        rota: "/rh/jornada",
+        modulo: "RH",
+        requerEmpresa: true,
+      },
+      {
+        label: "FUNCIONARIOS",
+        rota: "/rh/funcionario",
+        modulo: "RH",
+        requerEmpresa: true,
+      },
+      {
+        label: "PERFIS DE ACESSO",
+        rota: "/seg/perfil",
+        modulo: "SEGURANCA",
+        requerEmpresa: true,
+      },
+    ],
+    []
+  );
 
-    const nome = window.localStorage.getItem("EMPRESA_ATUAL_NOME");
-    const logo = window.localStorage.getItem("EMPRESA_ATUAL_LOGO_URL");
+  const possuiEmpresaSelecionada = Boolean(empresa?.id);
 
-    if (nome) {
-      setEmpresaAtual({
-        nomeFantasia: nome,
-        logoUrl:
-          logo && logo !== "null" && logo !== "undefined" && logo !== ""
-            ? logo
-            : null,
-      });
-    }
-  }, []);
+  const itensVisiveis = itensMenu.filter((item) => {
+    if (item.requerEmpresa && !possuiEmpresaSelecionada) return false;
+    return true;
+  });
 
-  const isInicio = pathname === "/";
-  const isEmpresa = pathname.startsWith("/core/empresa");
-  const isDepartamento = pathname.startsWith("/emp/departamento");
-  const isJornada = pathname.startsWith("/rh/jornada");
-  const isFuncionario = pathname.startsWith("/rh/funcionario");
-  const isPerfil = pathname.startsWith("/seg/perfil");
   const isAjuda = pathname.startsWith("/ajuda");
 
   return (
     <aside className="sidebar">
       <div className="sidebar-top">
         <div className="sidebar-logo-block">
-          {empresaAtual?.logoUrl ? (
+          {empresa?.logoUrl ? (
             <img
-              src={empresaAtual.logoUrl}
-              alt={empresaAtual.nomeFantasia ?? "Logo empresa"}
+              src={empresa.logoUrl}
+              alt={empresa.nomeFantasia ?? "Logo empresa"}
               className="sidebar-logo-image"
             />
           ) : (
@@ -56,44 +82,22 @@ export function Sidebar() {
         <div className="sidebar-section-header">CADASTROS</div>
 
         <nav className="sidebar-nav">
-          <Link
-            href="/"
-            className={isInicio ? "sidebar-nav-item active" : "sidebar-nav-item"}
-          >
-            INICIAL
-          </Link>
-          <Link
-            href="/core/empresa/nova"
-            className={isEmpresa ? "sidebar-nav-item active" : "sidebar-nav-item"}
-          >
-            EMPRESA
-          </Link>
-          <Link
-            href="/emp/departamento"
-            className={
-              isDepartamento ? "sidebar-nav-item active" : "sidebar-nav-item"
-            }
-          >
-            DEPARTAMENTOS
-          </Link>
-          <Link
-            href="/rh/jornada"
-            className={isJornada ? "sidebar-nav-item active" : "sidebar-nav-item"}
-          >
-            JORNADAS
-          </Link>
-          <Link
-            href="/rh/funcionario"
-            className={isFuncionario ? "sidebar-nav-item active" : "sidebar-nav-item"}
-          >
-            FUNCIONARIOS
-          </Link>
-          <Link
-            href="/seg/perfil"
-            className={isPerfil ? "sidebar-nav-item active" : "sidebar-nav-item"}
-          >
-            PERFIS DE ACESSO
-          </Link>
+          {itensVisiveis.map((item) => {
+            const ativo =
+              item.rota === "/"
+                ? pathname === item.rota
+                : pathname.startsWith(item.rota);
+
+            return (
+              <Link
+                key={item.rota}
+                href={item.rota}
+                className={ativo ? "sidebar-nav-item active" : "sidebar-nav-item"}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
       </div>
 

@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { createContext, useContext, useMemo, useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { HelpPanel, type HelpData } from "./HelpPanel";
-import { useEmpresaObrigatoria } from "@/hooks/useEmpresaObrigatoria";
 
 interface LayoutShellProps {
   children: ReactNode;
@@ -32,8 +31,6 @@ export default function LayoutShell({ children }: LayoutShellProps) {
   const [ajudaAberta, setAjudaAberta] = useState(false);
   const [ajudaCarregando, setAjudaCarregando] = useState(false);
   const [dadosAjuda, setDadosAjuda] = useState<HelpData | null>(null);
-
-  useEmpresaObrigatoria();
 
   const abrirAjuda = useMemo(
     () =>

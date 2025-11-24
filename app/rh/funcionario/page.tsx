@@ -4,7 +4,8 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
-import { useEmpresaObrigatoria } from "@/hooks/useEmpresaObrigatoria";
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
+import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 
 type Funcionario = {
   ID_FUNCIONARIO: string;
@@ -86,9 +87,9 @@ function formatarCodigoFuncionario(valor?: string) {
 }
 
 export default function FuncionarioPage() {
-  useEmpresaObrigatoria();
+  useRequerEmpresaSelecionada();
 
-  const [empresaId, setEmpresaId] = useState<number | null>(null);
+  const { empresa, carregando } = useEmpresaSelecionada();
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [jornadas, setJornadas] = useState<Jornada[]>([]);
@@ -114,16 +115,7 @@ export default function FuncionarioPage() {
     null
   );
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const id = window.localStorage.getItem("EMPRESA_ATUAL_ID");
-    if (id) {
-      const parsed = Number(id);
-      if (Number.isFinite(parsed)) {
-        setEmpresaId(parsed);
-      }
-    }
-  }, []);
+  const empresaId = empresa?.id ?? null;
 
   const headersPadrao = useMemo<HeadersInit>(() => {
     const headers: Record<string, string> = {};
@@ -162,9 +154,7 @@ export default function FuncionarioPage() {
   const carregarDepartamentos = async () => {
     if (!empresaId) return;
     try {
-      const resposta = await fetch(`/api/departamentos?empresaId=${empresaId}`, {
-        headers: headersPadrao,
-      });
+      const resposta = await fetch(`/api/departamentos`, { headers: headersPadrao });
       const json = await resposta.json();
 
       if (json?.success) {
@@ -204,12 +194,13 @@ export default function FuncionarioPage() {
   };
 
   useEffect(() => {
+    if (carregando) return;
     carregarFuncionarios();
     carregarDepartamentos();
     carregarJornadas();
     carregarPerfis();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresaId]);
+  }, [carregando, empresaId]);
 
   const limparFormulario = () => {
     setFuncionarioEmEdicao(null);

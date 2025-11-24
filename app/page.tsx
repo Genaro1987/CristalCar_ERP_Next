@@ -4,6 +4,7 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 
 interface Empresa {
   ID_EMPRESA: number;
@@ -21,6 +22,7 @@ interface Empresa {
 
 export default function SelecaoEmpresaPage() {
   const router = useRouter();
+  const { definirEmpresa } = useEmpresaSelecionada();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -69,12 +71,12 @@ export default function SelecaoEmpresaPage() {
   }, []);
 
   function handleSelecionar(empresa: Empresa) {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("EMPRESA_ATUAL_ID", String(empresa.ID_EMPRESA));
-      localStorage.setItem("EMPRESA_ATUAL_NOME", empresa.NOME_FANTASIA ?? "");
-      const logoUrl = empresa.LOGOTIPO_URL ?? "";
-      localStorage.setItem("EMPRESA_ATUAL_LOGO_URL", logoUrl);
-    }
+    definirEmpresa({
+      id: empresa.ID_EMPRESA,
+      nomeFantasia: empresa.NOME_FANTASIA,
+      cnpj: empresa.CNPJ,
+      logoUrl: empresa.LOGOTIPO_URL ?? null,
+    });
 
     router.push("/core/empresa/nova");
   }

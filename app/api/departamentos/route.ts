@@ -1,6 +1,10 @@
 import { db } from "@/db/client";
 import { NextRequest, NextResponse } from "next/server";
-import { interpretarAtivo, normalizarTextoBasico, obterEmpresaId } from "./utils";
+import { interpretarAtivo, normalizarTextoBasico } from "./utils";
+import {
+  obterEmpresaIdDaRequest,
+  respostaEmpresaNaoSelecionada,
+} from "@/app/api/_utils/empresa";
 
 const CAMPOS_DEPARTAMENTO = [
   "ID_DEPARTAMENTO",
@@ -13,13 +17,10 @@ const CAMPOS_DEPARTAMENTO = [
 ].join(", ");
 
 export async function GET(request: NextRequest) {
-  const empresaId = obterEmpresaId(request);
+  const empresaId = obterEmpresaIdDaRequest(request);
 
   if (!empresaId) {
-    return NextResponse.json(
-      { success: false, error: "EMPRESA_NAO_INFORMADA" },
-      { status: 400 }
-    );
+    return respostaEmpresaNaoSelecionada();
   }
 
   try {
@@ -44,13 +45,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const empresaId = obterEmpresaId(request);
+  const empresaId = obterEmpresaIdDaRequest(request);
 
   if (!empresaId) {
-    return NextResponse.json(
-      { success: false, error: "EMPRESA_NAO_INFORMADA" },
-      { status: 400 }
-    );
+    return respostaEmpresaNaoSelecionada();
   }
 
   try {
