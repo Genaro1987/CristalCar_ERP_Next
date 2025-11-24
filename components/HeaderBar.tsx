@@ -77,10 +77,9 @@ export function HeaderBar({ codigoTela, nomeTela, caminhoRota, modulo }: HeaderB
       const empresaId = window.localStorage.getItem("EMPRESA_ATUAL_ID");
 
       if (!empresaId && !ROTAS_LIVRES.has(rotaAlvo)) {
-        console.warn(
-          "Nenhuma empresa selecionada. Redirecionando para a seleção de empresa."
-        );
-        router.push("/emp/selecao");
+        window.alert("Selecione uma empresa antes de acessar as telas do sistema.");
+        setIsOpen(false);
+        setQuery("");
         return;
       }
 

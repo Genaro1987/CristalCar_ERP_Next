@@ -63,6 +63,9 @@ function normalizarDescricao(valor: string): string {
   return semAcento.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 100);
 }
 
+const GRID_COLS =
+  "grid grid-cols-[150px_minmax(420px,1fr)_140px_140px_140px] gap-3 items-center";
+
 function SelecaoTelasPorModulo({
   modulos,
   onTogglePermissao,
@@ -96,94 +99,95 @@ function SelecaoTelasPorModulo({
       {modulos.map((modulo) => (
         <div
           key={modulo.modulo}
-          className="overflow-hidden rounded-2xl bg-white shadow-sm"
+          className="overflow-hidden rounded-2xl bg-white shadow-sm w-full"
         >
           <div className="bg-[#ff7a1a] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white">
             {modulo.modulo}
           </div>
 
-          <div className="overflow-x-auto px-4 pb-3 pt-2">
-            <table className="w-full border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 text-[11px] font-semibold uppercase text-slate-500">
-                  <th className="w-52 py-2 pr-4 text-left whitespace-nowrap">
-                    Código tela
-                  </th>
-                  <th className="w-[45%] py-2 pr-4 text-left whitespace-nowrap">
-                    Nome da tela
-                  </th>
-                  <th className="w-28 py-2 text-center whitespace-nowrap">
-                    Pode acessar
-                  </th>
-                  <th className="w-28 py-2 text-center whitespace-nowrap">
-                    Pode consultar
-                  </th>
-                  <th className="w-28 py-2 text-center whitespace-nowrap">
-                    Pode editar
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {modulo.telas.map((tela) => (
-                  <tr
-                    key={tela.idTela}
-                    className="border-b border-slate-100 last:border-0"
-                  >
-                    <td className="py-2 pr-4 font-mono text-[11px] text-slate-700 whitespace-nowrap">
-                      {tela.codigoTela}
-                    </td>
-                    <td className="py-2 pr-4 text-slate-900 whitespace-nowrap">
-                      {tela.nomeTela}
-                    </td>
-                    <td className="py-2 text-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300"
-                        disabled={somenteConsulta}
-                        checked={tela.podeAcessar}
-                        onChange={(e) =>
-                          onTogglePermissao(
-                            tela.idTela,
-                            "ACESSAR",
-                            e.target.checked
-                          )
-                        }
-                      />
-                    </td>
-                    <td className="py-2 text-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300"
-                        disabled={somenteConsulta || !tela.podeAcessar}
-                        checked={tela.podeConsultar}
-                        onChange={(e) =>
-                          onTogglePermissao(
-                            tela.idTela,
-                            "CONSULTAR",
-                            e.target.checked
-                          )
-                        }
-                      />
-                    </td>
-                    <td className="py-2 text-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300"
-                        disabled={somenteConsulta || !tela.podeAcessar}
-                        checked={tela.podeEditar}
-                        onChange={(e) =>
-                          onTogglePermissao(
-                            tela.idTela,
-                            "EDITAR",
-                            e.target.checked
-                          )
-                        }
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="border border-slate-100 border-t-0">
+            <div className="bg-gray-50 border-b border-gray-200 px-4 py-2">
+              <div
+                className={
+                  GRID_COLS +
+                  " text-xs font-semibold text-gray-600 uppercase tracking-wide"
+                }
+              >
+                <span>Código tela</span>
+                <span>Nome da tela</span>
+                <span className="whitespace-nowrap">Pode acessar</span>
+                <span className="whitespace-nowrap">Pode consultar</span>
+                <span className="whitespace-nowrap">Pode editar</span>
+              </div>
+            </div>
+
+            {modulo.telas.map((tela) => (
+              <div key={tela.idTela} className="px-4 py-2 border-t border-gray-200">
+                <div className={GRID_COLS + " text-sm text-gray-900"}>
+                  <span className="font-mono text-xs text-gray-600 whitespace-nowrap">
+                    {tela.codigoTela}
+                  </span>
+
+                <span
+                  className="truncate whitespace-nowrap text-left"
+                  title={tela.nomeTela}
+                >
+                  {tela.nomeTela}
+                </span>
+
+                  <label className="inline-flex items-center gap-2 whitespace-nowrap text-xs text-gray-700">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300"
+                      disabled={somenteConsulta}
+                      checked={tela.podeAcessar}
+                      onChange={(e) =>
+                        onTogglePermissao(
+                          tela.idTela,
+                          "ACESSAR",
+                          e.target.checked
+                        )
+                      }
+                    />
+                    <span>Pode acessar</span>
+                  </label>
+
+                  <label className="inline-flex items-center gap-2 whitespace-nowrap text-xs text-gray-700">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300"
+                      disabled={somenteConsulta || !tela.podeAcessar}
+                      checked={tela.podeConsultar}
+                      onChange={(e) =>
+                        onTogglePermissao(
+                          tela.idTela,
+                          "CONSULTAR",
+                          e.target.checked
+                        )
+                      }
+                    />
+                    <span>Pode consultar</span>
+                  </label>
+
+                  <label className="inline-flex items-center gap-2 whitespace-nowrap text-xs text-gray-700">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300"
+                      disabled={somenteConsulta || !tela.podeAcessar}
+                      checked={tela.podeEditar}
+                      onChange={(e) =>
+                        onTogglePermissao(
+                          tela.idTela,
+                          "EDITAR",
+                          e.target.checked
+                        )
+                      }
+                    />
+                    <span>Pode editar</span>
+                  </label>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       ))}
