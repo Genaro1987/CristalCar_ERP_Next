@@ -601,9 +601,12 @@ export default function PerfilPage() {
                                 <span className="text-center">Pode consultar</span>
                                 <span className="text-center">Pode editar</span>
                               </div>
-                              <div className="divide-y divide-gray-100">
+                              <div>
                                 {telas.map((tela) => (
-                                  <div key={tela.ID_TELA} className={`px-4 py-2 text-sm ${GRID_COLS}`}>
+                                  <div
+                                    key={tela.ID_TELA}
+                                    className={`px-4 py-2 border-t border-gray-100 text-sm bg-white ${GRID_COLS}`}
+                                  >
                                     <span className="font-mono text-xs text-gray-800">{tela.CODIGO_TELA}</span>
                                     <span
                                       className="text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis"
