@@ -1125,6 +1125,15 @@ a {
   column-gap: 24px;
 }
 
+.permissoes-grid-template {
+  grid-template-columns:
+    minmax(160px, 0.22fr)
+    minmax(320px, 0.46fr)
+    minmax(130px, 0.1fr)
+    minmax(150px, 0.11fr)
+    minmax(130px, 0.11fr);
+}
+
 .permissoes-grid-row {
   display: grid;
   align-items: center;
