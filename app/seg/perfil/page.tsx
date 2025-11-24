@@ -64,7 +64,7 @@ function normalizarDescricao(valor: string): string {
 }
 
 const GRID_COLS =
-  "grid grid-cols-[180px_minmax(320px,1fr)_150px_150px_150px] gap-4 items-center";
+  "grid grid-cols-[150px_minmax(420px,1fr)_140px_140px_140px] gap-3 items-center";
 
 function SelecaoTelasPorModulo({
   modulos,
@@ -99,7 +99,7 @@ function SelecaoTelasPorModulo({
       {modulos.map((modulo) => (
         <div
           key={modulo.modulo}
-          className="overflow-hidden rounded-2xl bg-white shadow-sm"
+          className="overflow-hidden rounded-2xl bg-white shadow-sm w-full"
         >
           <div className="bg-[#ff7a1a] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white">
             {modulo.modulo}
@@ -128,12 +128,12 @@ function SelecaoTelasPorModulo({
                     {tela.codigoTela}
                   </span>
 
-                  <span
-                    className="truncate whitespace-nowrap"
-                    title={tela.nomeTela}
-                  >
-                    {tela.nomeTela}
-                  </span>
+                <span
+                  className="truncate whitespace-nowrap text-left"
+                  title={tela.nomeTela}
+                >
+                  {tela.nomeTela}
+                </span>
 
                   <label className="inline-flex items-center gap-2 whitespace-nowrap text-xs text-gray-700">
                     <input
