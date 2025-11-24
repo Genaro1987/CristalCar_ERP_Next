@@ -5,6 +5,11 @@ import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { useEmpresaObrigatoria } from "@/hooks/useEmpresaObrigatoria";
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  PermissoesPorTelaSection,
+  TelaPermissao,
+  TipoPermissao,
+} from "./PermissoesPorTelaSection";
 
 interface Perfil {
   ID_PERFIL: string;
@@ -25,20 +30,6 @@ interface TelaPermitida {
   PODE_CONSULTAR: boolean;
   PODE_EDITAR: boolean;
 }
-
-type TelaPerfil = {
-  idTela: number;
-  codigoTela: string;
-  nomeTela: string;
-  podeAcessar: boolean;
-  podeConsultar: boolean;
-  podeEditar: boolean;
-};
-
-type ModuloAgrupado = {
-  modulo: string;
-  telas: TelaPerfil[];
-};
 
 const MODULOS_ORDENADOS = ["CORE", "EMPRESA", "RH", "SEGURANCA"] as const;
 
@@ -63,116 +54,6 @@ function normalizarDescricao(valor: string): string {
   const semAcento = removerAcentosPreservandoEspaco(valor ?? "");
 
   return semAcento.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 100);
-}
-
-function SelecaoTelasPorModulo({
-  modulos,
-  onTogglePermissao,
-  somenteConsulta,
-  perfilSelecionadoLabel,
-}: {
-  modulos: ModuloAgrupado[];
-  onTogglePermissao: (
-    idTela: number,
-    tipo: "ACESSAR" | "CONSULTAR" | "EDITAR",
-    value: boolean
-  ) => void;
-  somenteConsulta: boolean;
-  perfilSelecionadoLabel?: string;
-}) {
-  if (!modulos.length) return null;
-
-  const colTemplate =
-    "grid grid-cols-[minmax(160px,0.22fr)_minmax(320px,0.46fr)_minmax(130px,0.1fr)_minmax(150px,0.11fr)_minmax(130px,0.11fr)] items-center gap-x-6";
-
-  return (
-    <section className="mt-8 space-y-6">
-      <h2 className="text-base font-semibold text-slate-900">
-        Telas permitidas para o perfil selecionado
-      </h2>
-      <p className="text-xs text-slate-500">
-        Configure abaixo as permissões de cada tela para o perfil em edição.
-      </p>
-
-      {perfilSelecionadoLabel ? (
-        <p className="text-xs font-medium text-slate-700">{perfilSelecionadoLabel}</p>
-      ) : null}
-
-      {modulos.map((modulo) => (
-        <section
-          key={modulo.modulo}
-          className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden mb-6"
-        >
-          <header className="bg-orange-500 text-white font-semibold text-sm px-6 py-3 uppercase tracking-wide">
-            {modulo.modulo}
-          </header>
-
-          <div className="divide-y divide-slate-100">
-            <div
-              className={`${colTemplate} px-6 py-3 bg-slate-50 border-b border-slate-200`}
-            >
-              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap">
-                Código tela
-              </span>
-              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap">
-                Nome da tela
-              </span>
-              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap text-center">
-                Pode acessar
-              </span>
-              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap text-center">
-                Pode consultar
-              </span>
-              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap text-center">
-                Pode editar
-              </span>
-            </div>
-
-            <div className="divide-y divide-slate-100">
-              {modulo.telas.map((tela) => (
-                <div key={tela.idTela} className={`${colTemplate} px-6 py-2`}>
-                  <span className="text-sm font-mono text-slate-800 whitespace-nowrap">
-                    {tela.codigoTela}
-                  </span>
-                  <span className="text-sm text-slate-800">{tela.nomeTela}</span>
-
-                  <div className="flex justify-center">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300"
-                      disabled={somenteConsulta}
-                      checked={tela.podeAcessar}
-                      onChange={(e) => onTogglePermissao(tela.idTela, "ACESSAR", e.target.checked)}
-                    />
-                  </div>
-
-                  <div className="flex justify-center">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300"
-                      disabled={somenteConsulta || !tela.podeAcessar}
-                      checked={tela.podeConsultar}
-                      onChange={(e) => onTogglePermissao(tela.idTela, "CONSULTAR", e.target.checked)}
-                    />
-                  </div>
-
-                  <div className="flex justify-center">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300"
-                      disabled={somenteConsulta || !tela.podeAcessar}
-                      checked={tela.podeEditar}
-                      onChange={(e) => onTogglePermissao(tela.idTela, "EDITAR", e.target.checked)}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      ))}
-    </section>
-  );
 }
 
 export default function PerfilPage() {
@@ -380,11 +261,9 @@ export default function PerfilPage() {
     }
   };
 
-  const atualizarPermissaoTela = (
-    idTela: number,
-    tipo: "ACESSAR" | "CONSULTAR" | "EDITAR",
-    valor: boolean
-  ) => {
+  const handleTogglePermissao = (idTela: number, tipo: TipoPermissao) => {
+    if (!podeEditarPermissoes) return;
+
     setTelasPerfil((prev) =>
       prev.map((tela) => {
         if (tela.ID_TELA !== idTela) return tela;
@@ -393,8 +272,8 @@ export default function PerfilPage() {
         let podeConsultar = tela.PODE_CONSULTAR;
         let podeEditar = tela.PODE_EDITAR;
 
-        if (tipo === "ACESSAR") {
-          podeAcessar = valor;
+        if (tipo === "acessar") {
+          podeAcessar = !tela.PODE_ACESSAR;
           if (!podeAcessar) {
             podeConsultar = false;
             podeEditar = false;
@@ -403,22 +282,20 @@ export default function PerfilPage() {
           }
         }
 
-        if (tipo === "CONSULTAR") {
-          podeConsultar = valor;
-          if (podeConsultar) {
+        if (tipo === "consultar") {
+          const novoConsultar = !tela.PODE_CONSULTAR;
+          podeConsultar = novoConsultar;
+          if (novoConsultar) {
             podeAcessar = true;
-          } else if (!podeAcessar) {
-            podeConsultar = false;
           }
         }
 
-        if (tipo === "EDITAR") {
-          podeEditar = valor;
-          if (podeEditar) {
+        if (tipo === "editar") {
+          const novoEditar = !tela.PODE_EDITAR;
+          podeEditar = novoEditar;
+          if (novoEditar) {
             podeAcessar = true;
             podeConsultar = true;
-          } else if (!podeAcessar) {
-            podeEditar = false;
           }
         }
 
@@ -498,31 +375,27 @@ export default function PerfilPage() {
     setPerfilEmEdicao(null);
   };
 
-  const modulosAgrupados = useMemo<ModuloAgrupado[]>(() => {
-    const grupos: Record<string, TelaPermitida[]> = {};
+  const telasPermissoes = useMemo<TelaPermissao[]>(() => {
     const modulosPermitidos = new Set<string>(MODULOS_ORDENADOS);
+    const moduloIndex = (modulo: string) =>
+      MODULOS_ORDENADOS.indexOf(modulo as (typeof MODULOS_ORDENADOS)[number]);
 
-    for (const tela of telasPerfil) {
-      const modulo = (tela.MODULO || "OUTROS").toUpperCase();
-      if (!modulosPermitidos.has(modulo)) continue;
-      if (!grupos[modulo]) grupos[modulo] = [];
-      grupos[modulo].push(tela);
-    }
-
-    return MODULOS_ORDENADOS.map((modulo) => ({
-      modulo,
-      telas: (grupos[modulo] ?? [])
-        .slice()
-        .sort((a, b) => a.CODIGO_TELA.localeCompare(b.CODIGO_TELA))
-        .map((tela) => ({
-          idTela: tela.ID_TELA,
-          codigoTela: tela.CODIGO_TELA,
-          nomeTela: tela.NOME_TELA,
-          podeAcessar: tela.PODE_ACESSAR,
-          podeConsultar: tela.PODE_CONSULTAR,
-          podeEditar: tela.PODE_EDITAR,
-        })),
-    })).filter((modulo) => modulo.telas.length > 0);
+    return telasPerfil
+      .map((tela) => ({
+        idTela: tela.ID_TELA,
+        codigoTela: tela.CODIGO_TELA,
+        nomeTela: tela.NOME_TELA,
+        modulo: (tela.MODULO || "OUTROS").toUpperCase(),
+        podeAcessar: tela.PODE_ACESSAR,
+        podeConsultar: tela.PODE_CONSULTAR,
+        podeEditar: tela.PODE_EDITAR,
+      }))
+      .filter((tela) => modulosPermitidos.has(tela.modulo))
+      .sort((a, b) => {
+        const moduloDiff = moduloIndex(a.modulo) - moduloIndex(b.modulo);
+        if (moduloDiff !== 0) return moduloDiff;
+        return a.codigoTela.localeCompare(b.codigoTela);
+      });
   }, [telasPerfil]);
 
   const podeEditarPermissoes = useMemo(
@@ -717,16 +590,17 @@ export default function PerfilPage() {
                   {carregandoTelas && <p>Carregando telas...</p>}
                   {erroTelas && <p className="error-text">{erroTelas}</p>}
 
-                  {!carregandoTelas && !erroTelas && modulosAgrupados.length === 0 && (
+                  {!carregandoTelas && !erroTelas && telasPermissoes.length === 0 && (
                     <p className="helper-text">Nenhuma tela cadastrada.</p>
                   )}
 
-                  {!carregandoTelas && !erroTelas && modulosAgrupados.length > 0 && (
-                    <SelecaoTelasPorModulo
-                      modulos={modulosAgrupados}
-                      onTogglePermissao={atualizarPermissaoTela}
+                  {!carregandoTelas && !erroTelas && telasPermissoes.length > 0 && (
+                    <PermissoesPorTelaSection
+                      perfilCodigo={formatarCodigoPerfil(perfilSelecionado.ID_PERFIL)}
+                      perfilNome={perfilSelecionado.NOME_PERFIL}
+                      telas={telasPermissoes}
+                      onTogglePermissao={handleTogglePermissao}
                       somenteConsulta={!podeEditarPermissoes}
-                      perfilSelecionadoLabel={`Configurando acessos para ${formatarCodigoPerfil(perfilSelecionado.ID_PERFIL)} - ${perfilSelecionado.NOME_PERFIL}`}
                     />
                   )}
 
