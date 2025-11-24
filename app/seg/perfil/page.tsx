@@ -6,7 +6,7 @@ import { NotificationBar } from "@/components/NotificationBar";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 
 const GRID_COLS =
-  "grid grid-cols-[220px_minmax(300px,1fr)_130px_130px_130px] items-center gap-4";
+  "grid grid-cols-[minmax(180px,260px)_minmax(320px,1fr)_140px_150px_130px] items-center gap-4";
 
 interface Perfil {
   ID_PERFIL: string;
@@ -595,11 +595,11 @@ export default function PerfilPage() {
                               <div
                                 className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-700 bg-gray-50 ${GRID_COLS}`}
                               >
-                                <span>Código tela</span>
+                                <span className="whitespace-nowrap">Código tela</span>
                                 <span className="whitespace-nowrap">Nome da tela</span>
-                                <span className="text-center">Pode acessar</span>
-                                <span className="text-center">Pode consultar</span>
-                                <span className="text-center">Pode editar</span>
+                                <span className="whitespace-nowrap text-center">Pode acessar</span>
+                                <span className="whitespace-nowrap text-center">Pode consultar</span>
+                                <span className="whitespace-nowrap text-center">Pode editar</span>
                               </div>
                               <div>
                                 {telas.map((tela) => (
