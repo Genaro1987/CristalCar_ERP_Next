@@ -40,6 +40,8 @@ type ModuloAgrupado = {
   telas: TelaPerfil[];
 };
 
+const MODULOS_ORDENADOS = ["CORE", "EMPRESA", "RH", "SEGURANCA"] as const;
+
 const CODIGO_PADRAO_PERFIL = "PER-XXX";
 
 function formatarCodigoPerfil(codigo?: string | null): string {
@@ -80,8 +82,8 @@ function SelecaoTelasPorModulo({
 }) {
   if (!modulos.length) return null;
 
-  const layoutColunas =
-    "grid grid-cols-[minmax(150px,220px)_minmax(320px,1fr)_minmax(130px,150px)_minmax(150px,170px)_minmax(130px,150px)] gap-x-4 items-center";
+  const colTemplate =
+    "grid grid-cols-[minmax(160px,0.22fr)_minmax(320px,0.46fr)_minmax(130px,0.1fr)_minmax(150px,0.11fr)_minmax(130px,0.11fr)] items-center gap-x-6";
 
   return (
     <section className="mt-8 space-y-6">
@@ -105,61 +107,66 @@ function SelecaoTelasPorModulo({
             {modulo.modulo}
           </header>
 
-          <div className="overflow-x-auto">
-            <div className="min-w-[900px]">
-              <div
-                className={`${layoutColunas} px-6 py-3 bg-neutral-50 text-xs font-semibold text-neutral-600 uppercase`}
-              >
-                <div className="whitespace-nowrap">CÓDIGO TELA</div>
-                <div className="whitespace-nowrap">NOME DA TELA</div>
-                <div className="text-center whitespace-nowrap">PODE ACESSAR</div>
-                <div className="text-center whitespace-nowrap">PODE CONSULTAR</div>
-                <div className="text-center whitespace-nowrap">PODE EDITAR</div>
-              </div>
+          <div className="divide-y divide-slate-100">
+            <div
+              className={`${colTemplate} px-6 py-3 bg-slate-50 border-b border-slate-200`}
+            >
+              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap">
+                Código tela
+              </span>
+              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap">
+                Nome da tela
+              </span>
+              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap text-center">
+                Pode acessar
+              </span>
+              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap text-center">
+                Pode consultar
+              </span>
+              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap text-center">
+                Pode editar
+              </span>
+            </div>
 
-              <div className="divide-y divide-neutral-100">
-                {modulo.telas.map((tela) => (
-                  <div
-                    key={tela.idTela}
-                    className={`${layoutColunas} px-6 py-3 text-sm text-neutral-800`}
-                  >
-                    <div className="whitespace-nowrap" title={tela.codigoTela}>
-                      {tela.codigoTela}
-                    </div>
-                    <div title={tela.nomeTela}>{tela.nomeTela}</div>
+            <div className="divide-y divide-slate-100">
+              {modulo.telas.map((tela) => (
+                <div key={tela.idTela} className={`${colTemplate} px-6 py-2`}>
+                  <span className="text-sm font-mono text-slate-800 whitespace-nowrap">
+                    {tela.codigoTela}
+                  </span>
+                  <span className="text-sm text-slate-800">{tela.nomeTela}</span>
 
-                    <div className="flex justify-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300"
-                        disabled={somenteConsulta}
-                        checked={tela.podeAcessar}
-                        onChange={(e) => onTogglePermissao(tela.idTela, "ACESSAR", e.target.checked)}
-                      />
-                    </div>
-
-                    <div className="flex justify-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300"
-                        disabled={somenteConsulta || !tela.podeAcessar}
-                        checked={tela.podeConsultar}
-                        onChange={(e) => onTogglePermissao(tela.idTela, "CONSULTAR", e.target.checked)}
-                      />
-                    </div>
-
-                    <div className="flex justify-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300"
-                        disabled={somenteConsulta || !tela.podeAcessar}
-                        checked={tela.podeEditar}
-                        onChange={(e) => onTogglePermissao(tela.idTela, "EDITAR", e.target.checked)}
-                      />
-                    </div>
+                  <div className="flex justify-center">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300"
+                      disabled={somenteConsulta}
+                      checked={tela.podeAcessar}
+                      onChange={(e) => onTogglePermissao(tela.idTela, "ACESSAR", e.target.checked)}
+                    />
                   </div>
-                ))}
-              </div>
+
+                  <div className="flex justify-center">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300"
+                      disabled={somenteConsulta || !tela.podeAcessar}
+                      checked={tela.podeConsultar}
+                      onChange={(e) => onTogglePermissao(tela.idTela, "CONSULTAR", e.target.checked)}
+                    />
+                  </div>
+
+                  <div className="flex justify-center">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300"
+                      disabled={somenteConsulta || !tela.podeAcessar}
+                      checked={tela.podeEditar}
+                      onChange={(e) => onTogglePermissao(tela.idTela, "EDITAR", e.target.checked)}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -493,16 +500,18 @@ export default function PerfilPage() {
 
   const modulosAgrupados = useMemo<ModuloAgrupado[]>(() => {
     const grupos: Record<string, TelaPermitida[]> = {};
+    const modulosPermitidos = new Set<string>(MODULOS_ORDENADOS);
 
     for (const tela of telasPerfil) {
-      const modulo = tela.MODULO || "OUTROS";
+      const modulo = (tela.MODULO || "OUTROS").toUpperCase();
+      if (!modulosPermitidos.has(modulo)) continue;
       if (!grupos[modulo]) grupos[modulo] = [];
       grupos[modulo].push(tela);
     }
 
-    return Object.entries(grupos).map(([modulo, telas]) => ({
+    return MODULOS_ORDENADOS.map((modulo) => ({
       modulo,
-      telas: telas
+      telas: (grupos[modulo] ?? [])
         .slice()
         .sort((a, b) => a.CODIGO_TELA.localeCompare(b.CODIGO_TELA))
         .map((tela) => ({
@@ -513,7 +522,7 @@ export default function PerfilPage() {
           podeConsultar: tela.PODE_CONSULTAR,
           podeEditar: tela.PODE_EDITAR,
         })),
-    }));
+    })).filter((modulo) => modulo.telas.length > 0);
   }, [telasPerfil]);
 
   const podeEditarPermissoes = useMemo(
