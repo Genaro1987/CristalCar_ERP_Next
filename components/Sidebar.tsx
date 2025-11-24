@@ -46,6 +46,12 @@ export function Sidebar() {
         requerEmpresa: true,
       },
       {
+        label: "LANCAMENTO DE PONTO",
+        rota: "/rh/ponto",
+        modulo: "RH",
+        requerEmpresa: true,
+      },
+      {
         label: "PERFIS DE ACESSO",
         rota: "/seg/perfil",
         modulo: "SEGURANCA",
