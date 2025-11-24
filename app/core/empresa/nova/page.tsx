@@ -5,6 +5,8 @@ import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
+import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 
 function normalizarTextoBasico(valor: string): string {
   return valor
@@ -35,6 +37,9 @@ type PageProps = {
 
 export default function CadastroEmpresaPage({ searchParams }: PageProps) {
   const router = useRouter();
+  const { empresa, carregando: carregandoEmpresaSelecionada } =
+    useEmpresaSelecionada();
+  useRequerEmpresaSelecionada({ ativo: !isNovo });
   const modoParam = (searchParams?.modo as string | undefined) ?? null;
   const isNovo = modoParam === "novo";
   const [carregando, setCarregando] = useState(false);
@@ -58,12 +63,9 @@ export default function CadastroEmpresaPage({ searchParams }: PageProps) {
 
   useEffect(() => {
     if (isNovo) return;
-    if (typeof window === "undefined") return;
-    const id = localStorage.getItem("EMPRESA_ATUAL_ID");
+    if (carregandoEmpresaSelecionada) return;
 
-    if (!id) return;
-
-    const idNum = Number(id);
+    const idNum = empresa?.id;
     if (!idNum) return;
 
     setModoEdicao(true);
@@ -74,16 +76,18 @@ export default function CadastroEmpresaPage({ searchParams }: PageProps) {
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.empresa) {
-          const empresa = data.empresa;
-          setNomeFantasia(normalizarTextoBasico(empresa.NOME_FANTASIA ?? ""));
-          setRazaoSocial(normalizarTextoBasico(empresa.RAZAO_SOCIAL ?? ""));
-          setCnpj(String(empresa.CNPJ ?? "").replace(/\D/g, "").slice(0, 14));
-          setInscricaoEstadual(normalizarTextoBasico(empresa.INSCRICAO_ESTADUAL ?? ""));
-          setInscricaoMunicipal(normalizarTextoBasico(empresa.INSCRICAO_MUNICIPAL ?? ""));
-          setRegimeTributario(empresa.REGIME_TRIBUTARIO ?? "");
-          setAtiva(empresa.ATIVA === 1);
+          const empresaSelecionada = data.empresa;
+          setNomeFantasia(normalizarTextoBasico(empresaSelecionada.NOME_FANTASIA ?? ""));
+          setRazaoSocial(normalizarTextoBasico(empresaSelecionada.RAZAO_SOCIAL ?? ""));
+          setCnpj(String(empresaSelecionada.CNPJ ?? "").replace(/\D/g, "").slice(0, 14));
+          setInscricaoEstadual(normalizarTextoBasico(empresaSelecionada.INSCRICAO_ESTADUAL ?? ""));
+          setInscricaoMunicipal(normalizarTextoBasico(empresaSelecionada.INSCRICAO_MUNICIPAL ?? ""));
+          setRegimeTributario(empresaSelecionada.REGIME_TRIBUTARIO ?? "");
+          setAtiva(empresaSelecionada.ATIVA === 1);
           setLogoFileName(
-            empresa.LOGOTIPO_URL ? "Logotipo já cadastrado" : "Nenhum arquivo selecionado"
+            empresaSelecionada.LOGOTIPO_URL
+              ? "Logotipo já cadastrado"
+              : "Nenhum arquivo selecionado"
           );
         }
       })
@@ -94,7 +98,7 @@ export default function CadastroEmpresaPage({ searchParams }: PageProps) {
         })
       )
       .finally(() => setCarregandoEmpresa(false));
-  }, [isNovo]);
+  }, [carregandoEmpresaSelecionada, empresa?.id, isNovo]);
 
   const aoSalvar = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

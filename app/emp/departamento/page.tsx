@@ -4,6 +4,8 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
+import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 
 interface Departamento {
   ID_DEPARTAMENTO: number;
@@ -40,7 +42,7 @@ function formatarCodigoDepartamento(id?: number) {
 }
 
 export default function DepartamentoPage() {
-  const [empresaId, setEmpresaId] = useState<number | null>(null);
+  const { empresa, carregando } = useEmpresaSelecionada();
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [carregandoLista, setCarregandoLista] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -57,16 +59,9 @@ export default function DepartamentoPage() {
     null
   );
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const id = window.localStorage.getItem("EMPRESA_ATUAL_ID");
-    if (id) {
-      const parsed = Number(id);
-      if (Number.isFinite(parsed)) {
-        setEmpresaId(parsed);
-      }
-    }
-  }, []);
+  useRequerEmpresaSelecionada();
+
+  const empresaId = empresa?.id ?? null;
 
   const headersPadrao = useMemo<HeadersInit>(() => {
     const headers: Record<string, string> = {};
@@ -84,7 +79,7 @@ export default function DepartamentoPage() {
     setErroLista(null);
 
     try {
-      const resposta = await fetch(`/api/departamentos?empresaId=${empresaId}`, {
+      const resposta = await fetch(`/api/departamentos`, {
         headers: headersPadrao,
       });
       const json = await resposta.json();
@@ -103,9 +98,10 @@ export default function DepartamentoPage() {
   };
 
   useEffect(() => {
+    if (carregando) return;
     carregarDepartamentos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresaId]);
+  }, [carregando, empresaId]);
 
   const limparFormulario = () => {
     setDepartamentoEmEdicao(null);

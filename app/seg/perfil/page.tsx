@@ -3,8 +3,9 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
-import { useEmpresaObrigatoria } from "@/hooks/useEmpresaObrigatoria";
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
+import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import {
   PermissoesPorTelaSection,
   TelaPermissao,
@@ -57,9 +58,10 @@ function normalizarDescricao(valor: string): string {
 }
 
 export default function PerfilPage() {
-  useEmpresaObrigatoria();
+  useRequerEmpresaSelecionada();
 
-  const [empresaId, setEmpresaId] = useState<number | null>(null);
+  const { empresa, carregando } = useEmpresaSelecionada();
+  const empresaId = empresa?.id ?? null;
   const [perfis, setPerfis] = useState<Perfil[]>([]);
   const [telasPerfil, setTelasPerfil] = useState<TelaPermitida[]>([]);
   const [perfilSelecionado, setPerfilSelecionado] = useState<Perfil | null>(null);
@@ -80,17 +82,6 @@ export default function PerfilPage() {
     type: "success" | "error" | "info";
     message: string;
   } | null>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const id = window.localStorage.getItem("EMPRESA_ATUAL_ID");
-    if (id) {
-      const parsed = Number(id);
-      if (Number.isFinite(parsed)) {
-        setEmpresaId(parsed);
-      }
-    }
-  }, []);
 
   const headersPadrao = useMemo<HeadersInit>(() => {
     const headers: Record<string, string> = {};

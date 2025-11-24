@@ -4,7 +4,8 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
-import { useEmpresaObrigatoria } from "@/hooks/useEmpresaObrigatoria";
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
+import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 
 interface Jornada {
   ID_JORNADA: string;
@@ -63,9 +64,9 @@ function montarResumoHorarios(jornada: Jornada) {
 }
 
 export default function JornadaPage() {
-  useEmpresaObrigatoria();
+  useRequerEmpresaSelecionada();
 
-  const [empresaId, setEmpresaId] = useState<number | null>(null);
+  const { empresa, carregando } = useEmpresaSelecionada();
   const [jornadas, setJornadas] = useState<Jornada[]>([]);
   const [carregandoLista, setCarregandoLista] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -87,16 +88,7 @@ export default function JornadaPage() {
   const [ativo, setAtivo] = useState(true);
   const [jornadaEmEdicao, setJornadaEmEdicao] = useState<Jornada | null>(null);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const id = window.localStorage.getItem("EMPRESA_ATUAL_ID");
-    if (id) {
-      const parsed = Number(id);
-      if (Number.isFinite(parsed)) {
-        setEmpresaId(parsed);
-      }
-    }
-  }, []);
+  const empresaId = empresa?.id ?? null;
 
   const headersPadrao = useMemo<HeadersInit>(() => {
     const headers: Record<string, string> = {};
@@ -133,9 +125,10 @@ export default function JornadaPage() {
   };
 
   useEffect(() => {
+    if (carregando) return;
     carregarJornadas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresaId]);
+  }, [carregando, empresaId]);
 
   const limparFormulario = () => {
     setJornadaEmEdicao(null);

@@ -1,5 +1,9 @@
 import { db } from "@/db/client";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  obterEmpresaIdDaRequest,
+  respostaEmpresaNaoSelecionada,
+} from "@/app/api/_utils/empresa";
 
 type FuncionarioPayload = {
   CPF?: string;
@@ -26,17 +30,6 @@ const CAMPOS_RETORNO = `
   f.DATA_DEMISSAO,
   f.ATIVO
 `;
-
-function obterEmpresaId(request: NextRequest): number | null {
-  const headerId = request.headers.get("x-empresa-id");
-  const queryId = request.nextUrl.searchParams.get("empresaId");
-  const valor = headerId ?? queryId;
-
-  if (!valor) return null;
-
-  const parsed = Number(valor);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
 
 function removerAcentosPreservandoEspaco(valor: string): string {
   return valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -117,13 +110,10 @@ async function buscarFuncionario(empresaId: number, id: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const empresaId = obterEmpresaId(request);
+  const empresaId = obterEmpresaIdDaRequest(request);
 
   if (!empresaId) {
-    return NextResponse.json(
-      { success: false, error: "EMPRESA_NAO_INFORMADA" },
-      { status: 400 }
-    );
+    return respostaEmpresaNaoSelecionada();
   }
 
   const id = request.nextUrl.searchParams.get("id");
@@ -172,13 +162,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const empresaId = obterEmpresaId(request);
+  const empresaId = obterEmpresaIdDaRequest(request);
 
   if (!empresaId) {
-    return NextResponse.json(
-      { success: false, error: "EMPRESA_NAO_INFORMADA" },
-      { status: 400 }
-    );
+    return respostaEmpresaNaoSelecionada();
   }
 
   try {
@@ -299,13 +286,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const empresaId = obterEmpresaId(request);
+  const empresaId = obterEmpresaIdDaRequest(request);
 
   if (!empresaId) {
-    return NextResponse.json(
-      { success: false, error: "EMPRESA_NAO_INFORMADA" },
-      { status: 400 }
-    );
+    return respostaEmpresaNaoSelecionada();
   }
 
   const id = request.nextUrl.searchParams.get("id");
