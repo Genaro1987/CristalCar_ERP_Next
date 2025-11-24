@@ -417,6 +417,11 @@ a {
   width: 130px;
 }
 
+.col-consulta {
+  width: 110px;
+  text-align: center;
+}
+
 .col-nome {
   min-width: 220px;
   width: 260px;
@@ -425,6 +430,12 @@ a {
 .col-descricao {
   min-width: 320px;
   width: 100%;
+}
+
+.radio-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .col-carga {
@@ -1002,51 +1013,38 @@ a {
 }
 
 .perfil-telas-lista {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   padding: 12px 14px;
+  overflow-x: auto;
 }
 
-.perfil-tela-linha {
-  display: grid;
-  grid-template-columns: minmax(260px, 1fr) repeat(3, 170px);
-  align-items: center;
-  gap: 12px;
-  padding: 8px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+.perfil-telas-table {
+  min-width: 860px;
 }
 
-.perfil-tela-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
+.perfil-telas-table th,
+.perfil-telas-table td {
+  vertical-align: middle;
 }
 
-.perfil-tela-codigo {
-  font-weight: 600;
-  letter-spacing: 0.05em;
+.col-codigo-tela {
+  width: 190px;
   white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
-.perfil-tela-nome {
-  font-weight: 500;
-  min-width: 0;
-  word-break: break-word;
+.col-nome-tela {
+  min-width: 320px;
+  width: 100%;
+  font-weight: 600;
+}
+
+.col-permissao {
+  width: 180px;
+  text-align: center;
 }
 
 .perfil-tela-permissao {
-  justify-content: flex-start;
-}
-
-@media (max-width: 900px) {
-  .perfil-tela-linha {
-    grid-template-columns: 1fr;
-  }
-
-  .perfil-tela-permissao {
-    justify-content: flex-start;
-  }
+  justify-content: center;
+  width: 100%;
 }

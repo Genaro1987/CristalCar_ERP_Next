@@ -27,6 +27,11 @@ interface TelaPermitida {
 
 const CODIGO_PADRAO_PERFIL = "PER-XXX";
 
+function formatarCodigoPerfil(codigo?: string | null): string {
+  if (!codigo) return CODIGO_PADRAO_PERFIL;
+  return codigo.startsWith("PER-") ? codigo : `PER-${codigo}`;
+}
+
 function removerAcentosPreservandoEspaco(valor: string): string {
   return valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
@@ -130,6 +135,13 @@ export default function PerfilPage() {
     setNomePerfil(normalizarTextoBasico(perfil.NOME_PERFIL ?? ""));
     setDescricao(normalizarDescricao(perfil.DESCRICAO ?? ""));
     setAtivo(perfil.ATIVO === 1);
+    await carregarTelasPerfil(perfil.ID_PERFIL);
+  };
+
+  const selecionarPerfilParaConsulta = async (perfil: Perfil) => {
+    setPerfilSelecionado(perfil);
+    setPerfilEmEdicao(null);
+    setNotification(null);
     await carregarTelasPerfil(perfil.ID_PERFIL);
   };
 
@@ -305,6 +317,14 @@ export default function PerfilPage() {
       return;
     }
 
+    if (!(perfilEmEdicao && perfilEmEdicao.ID_PERFIL === perfilSelecionado.ID_PERFIL)) {
+      setNotification({
+        type: "info",
+        message: "Clique em Editar para habilitar a alteração das permissões.",
+      });
+      return;
+    }
+
     setSalvandoTelas(true);
     setNotification(null);
 
@@ -343,6 +363,12 @@ export default function PerfilPage() {
     }
   };
 
+  const cancelarEdicaoPermissoes = async () => {
+    if (!perfilSelecionado) return;
+    await carregarTelasPerfil(perfilSelecionado.ID_PERFIL);
+    setPerfilEmEdicao(null);
+  };
+
   const gruposDeTelas = useMemo(() => {
     const grupos: Record<string, TelaPermitida[]> = {};
 
@@ -358,6 +384,16 @@ export default function PerfilPage() {
 
     return Object.entries(grupos);
   }, [telasPerfil]);
+
+  const podeEditarPermissoes = useMemo(
+    () =>
+      Boolean(
+        perfilSelecionado &&
+          perfilEmEdicao &&
+          perfilSelecionado.ID_PERFIL === perfilEmEdicao.ID_PERFIL
+      ),
+    [perfilEmEdicao, perfilSelecionado]
+  );
 
   return (
     <LayoutShell>
@@ -393,7 +429,7 @@ export default function PerfilPage() {
                       id="codigoPerfil"
                       name="codigoPerfil"
                       className="form-input"
-                      value={codigoPerfil || CODIGO_PADRAO_PERFIL}
+                      value={formatarCodigoPerfil(codigoPerfil)}
                       placeholder={CODIGO_PADRAO_PERFIL}
                       disabled
                       readOnly
@@ -475,6 +511,7 @@ export default function PerfilPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
+                        <th className="col-consulta">Consulta</th>
                         <th className="col-codigo">CÓDIGO</th>
                         <th className="col-nome">NOME</th>
                         <th className="col-descricao">DESCRIÇÃO</th>
@@ -485,7 +522,17 @@ export default function PerfilPage() {
                     <tbody>
                       {perfis.map((perfil) => (
                         <tr key={perfil.ID_PERFIL}>
-                          <td className="col-codigo">{perfil.ID_PERFIL}</td>
+                          <td className="col-consulta">
+                            <label className="radio-row">
+                              <input
+                                type="radio"
+                                name="perfil-consulta"
+                                checked={perfilSelecionado?.ID_PERFIL === perfil.ID_PERFIL}
+                                onChange={() => selecionarPerfilParaConsulta(perfil)}
+                              />
+                            </label>
+                          </td>
+                          <td className="col-codigo">{formatarCodigoPerfil(perfil.ID_PERFIL)}</td>
                           <td className="col-nome">{perfil.NOME_PERFIL}</td>
                           <td className="col-descricao">{perfil.DESCRICAO || "-"}</td>
                           <td className="col-status">
@@ -519,7 +566,7 @@ export default function PerfilPage() {
                 <h2>Telas permitidas para o perfil selecionado</h2>
                 <p>
                   {perfilSelecionado
-                    ? `Configurando acessos para: ${perfilSelecionado.ID_PERFIL} - ${perfilSelecionado.NOME_PERFIL}`
+                    ? `Configurando acessos para: ${formatarCodigoPerfil(perfilSelecionado.ID_PERFIL)} - ${perfilSelecionado.NOME_PERFIL}`
                     : "Selecione um perfil acima para configurar as telas permitidas."}
                 </p>
               </header>
@@ -541,54 +588,76 @@ export default function PerfilPage() {
                         <div key={modulo} className="perfil-modulo-bloco">
                           <div className="perfil-modulo-cabecalho">{modulo}</div>
                           <div className="perfil-telas-lista">
-                            {telas.map((tela) => (
-                              <div key={tela.ID_TELA} className="perfil-tela-linha">
-                                <div className="perfil-tela-info">
-                                  <span className="perfil-tela-codigo">{tela.CODIGO_TELA}</span>
-                                  <span className="perfil-tela-nome">{tela.NOME_TELA}</span>
-                                </div>
-                                <label className="checkbox-row perfil-tela-permissao">
-                                  <input
-                                    type="checkbox"
-                                    checked={tela.PODE_ACESSAR}
-                                    onChange={(e) =>
-                                      atualizarPermissaoTela(tela.ID_TELA, "acesso", e.target.checked)
-                                    }
-                                  />
-                                  <span>Pode acessar</span>
-                                </label>
-                                <label className="checkbox-row perfil-tela-permissao">
-                                  <input
-                                    type="checkbox"
-                                    checked={tela.PODE_CONSULTAR}
-                                    disabled={!tela.PODE_ACESSAR}
-                                    onChange={(e) =>
-                                      atualizarPermissaoTela(
-                                        tela.ID_TELA,
-                                        "consulta",
-                                        e.target.checked
-                                      )
-                                    }
-                                  />
-                                  <span>Pode consultar</span>
-                                </label>
-                                <label className="checkbox-row perfil-tela-permissao">
-                                  <input
-                                    type="checkbox"
-                                    checked={tela.PODE_EDITAR}
-                                    disabled={!tela.PODE_ACESSAR}
-                                    onChange={(e) =>
-                                      atualizarPermissaoTela(
-                                        tela.ID_TELA,
-                                        "edicao",
-                                        e.target.checked
-                                      )
-                                    }
-                                  />
-                                  <span>Pode editar</span>
-                                </label>
-                              </div>
-                            ))}
+                            <table className="data-table perfil-telas-table">
+                              <thead>
+                                <tr>
+                                  <th className="col-codigo-tela">Código tela</th>
+                                  <th className="col-nome-tela">Nome da tela</th>
+                                  <th className="col-permissao">Pode acessar</th>
+                                  <th className="col-permissao">Pode consultar</th>
+                                  <th className="col-permissao">Pode editar</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {telas.map((tela) => (
+                                  <tr key={tela.ID_TELA}>
+                                    <td className="col-codigo-tela">{tela.CODIGO_TELA}</td>
+                                    <td className="col-nome-tela">{tela.NOME_TELA}</td>
+                                    <td className="col-permissao">
+                                      <label className="checkbox-row perfil-tela-permissao">
+                                        <input
+                                          type="checkbox"
+                                          checked={tela.PODE_ACESSAR}
+                                          disabled={!podeEditarPermissoes}
+                                          onChange={(e) =>
+                                            atualizarPermissaoTela(
+                                              tela.ID_TELA,
+                                              "acesso",
+                                              e.target.checked
+                                            )
+                                          }
+                                        />
+                                        <span>Pode acessar</span>
+                                      </label>
+                                    </td>
+                                    <td className="col-permissao">
+                                      <label className="checkbox-row perfil-tela-permissao">
+                                        <input
+                                          type="checkbox"
+                                          checked={tela.PODE_CONSULTAR}
+                                          disabled={!podeEditarPermissoes || !tela.PODE_ACESSAR}
+                                          onChange={(e) =>
+                                            atualizarPermissaoTela(
+                                              tela.ID_TELA,
+                                              "consulta",
+                                              e.target.checked
+                                            )
+                                          }
+                                        />
+                                        <span>Pode consultar</span>
+                                      </label>
+                                    </td>
+                                    <td className="col-permissao">
+                                      <label className="checkbox-row perfil-tela-permissao">
+                                        <input
+                                          type="checkbox"
+                                          checked={tela.PODE_EDITAR}
+                                          disabled={!podeEditarPermissoes || !tela.PODE_ACESSAR}
+                                          onChange={(e) =>
+                                            atualizarPermissaoTela(
+                                              tela.ID_TELA,
+                                              "edicao",
+                                              e.target.checked
+                                            )
+                                          }
+                                        />
+                                        <span>Pode editar</span>
+                                      </label>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
                       ))}
@@ -601,19 +670,15 @@ export default function PerfilPage() {
                       <button
                         type="button"
                         className="button button-secondary"
-                        disabled={carregandoTelas || salvandoTelas}
-                        onClick={() =>
-                          perfilSelecionado
-                            ? carregarTelasPerfil(perfilSelecionado.ID_PERFIL)
-                            : undefined
-                        }
+                        disabled={carregandoTelas || salvandoTelas || !podeEditarPermissoes}
+                        onClick={cancelarEdicaoPermissoes}
                       >
                         Cancelar
                       </button>
                       <button
                         type="button"
                         className="button button-primary"
-                        disabled={!perfilSelecionado || salvandoTelas}
+                        disabled={!perfilSelecionado || salvandoTelas || !podeEditarPermissoes}
                         onClick={salvarAcessos}
                       >
                         {salvandoTelas ? "Salvando..." : "Salvar acessos do perfil"}
