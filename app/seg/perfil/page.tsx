@@ -5,6 +5,9 @@ import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 
+const GRID_COLS =
+  "grid grid-cols-[minmax(180px,260px)_minmax(320px,1fr)_140px_150px_130px] items-center gap-4";
+
 interface Perfil {
   ID_PERFIL: string;
   ID_EMPRESA: number;
@@ -583,81 +586,80 @@ export default function PerfilPage() {
                   )}
 
                   {!carregandoTelas && !erroTelas && gruposDeTelas.length > 0 && (
-                    <div className="perfil-modulos-wrapper">
+                    <div className="perfil-modulos-wrapper w-full space-y-6">
                       {gruposDeTelas.map(([modulo, telas]) => (
-                        <div key={modulo} className="perfil-modulo-bloco">
+                        <div key={modulo} className="perfil-modulo-bloco w-full">
                           <div className="perfil-modulo-cabecalho">{modulo}</div>
-                          <div className="perfil-telas-lista">
-                            <table className="data-table perfil-telas-table">
-                              <thead>
-                                <tr>
-                                  <th className="col-codigo-tela">Código tela</th>
-                                  <th className="col-nome-tela">Nome da tela</th>
-                                  <th className="col-permissao">Pode acessar</th>
-                                  <th className="col-permissao">Pode consultar</th>
-                                  <th className="col-permissao">Pode editar</th>
-                                </tr>
-                              </thead>
-                              <tbody>
+                          <div className="perfil-telas-lista w-full">
+                            <div className="overflow-hidden rounded-md border border-gray-100 bg-white">
+                              <div
+                                className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-700 bg-gray-50 ${GRID_COLS}`}
+                              >
+                                <span className="whitespace-nowrap">Código tela</span>
+                                <span className="whitespace-nowrap">Nome da tela</span>
+                                <span className="whitespace-nowrap text-center">Pode acessar</span>
+                                <span className="whitespace-nowrap text-center">Pode consultar</span>
+                                <span className="whitespace-nowrap text-center">Pode editar</span>
+                              </div>
+                              <div>
                                 {telas.map((tela) => (
-                                  <tr key={tela.ID_TELA}>
-                                    <td className="col-codigo-tela">{tela.CODIGO_TELA}</td>
-                                    <td className="col-nome-tela">{tela.NOME_TELA}</td>
-                                    <td className="col-permissao">
-                                      <label className="checkbox-row perfil-tela-permissao">
-                                        <input
-                                          type="checkbox"
-                                          checked={tela.PODE_ACESSAR}
-                                          disabled={!podeEditarPermissoes}
-                                          onChange={(e) =>
-                                            atualizarPermissaoTela(
-                                              tela.ID_TELA,
-                                              "acesso",
-                                              e.target.checked
-                                            )
-                                          }
-                                        />
-                                        <span>Pode acessar</span>
-                                      </label>
-                                    </td>
-                                    <td className="col-permissao">
-                                      <label className="checkbox-row perfil-tela-permissao">
-                                        <input
-                                          type="checkbox"
-                                          checked={tela.PODE_CONSULTAR}
-                                          disabled={!podeEditarPermissoes || !tela.PODE_ACESSAR}
-                                          onChange={(e) =>
-                                            atualizarPermissaoTela(
-                                              tela.ID_TELA,
-                                              "consulta",
-                                              e.target.checked
-                                            )
-                                          }
-                                        />
-                                        <span>Pode consultar</span>
-                                      </label>
-                                    </td>
-                                    <td className="col-permissao">
-                                      <label className="checkbox-row perfil-tela-permissao">
-                                        <input
-                                          type="checkbox"
-                                          checked={tela.PODE_EDITAR}
-                                          disabled={!podeEditarPermissoes || !tela.PODE_ACESSAR}
-                                          onChange={(e) =>
-                                            atualizarPermissaoTela(
-                                              tela.ID_TELA,
-                                              "edicao",
-                                              e.target.checked
-                                            )
-                                          }
-                                        />
-                                        <span>Pode editar</span>
-                                      </label>
-                                    </td>
-                                  </tr>
+                                  <div
+                                    key={tela.ID_TELA}
+                                    className={`px-4 py-2 border-t border-gray-100 text-sm bg-white ${GRID_COLS}`}
+                                  >
+                                    <span className="font-mono text-xs text-gray-800">{tela.CODIGO_TELA}</span>
+                                    <span
+                                      className="text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis"
+                                      title={tela.NOME_TELA}
+                                    >
+                                      {tela.NOME_TELA}
+                                    </span>
+                                    <div className="flex justify-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={tela.PODE_ACESSAR}
+                                        disabled={!podeEditarPermissoes}
+                                        onChange={(e) =>
+                                          atualizarPermissaoTela(
+                                            tela.ID_TELA,
+                                            "acesso",
+                                            e.target.checked
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                    <div className="flex justify-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={tela.PODE_CONSULTAR}
+                                        disabled={!podeEditarPermissoes || !tela.PODE_ACESSAR}
+                                        onChange={(e) =>
+                                          atualizarPermissaoTela(
+                                            tela.ID_TELA,
+                                            "consulta",
+                                            e.target.checked
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                    <div className="flex justify-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={tela.PODE_EDITAR}
+                                        disabled={!podeEditarPermissoes || !tela.PODE_ACESSAR}
+                                        onChange={(e) =>
+                                          atualizarPermissaoTela(
+                                            tela.ID_TELA,
+                                            "edicao",
+                                            e.target.checked
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </div>
                                 ))}
-                              </tbody>
-                            </table>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       ))}
