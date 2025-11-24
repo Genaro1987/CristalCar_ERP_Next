@@ -37,11 +37,11 @@ type PageProps = {
 
 export default function CadastroEmpresaPage({ searchParams }: PageProps) {
   const router = useRouter();
+  const modoParam = (searchParams?.modo as string | undefined) ?? null;
+  const isNovo = modoParam === "novo";
   const { empresa, carregando: carregandoEmpresaSelecionada } =
     useEmpresaSelecionada();
   useRequerEmpresaSelecionada({ ativo: !isNovo });
-  const modoParam = (searchParams?.modo as string | undefined) ?? null;
-  const isNovo = modoParam === "novo";
   const [carregando, setCarregando] = useState(false);
   const [carregandoEmpresa, setCarregandoEmpresa] = useState(false);
   const [modoEdicao, setModoEdicao] = useState(false);
