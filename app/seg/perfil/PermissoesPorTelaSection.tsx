@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 
 export type TipoPermissao = "acessar" | "consultar" | "editar";
 
@@ -24,7 +24,7 @@ export interface PermissoesPorTelaSectionProps {
 
 const moduloOrder = ["CORE", "EMPRESA", "RH", "SEGURANCA"];
 const colTemplate =
-  "minmax(170px,0.22fr) minmax(320px,0.46fr) minmax(130px,0.1fr) minmax(150px,0.11fr) minmax(130px,0.11fr)";
+  "grid grid-cols-[minmax(160px,0.22fr)_minmax(320px,0.46fr)_minmax(130px,0.1fr)_minmax(150px,0.11fr)_minmax(130px,0.11fr)] items-center gap-x-6";
 
 export function PermissoesPorTelaSection({
   perfilCodigo,
@@ -33,90 +33,100 @@ export function PermissoesPorTelaSection({
   onTogglePermissao,
   somenteConsulta = false,
 }: PermissoesPorTelaSectionProps) {
-  const telasPorModulo = moduloOrder
-    .map((modulo) => ({
-      modulo,
-      telas: telas.filter((t) => t.modulo === modulo),
-    }))
-    .filter((grupo) => grupo.telas.length > 0);
+  const telasPorModulo = useMemo(() => {
+    return moduloOrder
+      .map((modulo) => ({
+        modulo,
+        telas: [...telas]
+          .filter((t) => t.modulo === modulo)
+          .sort((a, b) => a.codigoTela.localeCompare(b.codigoTela)),
+      }))
+      .filter((grupo) => grupo.telas.length > 0);
+  }, [telas]);
 
   if (!telasPorModulo.length) {
     return null;
   }
 
   return (
-    <section className="permissoes-section">
-      <h2 className="permissoes-section-title">
+    <section className="mt-8">
+      <h2 className="text-lg font-semibold text-slate-900">
         Telas permitidas para o perfil selecionado
       </h2>
-      <p className="permissoes-section-description">
+      <p className="mt-1 text-sm text-slate-600">
         Configure abaixo as permissões de cada tela para o perfil em edição.
       </p>
-      <p className="permissoes-section-highlight">
+      <p className="mt-2 text-sm font-medium text-slate-700">
         Configurando acessos para: {" "}
-        <span>
+        <span className="font-semibold">
           {perfilCodigo} - {perfilNome}
         </span>
       </p>
 
-      <div className="permissoes-cards">
+      <div className="mt-6 space-y-8">
         {telasPorModulo.map((grupo) => (
           <article
             key={grupo.modulo}
-            className="permissoes-card"
+            className="rounded-2xl border border-slate-200 bg-white shadow-md shadow-slate-200/70"
           >
-            <header className="permissoes-card-header">
+            <header className="rounded-t-2xl bg-[#ff7a00] px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white">
               {grupo.modulo}
             </header>
 
-            <div className="permissoes-grid-header">
-              <div
-                className="permissoes-grid"
-                style={{ gridTemplateColumns: colTemplate }}
-              >
-                <span className="whitespace-nowrap">Código tela</span>
-                <span className="whitespace-nowrap">Nome da tela</span>
-                <span className="text-center whitespace-nowrap">Pode acessar</span>
-                <span className="text-center whitespace-nowrap">Pode consultar</span>
-                <span className="text-center whitespace-nowrap">Pode editar</span>
-              </div>
+            <div className={`${colTemplate} px-6 py-3 bg-slate-50 border-b border-slate-200`}>
+              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap">
+                Código tela
+              </span>
+              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap">
+                Nome da tela
+              </span>
+              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap text-center">
+                Pode acessar
+              </span>
+              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap text-center">
+                Pode consultar
+              </span>
+              <span className="text-xs font-semibold uppercase text-slate-600 whitespace-nowrap text-center">
+                Pode editar
+              </span>
             </div>
 
-            <div className="permissoes-grid-body">
+            <div className="px-6 pb-4">
               {grupo.telas.map((tela) => (
                 <div
                   key={tela.idTela}
-                  className="permissoes-grid-row"
-                  style={{ gridTemplateColumns: colTemplate }}
+                  className={`${colTemplate} px-0 py-2 border-t border-slate-100`}
                 >
-                  <div className="permissoes-grid-codigo">{tela.codigoTela}</div>
+                  <div className="text-sm font-mono font-semibold text-slate-800 whitespace-nowrap">
+                    {tela.codigoTela}
+                  </div>
 
-                  <div className="permissoes-grid-nome">{tela.nomeTela}</div>
+                  <div className="text-sm text-slate-800">{tela.nomeTela}</div>
 
-                  <div className="permissoes-grid-checkbox">
+                  <div className="flex justify-center">
                     <input
                       type="checkbox"
-                      className="permissoes-checkbox"
+                      className="h-4 w-4 cursor-pointer rounded border-slate-300 text-[#ff7a00] focus:ring-[#ff7a00]"
                       checked={tela.podeAcessar}
                       disabled={somenteConsulta}
                       onChange={() => onTogglePermissao(tela.idTela, "acessar")}
                     />
                   </div>
 
-                  <div className="permissoes-grid-checkbox">
+                  <div className="flex justify-center">
                     <input
                       type="checkbox"
-                      className="permissoes-checkbox"
+                      className="h-4 w-4 cursor-pointer rounded border-slate-300 text-[#ff7a00] focus:ring-[#ff7a00]"
                       checked={tela.podeConsultar}
                       disabled={somenteConsulta || !tela.podeAcessar}
                       onChange={() => onTogglePermissao(tela.idTela, "consultar")}
                     />
                   </div>
 
-                  <div className="permissoes-grid-checkbox">
+                  <div className="flex justify-center">
                     <input
                       type="checkbox"
-                      className="permissoes-checkbox"
+                      className="h-4 w-4 cursor-pointer rounded border-slate-300 text-[#ff7a00] focus:ring-[#ff7a00]"
                       checked={tela.podeEditar}
                       disabled={somenteConsulta || !tela.podeAcessar}
                       onChange={() => onTogglePermissao(tela.idTela, "editar")}
