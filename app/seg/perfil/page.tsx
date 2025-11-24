@@ -80,6 +80,9 @@ function SelecaoTelasPorModulo({
 }) {
   if (!modulos.length) return null;
 
+  const layoutColunas =
+    "grid grid-cols-[minmax(150px,220px)_minmax(320px,1fr)_minmax(130px,150px)_minmax(150px,170px)_minmax(130px,150px)] gap-x-4 items-center";
+
   return (
     <section className="mt-8 space-y-6">
       <h2 className="text-base font-semibold text-slate-900">
@@ -103,46 +106,29 @@ function SelecaoTelasPorModulo({
           </header>
 
           <div className="overflow-x-auto">
-            <table className="w-full table-fixed text-sm">
-              <colgroup>
-                <col className="w-64" />
-                <col />
-                <col className="w-36" />
-                <col className="w-36" />
-                <col className="w-36" />
-              </colgroup>
+            <div className="min-w-[900px]">
+              <div
+                className={`${layoutColunas} px-6 py-3 bg-neutral-50 text-xs font-semibold text-neutral-600 uppercase`}
+              >
+                <div className="whitespace-nowrap">CÓDIGO TELA</div>
+                <div className="whitespace-nowrap">NOME DA TELA</div>
+                <div className="text-center whitespace-nowrap">PODE ACESSAR</div>
+                <div className="text-center whitespace-nowrap">PODE CONSULTAR</div>
+                <div className="text-center whitespace-nowrap">PODE EDITAR</div>
+              </div>
 
-              <thead className="bg-neutral-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-600 uppercase whitespace-nowrap">
-                    CÓDIGO TELA
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-600 uppercase whitespace-nowrap">
-                    NOME DA TELA
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-600 uppercase whitespace-nowrap">
-                    PODE ACESSAR
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-600 uppercase whitespace-nowrap">
-                    PODE CONSULTAR
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-600 uppercase whitespace-nowrap">
-                    PODE EDITAR
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
+              <div className="divide-y divide-neutral-100">
                 {modulo.telas.map((tela) => (
-                  <tr key={tela.idTela} className="border-t border-neutral-100">
-                    <td className="px-6 py-3 text-sm text-neutral-800 whitespace-nowrap">
+                  <div
+                    key={tela.idTela}
+                    className={`${layoutColunas} px-6 py-3 text-sm text-neutral-800`}
+                  >
+                    <div className="whitespace-nowrap" title={tela.codigoTela}>
                       {tela.codigoTela}
-                    </td>
-                    <td className="px-6 py-3 text-sm text-neutral-800" title={tela.nomeTela}>
-                      {tela.nomeTela}
-                    </td>
+                    </div>
+                    <div title={tela.nomeTela}>{tela.nomeTela}</div>
 
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                    <div className="flex justify-center">
                       <input
                         type="checkbox"
                         className="h-4 w-4 rounded border-slate-300"
@@ -150,9 +136,9 @@ function SelecaoTelasPorModulo({
                         checked={tela.podeAcessar}
                         onChange={(e) => onTogglePermissao(tela.idTela, "ACESSAR", e.target.checked)}
                       />
-                    </td>
+                    </div>
 
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                    <div className="flex justify-center">
                       <input
                         type="checkbox"
                         className="h-4 w-4 rounded border-slate-300"
@@ -160,9 +146,9 @@ function SelecaoTelasPorModulo({
                         checked={tela.podeConsultar}
                         onChange={(e) => onTogglePermissao(tela.idTela, "CONSULTAR", e.target.checked)}
                       />
-                    </td>
+                    </div>
 
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                    <div className="flex justify-center">
                       <input
                         type="checkbox"
                         className="h-4 w-4 rounded border-slate-300"
@@ -170,11 +156,11 @@ function SelecaoTelasPorModulo({
                         checked={tela.podeEditar}
                         onChange={(e) => onTogglePermissao(tela.idTela, "EDITAR", e.target.checked)}
                       />
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
         </section>
       ))}
