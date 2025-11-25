@@ -558,7 +558,6 @@ export default function FuncionarioPage() {
                     >
                       <option value="MENSALISTA">Mensalista</option>
                     </select>
-                    <p className="helper-text">Atualmente apenas salário mensal está disponível.</p>
                   </div>
 
                   <div className="form-group">
@@ -569,7 +568,7 @@ export default function FuncionarioPage() {
                       className="form-input"
                       type="number"
                       step="0.01"
-                      min="0"
+                      min="0.01"
                       placeholder="Ex.: 2500,00"
                       value={salarioBase}
                       onChange={(e) => setSalarioBase(e.target.value)}
@@ -586,7 +585,7 @@ export default function FuncionarioPage() {
                       name="cargaHorariaMensal"
                       className="form-input"
                       type="number"
-                      min="0"
+                      min="1"
                       value={cargaHorariaMensalReferencia}
                       onChange={(e) => setCargaHorariaMensalReferencia(e.target.value)}
                       required
