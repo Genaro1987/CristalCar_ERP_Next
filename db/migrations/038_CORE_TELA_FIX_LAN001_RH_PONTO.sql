@@ -1,11 +1,9 @@
--- 038_CORE_TELA_FIX_LAN001_RH_PONTO.sql
--- Normaliza a tela de lançamento de ponto para LAN001_RH_PONTO
--- e elimina eventual duplicidade com CAD007_RH_PONTO.
+-- 038_CORE_TELA_FIX_LAN001.sql
+-- Ajusta a tela de ponto para usar apenas LAN001_RH_PONTO, sem duplicidades.
 
 BEGIN TRANSACTION;
 
--- 1) Caso exista CAD007_RH_PONTO e NÃO exista LAN001_RH_PONTO,
---    apenas renomeia o código.
+-- 1) Se ainda existe CAD007_RH_PONTO e NÃO existe LAN001_RH_PONTO, renomeia
 UPDATE CORE_TELA
 SET CODIGO_TELA = 'LAN001_RH_PONTO'
 WHERE CODIGO_TELA = 'CAD007_RH_PONTO'
@@ -13,30 +11,14 @@ WHERE CODIGO_TELA = 'CAD007_RH_PONTO'
     SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'LAN001_RH_PONTO'
   );
 
--- 2) Caso existam os dois códigos (CAD007 e LAN001),
---    unifica permissões e remove o antigo.
-
--- 2.1) Move permissões de SEG_PERFIL_TELA do ID_TELA de CAD007 para o ID_TELA de LAN001
-UPDATE SEG_PERFIL_TELA
-SET ID_TELA = (
-  SELECT ID_TELA FROM CORE_TELA
-  WHERE CODIGO_TELA = 'LAN001_RH_PONTO'
-  LIMIT 1
-)
-WHERE ID_TELA = (
-  SELECT ID_TELA FROM CORE_TELA
-  WHERE CODIGO_TELA = 'CAD007_RH_PONTO'
-  LIMIT 1
-)
-  AND EXISTS (SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'CAD007_RH_PONTO')
-  AND EXISTS (SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'LAN001_RH_PONTO');
-
--- 2.2) Remove o registro antigo de CAD007_RH_PONTO se LAN001 já existir
+-- 2) Se por qualquer motivo existirem as duas, remove o CAD007 (mantendo o LAN001)
 DELETE FROM CORE_TELA
 WHERE CODIGO_TELA = 'CAD007_RH_PONTO'
-  AND EXISTS (SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'LAN001_RH_PONTO');
+  AND EXISTS (
+    SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'LAN001_RH_PONTO'
+  );
 
--- 3) Garante que toda ajuda esteja vinculada a LAN001_RH_PONTO
+-- 3) Garante que a ajuda está alinhada com o código LAN001_RH_PONTO
 UPDATE CORE_AJUDA_TELA
 SET CODIGO_TELA = 'LAN001_RH_PONTO'
 WHERE CODIGO_TELA IN ('CAD007_RH_PONTO', 'LAN001_RH_PONTO');
