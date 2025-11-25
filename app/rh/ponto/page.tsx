@@ -20,6 +20,10 @@ interface Jornada {
   HORA_SAIDA_1?: string | null;
   HORA_ENTRADA_2?: string | null;
   HORA_SAIDA_2?: string | null;
+  HORA_ENTRADA_3?: string | null;
+  HORA_SAIDA_3?: string | null;
+  HORA_ENTRADA_EXTRA?: string | null;
+  HORA_SAIDA_EXTRA?: string | null;
 }
 
 interface LancamentoDia {
@@ -32,6 +36,8 @@ interface LancamentoDia {
   saidaExtra?: string | null;
   statusDia?: string;
   observacao?: string | null;
+  minutosTrabalhados?: number | null;
+  minutosExtras?: number | null;
 }
 
 const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -76,6 +82,67 @@ function camposVazios(dia: LancamentoDia) {
   );
 }
 
+function parseHoraParaMinutos(hora?: string | null): number | null {
+  if (!hora || !hora.includes(":")) return null;
+  const [h, m] = hora.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+function minutosParaHora(min: number): string {
+  if (!Number.isFinite(min) || min <= 0) return "00:00";
+  const horas = Math.floor(min / 60);
+  const minutos = min % 60;
+  return `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
+}
+
+function recalcularTotaisDia(dia: LancamentoDia, minutosJornadaDia?: number | null): LancamentoDia {
+  const em = parseHoraParaMinutos(dia.entradaManha);
+  const sm = parseHoraParaMinutos(dia.saidaManha);
+  const et = parseHoraParaMinutos(dia.entradaTarde);
+  const st = parseHoraParaMinutos(dia.saidaTarde);
+  const ei = parseHoraParaMinutos(dia.entradaExtra);
+  const si = parseHoraParaMinutos(dia.saidaExtra);
+
+  const diff = (inicio: number | null, fim: number | null) =>
+    inicio != null && fim != null && fim > inicio ? fim - inicio : 0;
+
+  const minutosTrabalhados = diff(em, sm) + diff(et, st) - diff(ei, si);
+  const minutosJornada = minutosJornadaDia ?? 0;
+  const minutosExtras = minutosJornada > 0 ? Math.max(0, minutosTrabalhados - minutosJornada) : 0;
+
+  return {
+    ...dia,
+    minutosTrabalhados,
+    minutosExtras,
+  };
+}
+
+function calcularMinutosJornadaDiaria(jornada?: {
+  HORA_ENTRADA_1?: string | null;
+  HORA_SAIDA_1?: string | null;
+  HORA_ENTRADA_2?: string | null;
+  HORA_SAIDA_2?: string | null;
+  HORA_ENTRADA_3?: string | null;
+  HORA_SAIDA_3?: string | null;
+  HORA_ENTRADA_EXTRA?: string | null;
+  HORA_SAIDA_EXTRA?: string | null;
+}): number | null {
+  if (!jornada) return null;
+
+  const em = parseHoraParaMinutos(jornada.HORA_ENTRADA_1);
+  const sm = parseHoraParaMinutos(jornada.HORA_SAIDA_1);
+  const et = parseHoraParaMinutos(jornada.HORA_ENTRADA_2);
+  const st = parseHoraParaMinutos(jornada.HORA_SAIDA_2);
+  const ei = parseHoraParaMinutos(jornada.HORA_ENTRADA_EXTRA ?? jornada.HORA_ENTRADA_3);
+  const si = parseHoraParaMinutos(jornada.HORA_SAIDA_EXTRA ?? jornada.HORA_SAIDA_3);
+
+  const diff = (inicio: number | null, fim: number | null) =>
+    inicio != null && fim != null && fim > inicio ? fim - inicio : 0;
+
+  return diff(em, sm) + diff(et, st) - diff(ei, si);
+}
+
 export default function PontoPage() {
   useRequerEmpresaSelecionada({ ativo: true });
 
@@ -110,6 +177,62 @@ export default function PontoPage() {
     () => funcionarios.find((f) => f.ID_FUNCIONARIO === funcionarioSelecionado),
     [funcionarios, funcionarioSelecionado]
   );
+
+  const jornadaFuncionario = useMemo(
+    () =>
+      funcionarioAtual?.ID_JORNADA
+        ? jornadas.find((j) => j.ID_JORNADA === funcionarioAtual.ID_JORNADA) ?? null
+        : null,
+    [funcionarioAtual, jornadas]
+  );
+
+  const minutosJornadaDia = useMemo(
+    () => calcularMinutosJornadaDiaria(jornadaFuncionario ?? undefined),
+    [jornadaFuncionario]
+  );
+
+  const timeInputClasses = "form-input w-20 text-center px-1 py-1 text-sm";
+
+  const montarHorariosJornadaParaDia = (
+    diaAtual: LancamentoDia,
+    jornada?: Jornada | null
+  ): LancamentoDia => {
+    if (!jornada) return diaAtual;
+
+    return {
+      ...diaAtual,
+      entradaManha: jornada.HORA_ENTRADA_1 ?? diaAtual.entradaManha,
+      saidaManha: jornada.HORA_SAIDA_1 ?? diaAtual.saidaManha,
+      entradaTarde: jornada.HORA_ENTRADA_2 ?? diaAtual.entradaTarde,
+      saidaTarde: jornada.HORA_SAIDA_2 ?? diaAtual.saidaTarde,
+      entradaExtra: jornada.HORA_ENTRADA_3 ?? jornada.HORA_ENTRADA_EXTRA ?? diaAtual.entradaExtra,
+      saidaExtra: jornada.HORA_SAIDA_3 ?? jornada.HORA_SAIDA_EXTRA ?? diaAtual.saidaExtra,
+    };
+  };
+
+  const aplicarJornadaNoDia = (indexDia: number) => {
+    if (!jornadaFuncionario) return;
+
+    setDiasPonto((diasAnteriores) => {
+      const copia = [...diasAnteriores];
+      const diaAtual = copia[indexDia];
+      const comJornada = montarHorariosJornadaParaDia(diaAtual, jornadaFuncionario);
+      copia[indexDia] = recalcularTotaisDia(comJornada, minutosJornadaDia);
+      return copia;
+    });
+  };
+
+  const handleChangeHora = (indexDia: number, campo: keyof LancamentoDia, valor: string) => {
+    setDiasPonto((diasAnteriores) => {
+      const copia = [...diasAnteriores];
+      const atualizado: LancamentoDia = {
+        ...copia[indexDia],
+        [campo]: valor,
+      };
+      copia[indexDia] = recalcularTotaisDia(atualizado, minutosJornadaDia);
+      return copia;
+    });
+  };
 
   const carregarFuncionarios = async () => {
     if (!empresaId) return;
@@ -161,6 +284,12 @@ export default function PontoPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [carregando, empresaId]);
 
+  useEffect(() => {
+    if (!diasPonto.length) return;
+
+    setDiasPonto((dias) => dias.map((dia) => recalcularTotaisDia(dia, minutosJornadaDia)));
+  }, [diasPonto.length, minutosJornadaDia]);
+
   const carregarPonto = async () => {
     setErroFormulario(null);
     setNotification(null);
@@ -192,17 +321,22 @@ export default function PontoPage() {
       const json = await resposta.json();
 
       if (resposta.ok && json?.success) {
-        const dados: LancamentoDia[] = (json.data ?? []).map((dia: LancamentoDia) => ({
-          dataReferencia: dia.dataReferencia,
-          entradaManha: dia.entradaManha ?? "",
-          saidaManha: dia.saidaManha ?? "",
-          entradaTarde: dia.entradaTarde ?? "",
-          saidaTarde: dia.saidaTarde ?? "",
-          entradaExtra: dia.entradaExtra ?? "",
-          saidaExtra: dia.saidaExtra ?? "",
-          statusDia: dia.statusDia ?? "NORMAL",
-          observacao: dia.observacao ?? "",
-        }));
+        const dados: LancamentoDia[] = (json.data ?? []).map((dia: LancamentoDia) =>
+          recalcularTotaisDia(
+            {
+              dataReferencia: dia.dataReferencia,
+              entradaManha: dia.entradaManha ?? "",
+              saidaManha: dia.saidaManha ?? "",
+              entradaTarde: dia.entradaTarde ?? "",
+              saidaTarde: dia.saidaTarde ?? "",
+              entradaExtra: dia.entradaExtra ?? "",
+              saidaExtra: dia.saidaExtra ?? "",
+              statusDia: dia.statusDia ?? "NORMAL",
+              observacao: dia.observacao ?? "",
+            },
+            minutosJornadaDia
+          )
+        );
 
         if (dados.length === 0) {
           setDiasPonto(gerarGradeVazia(competencia));
@@ -260,13 +394,9 @@ export default function PontoPage() {
           return dia;
         }
 
-        return {
-          ...dia,
-          entradaManha: jornada?.HORA_ENTRADA_1 ?? dia.entradaManha,
-          saidaManha: jornada?.HORA_SAIDA_1 ?? dia.saidaManha,
-          entradaTarde: jornada?.HORA_ENTRADA_2 ?? dia.entradaTarde,
-          saidaTarde: jornada?.HORA_SAIDA_2 ?? dia.saidaTarde,
-        };
+        const comHorarios = montarHorariosJornadaParaDia(dia, jornada);
+
+        return recalcularTotaisDia(comHorarios, minutosJornadaDia);
       })
     );
 
@@ -448,12 +578,15 @@ export default function PontoPage() {
                         <th>Saída manhã</th>
                         <th>Entrada tarde</th>
                         <th>Saída tarde</th>
-                        <th>Entrada extra</th>
-                        <th>Saída extra</th>
+                        <th>Entrada intervalo</th>
+                        <th>Saída intervalo</th>
+                        <th className="text-right">Tempo trabalhado</th>
+                        <th className="text-right">Horas extras</th>
+                        <th className="text-right">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {diasPonto.map((dia) => {
+                      {diasPonto.map((dia, index) => {
                         const data = new Date(dia.dataReferencia);
                         const ehFimDeSemana = data.getDay() === 0 || data.getDay() === 6;
 
@@ -465,99 +598,69 @@ export default function PontoPage() {
                             <td>{formatarDia(dia.dataReferencia)}</td>
                             <td>
                               <input
-                                className="form-input"
+                                className={timeInputClasses}
                                 type="time"
                                 value={dia.entradaManha ?? ""}
-                                onChange={(e) =>
-                                  setDiasPonto((prev) =>
-                                    prev.map((d) =>
-                                      d.dataReferencia === dia.dataReferencia
-                                        ? { ...d, entradaManha: e.target.value }
-                                        : d
-                                    )
-                                  )
-                                }
+                                onChange={(e) => handleChangeHora(index, "entradaManha", e.target.value)}
                               />
                             </td>
                             <td>
                               <input
-                                className="form-input"
+                                className={timeInputClasses}
                                 type="time"
                                 value={dia.saidaManha ?? ""}
-                                onChange={(e) =>
-                                  setDiasPonto((prev) =>
-                                    prev.map((d) =>
-                                      d.dataReferencia === dia.dataReferencia
-                                        ? { ...d, saidaManha: e.target.value }
-                                        : d
-                                    )
-                                  )
-                                }
+                                onChange={(e) => handleChangeHora(index, "saidaManha", e.target.value)}
                               />
                             </td>
                             <td>
                               <input
-                                className="form-input"
+                                className={timeInputClasses}
                                 type="time"
                                 value={dia.entradaTarde ?? ""}
-                                onChange={(e) =>
-                                  setDiasPonto((prev) =>
-                                    prev.map((d) =>
-                                      d.dataReferencia === dia.dataReferencia
-                                        ? { ...d, entradaTarde: e.target.value }
-                                        : d
-                                    )
-                                  )
-                                }
+                                onChange={(e) => handleChangeHora(index, "entradaTarde", e.target.value)}
                               />
                             </td>
                             <td>
                               <input
-                                className="form-input"
+                                className={timeInputClasses}
                                 type="time"
                                 value={dia.saidaTarde ?? ""}
-                                onChange={(e) =>
-                                  setDiasPonto((prev) =>
-                                    prev.map((d) =>
-                                      d.dataReferencia === dia.dataReferencia
-                                        ? { ...d, saidaTarde: e.target.value }
-                                        : d
-                                    )
-                                  )
-                                }
+                                onChange={(e) => handleChangeHora(index, "saidaTarde", e.target.value)}
                               />
                             </td>
                             <td>
                               <input
-                                className="form-input"
+                                className={timeInputClasses}
                                 type="time"
                                 value={dia.entradaExtra ?? ""}
-                                onChange={(e) =>
-                                  setDiasPonto((prev) =>
-                                    prev.map((d) =>
-                                      d.dataReferencia === dia.dataReferencia
-                                        ? { ...d, entradaExtra: e.target.value }
-                                        : d
-                                    )
-                                  )
-                                }
+                                onChange={(e) => handleChangeHora(index, "entradaExtra", e.target.value)}
                               />
                             </td>
                             <td>
                               <input
-                                className="form-input"
+                                className={timeInputClasses}
                                 type="time"
                                 value={dia.saidaExtra ?? ""}
-                                onChange={(e) =>
-                                  setDiasPonto((prev) =>
-                                    prev.map((d) =>
-                                      d.dataReferencia === dia.dataReferencia
-                                        ? { ...d, saidaExtra: e.target.value }
-                                        : d
-                                    )
-                                  )
-                                }
+                                onChange={(e) => handleChangeHora(index, "saidaExtra", e.target.value)}
                               />
+                            </td>
+                            <td className="text-right text-sm">
+                              {dia.minutosTrabalhados != null
+                                ? minutosParaHora(dia.minutosTrabalhados)
+                                : "--:--"}
+                            </td>
+                            <td className="text-right text-sm">
+                              {dia.minutosExtras != null ? minutosParaHora(dia.minutosExtras) : "--:--"}
+                            </td>
+                            <td className="text-right">
+                              <button
+                                type="button"
+                                className="text-xs text-orange-600 hover:underline"
+                                onClick={() => aplicarJornadaNoDia(index)}
+                                disabled={!jornadaFuncionario}
+                              >
+                                Aplicar jornada
+                              </button>
                             </td>
                           </tr>
                         );
