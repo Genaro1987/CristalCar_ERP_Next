@@ -678,6 +678,11 @@ a {
   color: #991b1b;
 }
 
+.badge-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
 .section-actions {
   margin-bottom: 16px;
   display: flex;
@@ -705,10 +710,13 @@ a {
   margin-bottom: 16px;
 }
 
-.empresa-card-logo img {
+.empresa-card-logo img,
+.empresa-card-logo-img {
   max-width: 120px;
   max-height: 80px;
   object-fit: contain;
+  width: auto;
+  height: auto;
 }
 
 .empresa-card-info {
@@ -1191,57 +1199,9 @@ a {
   line-height: 1.2;
 }
 
-.falta-indicador-titulo {
-  font-weight: 600;
-  color: #92400e;
-}
-
-.falta-indicador-detalhe {
-  color: #92400e;
-}
-
-.falta-placeholder {
-  display: inline-block;
-  padding: 6px 8px;
-  color: #6b7280;
-}
-
-.falta-popover {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  z-index: 10;
-  width: 280px;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  margin-top: 8px;
-}
-
-.falta-popover-title {
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.falta-opcoes {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.falta-select-label {
-  font-size: 12px;
-  color: #374151;
-  margin-top: 6px;
-}
-
-.falta-popover-actions {
-  margin-top: 10px;
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+.time-input {
+  width: 96px;
+  min-width: 96px;
 }
 
 .button-compact {
@@ -1253,16 +1213,40 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: flex-end;
+  justify-content: center;
   position: relative;
 }
 
 .ponto-tabela {
-  margin-bottom: 20px;
+  margin-bottom: 28px;
 }
 
 .ponto-tabela table td {
   vertical-align: middle;
+}
+
+.ponto-actions {
+  margin-top: 12px;
+  padding-bottom: 12px;
+}
+
+.falta-badge {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.falta-badge-detalhe {
+  font-size: 12px;
+  color: #374151;
+}
+
+.falta-modal-opcoes {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .modal-overlay {
@@ -1284,4 +1268,11 @@ a {
   max-height: 80vh;
   overflow: auto;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.modal-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
 }

@@ -5,6 +5,7 @@ import { HeaderBar } from "@/components/HeaderBar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
+import Image from "next/image";
 
 interface Empresa {
   ID_EMPRESA: number;
@@ -124,9 +125,13 @@ export default function SelecaoEmpresaPage() {
                 <div className="empresa-card" key={empresa.ID_EMPRESA}>
                   <div className="empresa-card-logo">
                     {empresa.LOGOTIPO_URL && (
-                      <img
+                      <Image
                         src={empresa.LOGOTIPO_URL}
                         alt={empresa.NOME_FANTASIA}
+                        width={120}
+                        height={80}
+                        className="empresa-card-logo-img"
+                        unoptimized
                       />
                     )}
                   </div>

@@ -14,7 +14,7 @@ export async function listarMotivosFaltaAtivos(): Promise<MotivoFalta[]> {
       SELECT ID_MOTIVO, DESCRICAO, ATIVO, ORDEM_EXIBICAO
       FROM RH_FALTA_JUSTIFICATIVA_MOTIVO
       WHERE ATIVO = 1
-      ORDER BY ORDEM_EXIBICAO, DESCRICAO
+      ORDER BY ORDEM_EXIBICAO
     `,
   });
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
+import Image from "next/image";
 
 type SecaoMenu = {
   label: string;
@@ -157,10 +158,13 @@ export function Sidebar() {
       <div className="sidebar-top">
         <div className="sidebar-logo-block">
           {empresa?.logoUrl ? (
-            <img
+            <Image
               src={empresa.logoUrl}
               alt={empresa.nomeFantasia ?? "Logo empresa"}
               className="sidebar-logo-image"
+              width={160}
+              height={60}
+              unoptimized
             />
           ) : (
             <div className="sidebar-logo-pill">CristalCar ERP</div>
