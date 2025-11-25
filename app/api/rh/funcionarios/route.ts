@@ -1,5 +1,6 @@
 import { db } from "@/db/client";
 import {
+  RegistroSalario,
   atualizarSalario,
   getSalarioAtual,
   listarHistoricoSalarios,
@@ -25,6 +26,13 @@ type FuncionarioPayload = {
   tipoSalario?: string;
   CARGA_HORARIA_MENSAL_REFERENCIA?: number | string;
   cargaHorariaMensalReferencia?: number | string;
+};
+
+type FuncionarioComSalario = {
+  [campo: string]: any;
+  SALARIO_BASE?: number | null;
+  SALARIO_ATUAL?: number | null;
+  HISTORICO_SALARIOS?: RegistroSalario[];
 };
 
 const CAMPOS_RETORNO = `
@@ -112,7 +120,7 @@ async function buscarFuncionario(
   empresaId: number,
   id: string,
   incluirHistoricoSalarios = false
-) {
+): Promise<FuncionarioComSalario | null> {
   const resultado = await db.execute({
     sql: `
       SELECT ${CAMPOS_RETORNO}
@@ -142,15 +150,17 @@ async function buscarFuncionario(
     ? await listarHistoricoSalarios(id)
     : undefined;
 
-  return {
+  const resultadoNormalizado: FuncionarioComSalario = {
     ...funcionario,
-    SALARIO_BASE: salarioAtual?.VALOR ?? funcionario.SALARIO_BASE,
-    SALARIO_ATUAL: salarioAtual?.VALOR ?? null,
-    HISTORICO_SALARIOS: historico,
-  } as typeof funcionario & {
-    SALARIO_ATUAL?: number | null;
-    HISTORICO_SALARIOS?: unknown[];
+    SALARIO_BASE:
+      (salarioAtual?.VALOR as number | null | undefined) ??
+      (funcionario.SALARIO_BASE as number | null | undefined) ??
+      null,
+    SALARIO_ATUAL: (salarioAtual?.VALOR as number | null | undefined) ?? null,
+    HISTORICO_SALARIOS: historico as RegistroSalario[] | undefined,
   };
+
+  return resultadoNormalizado;
 }
 
 export async function GET(request: NextRequest) {
