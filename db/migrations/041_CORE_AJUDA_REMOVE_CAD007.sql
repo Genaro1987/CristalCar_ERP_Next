@@ -1,15 +1,4 @@
 -- 041_CORE_AJUDA_REMOVE_CAD007.sql
-
--- Remove registros de ajuda ligados à antiga tela CAD007_RH_PONTO,
--- usando o ID_TELA vindo da CORE_TELA
-
-DELETE FROM CORE_AJUDA_TELA
-WHERE ID_TELA IN (
-  SELECT ID_TELA
-  FROM CORE_TELA
-  WHERE CODIGO_TELA = 'CAD007_RH_PONTO'
-);
-
-
-Sem BEGIN TRANSACTION;
-Sem COMMIT;
+-- Migration intencionalmente vazia.
+-- A limpeza de referências à tela CAD007_RH_PONTO já foi feita manualmente no banco.
+-- Esta migration existe apenas para manter a sequência de versões alinhada.
