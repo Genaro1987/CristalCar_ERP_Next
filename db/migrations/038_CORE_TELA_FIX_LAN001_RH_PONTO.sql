@@ -1,26 +1,5 @@
--- 038_CORE_TELA_FIX_LAN001.sql
--- Ajusta a tela de ponto para usar apenas LAN001_RH_PONTO, sem duplicidades.
+-- 038_CORE_TELA_FIX_LAN001_RH_PONTO.sql
+-- Migração intencionalmente sem efeito.
+-- Os ajustes de CAD007_RH_PONTO / LAN001_RH_PONTO serão tratados em uma próxima migration.
 
-BEGIN TRANSACTION;
-
--- 1) Se ainda existe CAD007_RH_PONTO e NÃO existe LAN001_RH_PONTO, renomeia
-UPDATE CORE_TELA
-SET CODIGO_TELA = 'LAN001_RH_PONTO'
-WHERE CODIGO_TELA = 'CAD007_RH_PONTO'
-  AND NOT EXISTS (
-    SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'LAN001_RH_PONTO'
-  );
-
--- 2) Se por qualquer motivo existirem as duas, remove o CAD007 (mantendo o LAN001)
-DELETE FROM CORE_TELA
-WHERE CODIGO_TELA = 'CAD007_RH_PONTO'
-  AND EXISTS (
-    SELECT 1 FROM CORE_TELA WHERE CODIGO_TELA = 'LAN001_RH_PONTO'
-  );
-
--- 3) Garante que a ajuda está alinhada com o código LAN001_RH_PONTO
-UPDATE CORE_AJUDA_TELA
-SET CODIGO_TELA = 'LAN001_RH_PONTO'
-WHERE CODIGO_TELA IN ('CAD007_RH_PONTO', 'LAN001_RH_PONTO');
-
-COMMIT;
+SELECT 1 AS DUMMY;
