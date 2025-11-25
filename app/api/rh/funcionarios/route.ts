@@ -150,14 +150,18 @@ async function buscarFuncionario(
     ? await listarHistoricoSalarios(id)
     : undefined;
 
+  const salarioBaseBruto = funcionario.SALARIO_BASE;
+  const salarioBase =
+    salarioAtual?.VALOR ??
+    (typeof salarioBaseBruto === "number"
+      ? salarioBaseBruto
+      : Number(salarioBaseBruto ?? NaN));
+
   const resultadoNormalizado: FuncionarioComSalario = {
     ...funcionario,
-    SALARIO_BASE:
-      (salarioAtual?.VALOR as number | null | undefined) ??
-      (funcionario.SALARIO_BASE as number | null | undefined) ??
-      null,
-    SALARIO_ATUAL: (salarioAtual?.VALOR as number | null | undefined) ?? null,
-    HISTORICO_SALARIOS: historico as RegistroSalario[] | undefined,
+    SALARIO_BASE: Number.isFinite(salarioBase) ? salarioBase : null,
+    SALARIO_ATUAL: salarioAtual?.VALOR ?? null,
+    HISTORICO_SALARIOS: historico,
   };
 
   return resultadoNormalizado;
