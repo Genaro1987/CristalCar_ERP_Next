@@ -23,6 +23,7 @@ type Funcionario = {
   SALARIO_BASE?: number | null;
   TIPO_SALARIO?: string | null;
   CARGA_HORARIA_MENSAL_REFERENCIA?: number | null;
+  HISTORICO_SALARIOS?: SalarioHistorico[];
 };
 
 type Departamento = {
@@ -41,6 +42,15 @@ type Perfil = {
   ID_PERFIL: string;
   NOME_PERFIL: string;
   ATIVO: 0 | 1;
+};
+
+type SalarioHistorico = {
+  ID_SALARIO: number;
+  ID_FUNCIONARIO: string;
+  DATA_INICIO_VIGENCIA: string;
+  DATA_FIM_VIGENCIA: string | null;
+  VALOR: number;
+  OBSERVACAO: string | null;
 };
 
 function removerAcentosPreservandoEspaco(valor: string): string {
@@ -77,6 +87,13 @@ function formatarNumeroParaMoeda(valor?: number | null): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function formatarData(valor?: string | null): string {
+  if (!valor) return "-";
+  const [ano, mes, dia] = valor.split("-");
+  if (!ano || !mes || !dia) return valor;
+  return `${dia}/${mes}/${ano}`;
 }
 
 function converterMoedaParaNumero(valor: string): number {
@@ -152,6 +169,8 @@ export default function FuncionarioPage() {
   );
   const [erroSalario, setErroSalario] = useState<string | null>(null);
   const [erroCargaHoraria, setErroCargaHoraria] = useState<string | null>(null);
+  const [historicoSalarios, setHistoricoSalarios] = useState<SalarioHistorico[]>([]);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
 
   const empresaId = empresa?.id ?? null;
 
@@ -256,9 +275,10 @@ export default function FuncionarioPage() {
     setCargaHorariaMensalReferencia("220");
     setErroSalario(null);
     setErroCargaHoraria(null);
+    setHistoricoSalarios([]);
   };
 
-  const preencherParaEdicao = (funcionario: Funcionario) => {
+  const preencherParaEdicao = async (funcionario: Funcionario) => {
     setFuncionarioEmEdicao(funcionario);
     setNomeCompleto(normalizarTextoBasico(funcionario.NOME_COMPLETO ?? ""));
     setCpf(aplicarMascaraCpf(funcionario.CPF ?? ""));
@@ -279,6 +299,29 @@ export default function FuncionarioPage() {
     );
     setErroSalario(null);
     setErroCargaHoraria(null);
+    setHistoricoSalarios([]);
+
+    if (!empresaId) return;
+
+    setCarregandoHistorico(true);
+    try {
+      const resposta = await fetch(
+        `/api/rh/funcionarios?id=${encodeURIComponent(funcionario.ID_FUNCIONARIO)}&incluirHistorico=true`,
+        { headers: headersPadrao }
+      );
+      const json = await resposta.json();
+
+      if (json?.success && json.data) {
+        const dados = json.data as Funcionario;
+        setTipoSalario(dados.TIPO_SALARIO || "MENSALISTA");
+        setSalarioBase(formatarNumeroParaMoeda(dados.SALARIO_BASE));
+        setHistoricoSalarios(dados.HISTORICO_SALARIOS || []);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setCarregandoHistorico(false);
+    }
   };
 
   const validarDatas = (admissao: string, demissao: string) => {
@@ -652,6 +695,44 @@ export default function FuncionarioPage() {
                   </div>
                 </div>
               </form>
+
+              <div className="panel-subsection">
+                <header className="form-section-header">
+                  <h3>Histórico de salários</h3>
+                  <p>Registros de vigência e valores já aplicados ao funcionário.</p>
+                </header>
+
+                {carregandoHistorico && <p>Carregando histórico de salários...</p>}
+
+                {!carregandoHistorico && historicoSalarios.length === 0 && (
+                  <p className="helper-text">Nenhum histórico de salário encontrado.</p>
+                )}
+
+                {!carregandoHistorico && historicoSalarios.length > 0 && (
+                  <div className="departamento-tabela-wrapper">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Início vigência</th>
+                          <th>Fim vigência</th>
+                          <th>Valor</th>
+                          <th>Observação</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {historicoSalarios.map((registro) => (
+                          <tr key={registro.ID_SALARIO}>
+                            <td>{formatarData(registro.DATA_INICIO_VIGENCIA)}</td>
+                            <td>{formatarData(registro.DATA_FIM_VIGENCIA)}</td>
+                            <td>R$ {formatarNumeroParaMoeda(registro.VALOR)}</td>
+                            <td>{registro.OBSERVACAO || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </section>
 
             <section className="panel">

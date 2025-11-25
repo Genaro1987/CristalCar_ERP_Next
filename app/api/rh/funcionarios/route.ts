@@ -1,4 +1,9 @@
 import { db } from "@/db/client";
+import {
+  atualizarSalario,
+  getSalarioAtual,
+  listarHistoricoSalarios,
+} from "@/db/rhSalario";
 import { NextRequest, NextResponse } from "next/server";
 import {
   obterEmpresaIdDaRequest,
@@ -103,7 +108,11 @@ async function gerarProximoIdFuncionario(empresaId: number): Promise<string> {
   return `FUN-${String(proximoNumero).padStart(3, "0")}`;
 }
 
-async function buscarFuncionario(empresaId: number, id: string) {
+async function buscarFuncionario(
+  empresaId: number,
+  id: string,
+  incluirHistoricoSalarios = false
+) {
   const resultado = await db.execute({
     sql: `
       SELECT ${CAMPOS_RETORNO}
@@ -123,7 +132,25 @@ async function buscarFuncionario(empresaId: number, id: string) {
     args: [empresaId, id],
   });
 
-  return resultado.rows?.[0] ?? null;
+  const funcionario = resultado.rows?.[0];
+
+  if (!funcionario) return null;
+
+  const salarioAtual = await getSalarioAtual(id);
+
+  const historico = incluirHistoricoSalarios
+    ? await listarHistoricoSalarios(id)
+    : undefined;
+
+  return {
+    ...funcionario,
+    SALARIO_BASE: salarioAtual?.VALOR ?? funcionario.SALARIO_BASE,
+    SALARIO_ATUAL: salarioAtual?.VALOR ?? null,
+    HISTORICO_SALARIOS: historico,
+  } as typeof funcionario & {
+    SALARIO_ATUAL?: number | null;
+    HISTORICO_SALARIOS?: unknown[];
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -135,10 +162,16 @@ export async function GET(request: NextRequest) {
 
   const id = request.nextUrl.searchParams.get("id");
   const apenasAtivos = request.nextUrl.searchParams.get("apenasAtivos") === "true";
+  const incluirHistorico =
+    request.nextUrl.searchParams.get("incluirHistorico") !== "false";
 
   try {
     if (id) {
-      const funcionario = await buscarFuncionario(empresaId, id);
+      const funcionario = await buscarFuncionario(
+        empresaId,
+        id,
+        incluirHistorico
+      );
 
       if (!funcionario) {
         return NextResponse.json(
@@ -333,7 +366,9 @@ export async function POST(request: NextRequest) {
       ],
     });
 
-    const funcionario = await buscarFuncionario(empresaId, novoId);
+    await atualizarSalario(novoId, salarioBase);
+
+    const funcionario = await buscarFuncionario(empresaId, novoId, true);
 
     return NextResponse.json({ success: true, data: funcionario }, { status: 201 });
   } catch (error) {
@@ -364,7 +399,7 @@ export async function PUT(request: NextRequest) {
   try {
     const body = (await request.json().catch(() => null)) as FuncionarioPayload | null;
 
-    const funcionarioAtual = await buscarFuncionario(empresaId, id);
+    const funcionarioAtual = await buscarFuncionario(empresaId, id, true);
 
     if (!funcionarioAtual) {
       return NextResponse.json(
@@ -484,6 +519,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const ativo = dataDemissao ? 0 : interpretarAtivo(body?.ATIVO ?? funcionarioAtual.ATIVO);
+    const salarioVigente = await getSalarioAtual(id);
 
     await db.execute({
       sql: `
@@ -519,7 +555,11 @@ export async function PUT(request: NextRequest) {
       ],
     });
 
-    const funcionarioAtualizado = await buscarFuncionario(empresaId, id);
+    if (salarioVigente?.VALOR !== salarioBase) {
+      await atualizarSalario(id, salarioBase);
+    }
+
+    const funcionarioAtualizado = await buscarFuncionario(empresaId, id, true);
 
     return NextResponse.json({ success: true, data: funcionarioAtualizado });
   } catch (error) {
