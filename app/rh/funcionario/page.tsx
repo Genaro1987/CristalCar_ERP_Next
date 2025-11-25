@@ -20,6 +20,9 @@ type Funcionario = {
   DATA_ADMISSAO: string;
   DATA_DEMISSAO?: string | null;
   ATIVO: 0 | 1;
+  SALARIO_BASE?: number | null;
+  TIPO_SALARIO?: string | null;
+  CARGA_HORARIA_MENSAL_REFERENCIA?: number | null;
 };
 
 type Departamento = {
@@ -111,9 +114,14 @@ export default function FuncionarioPage() {
   const [dataAdmissao, setDataAdmissao] = useState("");
   const [dataDemissao, setDataDemissao] = useState("");
   const [ativo, setAtivo] = useState(true);
+  const [tipoSalario, setTipoSalario] = useState("MENSALISTA");
+  const [salarioBase, setSalarioBase] = useState("");
+  const [cargaHorariaMensalReferencia, setCargaHorariaMensalReferencia] = useState("220");
   const [funcionarioEmEdicao, setFuncionarioEmEdicao] = useState<Funcionario | null>(
     null
   );
+  const [erroSalario, setErroSalario] = useState<string | null>(null);
+  const [erroCargaHoraria, setErroCargaHoraria] = useState<string | null>(null);
 
   const empresaId = empresa?.id ?? null;
 
@@ -213,6 +221,11 @@ export default function FuncionarioPage() {
     setDataDemissao("");
     setAtivo(true);
     setErroFormulario(null);
+    setTipoSalario("MENSALISTA");
+    setSalarioBase("");
+    setCargaHorariaMensalReferencia("220");
+    setErroSalario(null);
+    setErroCargaHoraria(null);
   };
 
   const preencherParaEdicao = (funcionario: Funcionario) => {
@@ -226,6 +239,20 @@ export default function FuncionarioPage() {
     setDataDemissao(funcionario.DATA_DEMISSAO ?? "");
     setAtivo(funcionario.ATIVO === 1 && !funcionario.DATA_DEMISSAO);
     setErroFormulario(null);
+    setTipoSalario(funcionario.TIPO_SALARIO || "MENSALISTA");
+    setSalarioBase(
+      funcionario.SALARIO_BASE !== undefined && funcionario.SALARIO_BASE !== null
+        ? String(funcionario.SALARIO_BASE)
+        : ""
+    );
+    setCargaHorariaMensalReferencia(
+      funcionario.CARGA_HORARIA_MENSAL_REFERENCIA !== undefined &&
+        funcionario.CARGA_HORARIA_MENSAL_REFERENCIA !== null
+        ? String(funcionario.CARGA_HORARIA_MENSAL_REFERENCIA)
+        : "220"
+    );
+    setErroSalario(null);
+    setErroCargaHoraria(null);
   };
 
   const validarDatas = (admissao: string, demissao: string) => {
@@ -239,6 +266,8 @@ export default function FuncionarioPage() {
     event.preventDefault();
     setNotification(null);
     setErroFormulario(null);
+    setErroSalario(null);
+    setErroCargaHoraria(null);
 
     if (!empresaId) {
       setNotification({ type: "error", message: "Selecione uma empresa antes de salvar." });
@@ -249,6 +278,8 @@ export default function FuncionarioPage() {
     const cpfLimpo = limparCpf(cpf);
     const dataAdmissaoValida = dataAdmissao || "";
     const dataDemissaoValida = dataDemissao || "";
+    const salarioBaseNumero = Number(salarioBase);
+    const cargaHorariaNumero = Number(cargaHorariaMensalReferencia);
     const erroDatas = validarDatas(dataAdmissaoValida, dataDemissaoValida);
 
     if (!nomeNormalizado) {
@@ -281,6 +312,16 @@ export default function FuncionarioPage() {
       return;
     }
 
+    if (!Number.isFinite(salarioBaseNumero) || salarioBaseNumero <= 0) {
+      setErroSalario("Informe um salário base válido.");
+      return;
+    }
+
+    if (!Number.isFinite(cargaHorariaNumero) || cargaHorariaNumero <= 0) {
+      setErroCargaHoraria("Informe uma carga horária mensal válida.");
+      return;
+    }
+
     const payload = {
       NOME_COMPLETO: nomeNormalizado,
       CPF: cpfLimpo,
@@ -290,6 +331,9 @@ export default function FuncionarioPage() {
       DATA_ADMISSAO: dataAdmissaoValida,
       DATA_DEMISSAO: dataDemissaoValida || null,
       ATIVO: dataDemissaoValida ? 0 : ativo ? 1 : 0,
+      salarioBase: salarioBaseNumero,
+      tipoSalario: tipoSalario || "MENSALISTA",
+      cargaHorariaMensalReferencia: cargaHorariaNumero,
     };
 
     const editando = Boolean(funcionarioEmEdicao?.ID_FUNCIONARIO);
@@ -498,6 +542,59 @@ export default function FuncionarioPage() {
                       value={dataDemissao}
                       onChange={(e) => setDataDemissao(e.target.value)}
                     />
+                  </div>
+                </div>
+
+                <div className="form-grid three-columns">
+                  <div className="form-group">
+                    <label htmlFor="tipoSalario">Tipo de salário *</label>
+                    <select
+                      id="tipoSalario"
+                      name="tipoSalario"
+                      className="form-input"
+                      value={tipoSalario}
+                      onChange={(e) => setTipoSalario(e.target.value)}
+                      required
+                    >
+                      <option value="MENSALISTA">Mensalista</option>
+                    </select>
+                    <p className="helper-text">Atualmente apenas salário mensal está disponível.</p>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="salarioBase">Salário base *</label>
+                    <input
+                      id="salarioBase"
+                      name="salarioBase"
+                      className="form-input"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Ex.: 2500,00"
+                      value={salarioBase}
+                      onChange={(e) => setSalarioBase(e.target.value)}
+                      style={{ textAlign: "right" }}
+                      required
+                    />
+                    {erroSalario && <p className="error-text">{erroSalario}</p>}
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="cargaHorariaMensal">Carga horária mensal (horas) *</label>
+                    <input
+                      id="cargaHorariaMensal"
+                      name="cargaHorariaMensal"
+                      className="form-input"
+                      type="number"
+                      min="0"
+                      value={cargaHorariaMensalReferencia}
+                      onChange={(e) => setCargaHorariaMensalReferencia(e.target.value)}
+                      required
+                    />
+                    <p className="helper-text">
+                      Usada para calcular o valor da hora (salário ÷ horas/mês).
+                    </p>
+                    {erroCargaHoraria && <p className="error-text">{erroCargaHoraria}</p>}
                   </div>
                 </div>
 

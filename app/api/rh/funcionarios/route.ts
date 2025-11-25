@@ -14,6 +14,12 @@ type FuncionarioPayload = {
   DATA_ADMISSAO?: string;
   DATA_DEMISSAO?: string | null;
   ATIVO?: number | boolean;
+  SALARIO_BASE?: number | string;
+  salarioBase?: number | string;
+  TIPO_SALARIO?: string;
+  tipoSalario?: string;
+  CARGA_HORARIA_MENSAL_REFERENCIA?: number | string;
+  cargaHorariaMensalReferencia?: number | string;
 };
 
 const CAMPOS_RETORNO = `
@@ -28,7 +34,10 @@ const CAMPOS_RETORNO = `
   p.NOME_PERFIL,
   f.DATA_ADMISSAO,
   f.DATA_DEMISSAO,
-  f.ATIVO
+  f.ATIVO,
+  f.SALARIO_BASE,
+  f.TIPO_SALARIO,
+  f.CARGA_HORARIA_MENSAL_REFERENCIA
 `;
 
 function removerAcentosPreservandoEspaco(valor: string): string {
@@ -53,6 +62,14 @@ function interpretarAtivo(valor: unknown): 0 | 1 {
     return 0;
   }
   return 1;
+}
+
+function normalizarNumero(valor: unknown, fallback: number): number {
+  const numero = Number(valor ?? fallback);
+
+  if (!Number.isFinite(numero)) return fallback;
+
+  return numero;
 }
 
 function validarDataIso(valor?: string | null): string | null {
@@ -117,6 +134,7 @@ export async function GET(request: NextRequest) {
   }
 
   const id = request.nextUrl.searchParams.get("id");
+  const apenasAtivos = request.nextUrl.searchParams.get("apenasAtivos") === "true";
 
   try {
     if (id) {
@@ -132,6 +150,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: funcionario });
     }
 
+    const filtros: string[] = ["f.ID_EMPRESA = ?"];
+
+    if (apenasAtivos) {
+      filtros.push("f.ATIVO = 1");
+    }
+
     const resultado = await db.execute({
       sql: `
         SELECT ${CAMPOS_RETORNO}
@@ -145,7 +169,7 @@ export async function GET(request: NextRequest) {
         LEFT JOIN SEG_PERFIL p
           ON p.ID_PERFIL = f.ID_PERFIL
          AND p.ID_EMPRESA = f.ID_EMPRESA
-        WHERE f.ID_EMPRESA = ?
+        WHERE ${filtros.join(" AND ")}
         ORDER BY f.ID_FUNCIONARIO
       `,
       args: [empresaId],
@@ -178,6 +202,15 @@ export async function POST(request: NextRequest) {
     const idPerfil = (body?.ID_PERFIL ?? "").toString().trim() || null;
     const dataAdmissao = validarDataIso(body?.DATA_ADMISSAO);
     const dataDemissao = validarDataIso(body?.DATA_DEMISSAO);
+    const salarioBase = normalizarNumero(body?.salarioBase ?? body?.SALARIO_BASE, 0);
+    const tipoSalario = (body?.tipoSalario ?? body?.TIPO_SALARIO ?? "MENSALISTA")
+      .toString()
+      .trim()
+      .toUpperCase();
+    const cargaHorariaMensalReferencia = normalizarNumero(
+      body?.cargaHorariaMensalReferencia ?? body?.CARGA_HORARIA_MENSAL_REFERENCIA,
+      0
+    );
 
     if (!nomeNormalizado) {
       return NextResponse.json(
@@ -210,6 +243,27 @@ export async function POST(request: NextRequest) {
     if (!dataAdmissao) {
       return NextResponse.json(
         { success: false, error: "DATA_ADMISSAO_OBRIGATORIA" },
+        { status: 400 }
+      );
+    }
+
+    if (tipoSalario !== "MENSALISTA") {
+      return NextResponse.json(
+        { success: false, error: "TIPO_SALARIO_INVALIDO" },
+        { status: 400 }
+      );
+    }
+
+    if (!Number.isFinite(salarioBase) || salarioBase <= 0) {
+      return NextResponse.json(
+        { success: false, error: "SALARIO_INVALIDO" },
+        { status: 400 }
+      );
+    }
+
+    if (!Number.isFinite(cargaHorariaMensalReferencia) || cargaHorariaMensalReferencia <= 0) {
+      return NextResponse.json(
+        { success: false, error: "CARGA_HORARIA_INVALIDA" },
         { status: 400 }
       );
     }
@@ -254,10 +308,13 @@ export async function POST(request: NextRequest) {
           DATA_ADMISSAO,
           DATA_DEMISSAO,
           ATIVO,
+          SALARIO_BASE,
+          TIPO_SALARIO,
+          CARGA_HORARIA_MENSAL_REFERENCIA,
           OBSERVACOES,
           CRIADO_EM,
           ATUALIZADO_EM
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'), datetime('now'))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'), datetime('now'))
       `,
       args: [
         novoId,
@@ -270,6 +327,9 @@ export async function POST(request: NextRequest) {
         dataAdmissao,
         dataDemissao,
         ativo,
+        salarioBase,
+        tipoSalario,
+        cargaHorariaMensalReferencia,
       ],
     });
 
@@ -330,6 +390,18 @@ export async function PUT(request: NextRequest) {
     const dataDemissao = validarDataIso(
       body?.DATA_DEMISSAO ?? (funcionarioAtual.DATA_DEMISSAO as string | null)
     );
+    const salarioBase = normalizarNumero(
+      body?.salarioBase ?? body?.SALARIO_BASE,
+      Number(funcionarioAtual.SALARIO_BASE ?? 0)
+    );
+    const tipoSalario = (body?.tipoSalario ?? body?.TIPO_SALARIO ?? funcionarioAtual.TIPO_SALARIO ?? "MENSALISTA")
+      .toString()
+      .trim()
+      .toUpperCase();
+    const cargaHorariaMensalReferencia = normalizarNumero(
+      body?.cargaHorariaMensalReferencia ?? body?.CARGA_HORARIA_MENSAL_REFERENCIA,
+      Number(funcionarioAtual.CARGA_HORARIA_MENSAL_REFERENCIA ?? 0)
+    );
 
     if (!nomeNormalizado) {
       return NextResponse.json(
@@ -362,6 +434,27 @@ export async function PUT(request: NextRequest) {
     if (!dataAdmissao) {
       return NextResponse.json(
         { success: false, error: "DATA_ADMISSAO_OBRIGATORIA" },
+        { status: 400 }
+      );
+    }
+
+    if (tipoSalario !== "MENSALISTA") {
+      return NextResponse.json(
+        { success: false, error: "TIPO_SALARIO_INVALIDO" },
+        { status: 400 }
+      );
+    }
+
+    if (!Number.isFinite(salarioBase) || salarioBase <= 0) {
+      return NextResponse.json(
+        { success: false, error: "SALARIO_INVALIDO" },
+        { status: 400 }
+      );
+    }
+
+    if (!Number.isFinite(cargaHorariaMensalReferencia) || cargaHorariaMensalReferencia <= 0) {
+      return NextResponse.json(
+        { success: false, error: "CARGA_HORARIA_INVALIDA" },
         { status: 400 }
       );
     }
@@ -403,6 +496,9 @@ export async function PUT(request: NextRequest) {
                DATA_ADMISSAO = ?,
                DATA_DEMISSAO = ?,
                ATIVO = ?,
+               SALARIO_BASE = ?,
+               TIPO_SALARIO = ?,
+               CARGA_HORARIA_MENSAL_REFERENCIA = ?,
                ATUALIZADO_EM = datetime('now')
          WHERE ID_EMPRESA = ? AND ID_FUNCIONARIO = ?
       `,
@@ -415,6 +511,9 @@ export async function PUT(request: NextRequest) {
         dataAdmissao,
         dataDemissao,
         ativo,
+        salarioBase,
+        tipoSalario,
+        cargaHorariaMensalReferencia,
         empresaId,
         id,
       ],
