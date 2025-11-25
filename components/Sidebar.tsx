@@ -127,7 +127,7 @@ export function Sidebar() {
             label: "Lançamento de ponto",
             rota: "/rh/ponto",
             requerEmpresa: true,
-            codigoTela: "CAD007_RH_PONTO",
+            codigoTela: "LAN001_RH_PONTO",
           },
         ],
       },

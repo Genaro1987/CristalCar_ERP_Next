@@ -73,6 +73,8 @@ export async function GET(
       sql: `
         SELECT ID_TELA, CODIGO_TELA, NOME_TELA, MODULO
         FROM CORE_TELA
+        WHERE ATIVA = 1
+          AND CODIGO_TELA != 'CAD007_RH_PONTO'
         ORDER BY MODULO, CODIGO_TELA
       `,
     });

@@ -1,0 +1,14 @@
+-- Cria tabela de motivos para faltas justificadas
+CREATE TABLE IF NOT EXISTS RH_FALTA_JUSTIFICATIVA_MOTIVO (
+  ID_MOTIVO INTEGER PRIMARY KEY AUTOINCREMENT,
+  DESCRICAO TEXT NOT NULL,
+  ATIVO INTEGER NOT NULL DEFAULT 1,
+  ORDEM_EXIBICAO INTEGER NOT NULL DEFAULT 0
+);
+
+INSERT INTO RH_FALTA_JUSTIFICATIVA_MOTIVO (DESCRICAO, ORDEM_EXIBICAO) VALUES
+  ('Atestado médico', 1),
+  ('Compensação de banco de horas', 2),
+  ('Atividade externa autorizada', 3),
+  ('Férias / Licença', 4),
+  ('Outros', 99);

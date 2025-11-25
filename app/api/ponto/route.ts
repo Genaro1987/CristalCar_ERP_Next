@@ -14,6 +14,9 @@ interface LancamentoDiaPayload {
   entradaExtra?: string | null;
   saidaExtra?: string | null;
   statusDia?: string | null;
+  tipoOcorrencia?: string | null;
+  idMotivoFalta?: number | null;
+  obsFalta?: string | null;
   observacao?: string | null;
 }
 
@@ -67,6 +70,8 @@ function normalizarHorario(valor?: string | null): string | null {
 
 function devePersistirDia(payload: LancamentoDiaPayload): boolean {
   const status = (payload.statusDia ?? "NORMAL").toString().trim().toUpperCase();
+  const tipoOcorrencia =
+    (payload.tipoOcorrencia ?? "NORMAL").toString().trim().toUpperCase();
   const observacao = payload.observacao?.toString().trim();
   const horarios = [
     payload.entradaManha,
@@ -79,6 +84,7 @@ function devePersistirDia(payload: LancamentoDiaPayload): boolean {
 
   if (horarios.length > 0) return true;
   if (status && status !== "NORMAL") return true;
+  if (tipoOcorrencia !== "NORMAL") return true;
   if (observacao) return true;
 
   return false;
@@ -113,6 +119,9 @@ export async function GET(request: NextRequest) {
           SAIDA_TARDE as saidaTarde,
           ENTRADA_EXTRA as entradaExtra,
           SAIDA_EXTRA as saidaExtra,
+          TIPO_OCORRENCIA as tipoOcorrencia,
+          ID_MOTIVO_FALTA as idMotivoFalta,
+          OBS_FALTA as obsFalta,
           STATUS_DIA as statusDia,
           OBSERVACAO as observacao
         FROM RH_PONTO_LANCAMENTO
@@ -172,14 +181,27 @@ export async function PUT(request: NextRequest) {
     for (const dia of dias) {
       if (!dia?.dataReferencia || !dia.dataReferencia.startsWith(competencia)) continue;
 
-      const entradaManha = normalizarHorario(dia.entradaManha ?? null);
-      const saidaManha = normalizarHorario(dia.saidaManha ?? null);
-      const entradaTarde = normalizarHorario(dia.entradaTarde ?? null);
-      const saidaTarde = normalizarHorario(dia.saidaTarde ?? null);
-      const entradaExtra = normalizarHorario(dia.entradaExtra ?? null);
-      const saidaExtra = normalizarHorario(dia.saidaExtra ?? null);
+      let entradaManha = normalizarHorario(dia.entradaManha ?? null);
+      let saidaManha = normalizarHorario(dia.saidaManha ?? null);
+      let entradaTarde = normalizarHorario(dia.entradaTarde ?? null);
+      let saidaTarde = normalizarHorario(dia.saidaTarde ?? null);
+      let entradaExtra = normalizarHorario(dia.entradaExtra ?? null);
+      let saidaExtra = normalizarHorario(dia.saidaExtra ?? null);
       const statusDia = (dia.statusDia ?? "NORMAL").toString().trim().toUpperCase();
+      const tipoOcorrencia =
+        (dia.tipoOcorrencia ?? "NORMAL").toString().trim().toUpperCase();
+      const idMotivoFalta = Number(dia.idMotivoFalta ?? NaN);
       const observacao = dia.observacao?.toString().trim() || null;
+      const obsFalta = dia.obsFalta?.toString().trim() || null;
+
+      if (tipoOcorrencia !== "NORMAL") {
+        entradaManha = null;
+        saidaManha = null;
+        entradaTarde = null;
+        saidaTarde = null;
+        entradaExtra = null;
+        saidaExtra = null;
+      }
 
       if (
         [entradaManha, saidaManha, entradaTarde, saidaTarde, entradaExtra, saidaExtra].includes(
@@ -197,6 +219,9 @@ export async function PUT(request: NextRequest) {
         !devePersistirDia({
           ...dia,
           statusDia,
+          tipoOcorrencia,
+          idMotivoFalta: Number.isFinite(idMotivoFalta) ? idMotivoFalta : null,
+          obsFalta: obsFalta ?? undefined,
           observacao: observacao ?? undefined,
           entradaManha: entradaManha === "INVALIDO" ? undefined : entradaManha,
           saidaManha: saidaManha === "INVALIDO" ? undefined : saidaManha,
@@ -222,8 +247,11 @@ export async function PUT(request: NextRequest) {
             ENTRADA_EXTRA,
             SAIDA_EXTRA,
             STATUS_DIA,
+            TIPO_OCORRENCIA,
+            ID_MOTIVO_FALTA,
+            OBS_FALTA,
             OBSERVACAO
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         args: [
           empresaId,
@@ -235,7 +263,10 @@ export async function PUT(request: NextRequest) {
           saidaTarde,
           entradaExtra,
           saidaExtra,
-          statusDia || "NORMAL",
+          tipoOcorrencia !== "NORMAL" ? tipoOcorrencia : statusDia || "NORMAL",
+          tipoOcorrencia,
+          Number.isFinite(idMotivoFalta) ? idMotivoFalta : null,
+          obsFalta,
           observacao,
         ],
       });

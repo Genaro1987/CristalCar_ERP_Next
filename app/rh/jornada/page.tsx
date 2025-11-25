@@ -13,12 +13,12 @@ interface Jornada {
   NOME_JORNADA: string;
   DESCRICAO?: string | null;
   CARGA_SEMANAL_HORAS: number;
-  HORA_ENTRADA_1?: string | null;
-  HORA_SAIDA_1?: string | null;
-  HORA_ENTRADA_2?: string | null;
-  HORA_SAIDA_2?: string | null;
-  HORA_ENTRADA_3?: string | null;
-  HORA_SAIDA_3?: string | null;
+  HORA_ENTRADA_MANHA?: string | null;
+  HORA_SAIDA_MANHA?: string | null;
+  HORA_ENTRADA_TARDE?: string | null;
+  HORA_SAIDA_TARDE?: string | null;
+  HORA_ENTRADA_INTERVALO?: string | null;
+  HORA_SAIDA_INTERVALO?: string | null;
   ATIVO: 0 | 1;
   CRIADO_EM?: string;
   ATUALIZADO_EM?: string;
@@ -48,16 +48,18 @@ function formatarCodigoJornada(codigo?: string) {
 function montarResumoHorarios(jornada: Jornada) {
   const blocos: string[] = [];
 
-  if (jornada.HORA_ENTRADA_1 && jornada.HORA_SAIDA_1) {
-    blocos.push(`${jornada.HORA_ENTRADA_1}-${jornada.HORA_SAIDA_1}`);
+  if (jornada.HORA_ENTRADA_MANHA && jornada.HORA_SAIDA_MANHA) {
+    blocos.push(`${jornada.HORA_ENTRADA_MANHA}-${jornada.HORA_SAIDA_MANHA}`);
   }
 
-  if (jornada.HORA_ENTRADA_2 && jornada.HORA_SAIDA_2) {
-    blocos.push(`${jornada.HORA_ENTRADA_2}-${jornada.HORA_SAIDA_2}`);
+  if (jornada.HORA_ENTRADA_TARDE && jornada.HORA_SAIDA_TARDE) {
+    blocos.push(`${jornada.HORA_ENTRADA_TARDE}-${jornada.HORA_SAIDA_TARDE}`);
   }
 
-  if (jornada.HORA_ENTRADA_3 && jornada.HORA_SAIDA_3) {
-    blocos.push(`${jornada.HORA_ENTRADA_3}-${jornada.HORA_SAIDA_3}`);
+  if (jornada.HORA_ENTRADA_INTERVALO && jornada.HORA_SAIDA_INTERVALO) {
+    blocos.push(
+      `${jornada.HORA_ENTRADA_INTERVALO}-${jornada.HORA_SAIDA_INTERVALO}`
+    );
   }
 
   return blocos.join(" / ") || "-";
@@ -79,12 +81,12 @@ export default function JornadaPage() {
   const [nomeJornada, setNomeJornada] = useState("");
   const [descricao, setDescricao] = useState("");
   const [cargaSemanal, setCargaSemanal] = useState("");
-  const [horaEntrada1, setHoraEntrada1] = useState("");
-  const [horaSaida1, setHoraSaida1] = useState("");
-  const [horaEntrada2, setHoraEntrada2] = useState("");
-  const [horaSaida2, setHoraSaida2] = useState("");
-  const [horaEntrada3, setHoraEntrada3] = useState("");
-  const [horaSaida3, setHoraSaida3] = useState("");
+  const [horaEntradaManha, setHoraEntradaManha] = useState("");
+  const [horaSaidaManha, setHoraSaidaManha] = useState("");
+  const [horaEntradaTarde, setHoraEntradaTarde] = useState("");
+  const [horaSaidaTarde, setHoraSaidaTarde] = useState("");
+  const [horaEntradaIntervalo, setHoraEntradaIntervalo] = useState("");
+  const [horaSaidaIntervalo, setHoraSaidaIntervalo] = useState("");
   const [ativo, setAtivo] = useState(true);
   const [jornadaEmEdicao, setJornadaEmEdicao] = useState<Jornada | null>(null);
 
@@ -135,12 +137,12 @@ export default function JornadaPage() {
     setNomeJornada("");
     setDescricao("");
     setCargaSemanal("");
-    setHoraEntrada1("");
-    setHoraSaida1("");
-    setHoraEntrada2("");
-    setHoraSaida2("");
-    setHoraEntrada3("");
-    setHoraSaida3("");
+    setHoraEntradaManha("");
+    setHoraSaidaManha("");
+    setHoraEntradaTarde("");
+    setHoraSaidaTarde("");
+    setHoraEntradaIntervalo("");
+    setHoraSaidaIntervalo("");
     setAtivo(true);
   };
 
@@ -154,12 +156,12 @@ export default function JornadaPage() {
     setNomeJornada(normalizarTextoBasico(jornada.NOME_JORNADA ?? ""));
     setDescricao(normalizarDescricao(jornada.DESCRICAO ?? ""));
     setCargaSemanal(String(jornada.CARGA_SEMANAL_HORAS ?? ""));
-    setHoraEntrada1(jornada.HORA_ENTRADA_1 ?? "");
-    setHoraSaida1(jornada.HORA_SAIDA_1 ?? "");
-    setHoraEntrada2(jornada.HORA_ENTRADA_2 ?? "");
-    setHoraSaida2(jornada.HORA_SAIDA_2 ?? "");
-    setHoraEntrada3(jornada.HORA_ENTRADA_3 ?? "");
-    setHoraSaida3(jornada.HORA_SAIDA_3 ?? "");
+    setHoraEntradaManha(jornada.HORA_ENTRADA_MANHA ?? "");
+    setHoraSaidaManha(jornada.HORA_SAIDA_MANHA ?? "");
+    setHoraEntradaTarde(jornada.HORA_ENTRADA_TARDE ?? "");
+    setHoraSaidaTarde(jornada.HORA_SAIDA_TARDE ?? "");
+    setHoraEntradaIntervalo(jornada.HORA_ENTRADA_INTERVALO ?? "");
+    setHoraSaidaIntervalo(jornada.HORA_SAIDA_INTERVALO ?? "");
     setAtivo(jornada.ATIVO === 1);
   };
 
@@ -186,8 +188,11 @@ export default function JornadaPage() {
       return;
     }
 
-    if (!horaEntrada1 || !horaSaida1) {
-      setNotification({ type: "error", message: "Entrada e saída 1 são obrigatórias." });
+    if (!horaEntradaManha || !horaSaidaManha) {
+      setNotification({
+        type: "error",
+        message: "Entrada e saída da manhã são obrigatórias.",
+      });
       return;
     }
 
@@ -197,12 +202,12 @@ export default function JornadaPage() {
       NOME_JORNADA: nomeNormalizado,
       DESCRICAO: descricaoNormalizada,
       CARGA_SEMANAL_HORAS: cargaNumero,
-      HORA_ENTRADA_1: horaEntrada1,
-      HORA_SAIDA_1: horaSaida1,
-      HORA_ENTRADA_2: horaEntrada2 || null,
-      HORA_SAIDA_2: horaSaida2 || null,
-      HORA_ENTRADA_3: horaEntrada3 || null,
-      HORA_SAIDA_3: horaSaida3 || null,
+      HORA_ENTRADA_MANHA: horaEntradaManha,
+      HORA_SAIDA_MANHA: horaSaidaManha,
+      HORA_ENTRADA_TARDE: horaEntradaTarde || null,
+      HORA_SAIDA_TARDE: horaSaidaTarde || null,
+      HORA_ENTRADA_INTERVALO: horaEntradaIntervalo || null,
+      HORA_SAIDA_INTERVALO: horaSaidaIntervalo || null,
       ATIVO: ativo ? 1 : 0,
     };
 
@@ -352,71 +357,71 @@ export default function JornadaPage() {
                   <h3>Horários</h3>
                   <div className="form-grid horarios-grid">
                     <div className="form-group">
-                      <label htmlFor="horaEntrada1">Entrada 1 *</label>
+                      <label htmlFor="horaEntradaManha">Entrada manhã *</label>
                       <input
-                        id="horaEntrada1"
-                        name="horaEntrada1"
-                        className="form-input"
+                        id="horaEntradaManha"
+                        name="horaEntradaManha"
+                        className="form-input w-20 text-center px-1 py-1 text-sm"
                         type="time"
-                        value={horaEntrada1}
-                        onChange={(e) => setHoraEntrada1(e.target.value)}
+                        value={horaEntradaManha}
+                        onChange={(e) => setHoraEntradaManha(e.target.value)}
                         required
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="horaSaida1">Saída 1 *</label>
+                      <label htmlFor="horaSaidaManha">Saída manhã *</label>
                       <input
-                        id="horaSaida1"
-                        name="horaSaida1"
-                        className="form-input"
+                        id="horaSaidaManha"
+                        name="horaSaidaManha"
+                        className="form-input w-20 text-center px-1 py-1 text-sm"
                         type="time"
-                        value={horaSaida1}
-                        onChange={(e) => setHoraSaida1(e.target.value)}
+                        value={horaSaidaManha}
+                        onChange={(e) => setHoraSaidaManha(e.target.value)}
                         required
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="horaEntrada2">Entrada 2</label>
+                      <label htmlFor="horaEntradaTarde">Entrada tarde</label>
                       <input
-                        id="horaEntrada2"
-                        name="horaEntrada2"
-                        className="form-input"
+                        id="horaEntradaTarde"
+                        name="horaEntradaTarde"
+                        className="form-input w-20 text-center px-1 py-1 text-sm"
                         type="time"
-                        value={horaEntrada2}
-                        onChange={(e) => setHoraEntrada2(e.target.value)}
+                        value={horaEntradaTarde}
+                        onChange={(e) => setHoraEntradaTarde(e.target.value)}
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="horaSaida2">Saída 2</label>
+                      <label htmlFor="horaSaidaTarde">Saída tarde</label>
                       <input
-                        id="horaSaida2"
-                        name="horaSaida2"
-                        className="form-input"
+                        id="horaSaidaTarde"
+                        name="horaSaidaTarde"
+                        className="form-input w-20 text-center px-1 py-1 text-sm"
                         type="time"
-                        value={horaSaida2}
-                        onChange={(e) => setHoraSaida2(e.target.value)}
+                        value={horaSaidaTarde}
+                        onChange={(e) => setHoraSaidaTarde(e.target.value)}
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="horaEntrada3">Entrada 3</label>
+                      <label htmlFor="horaEntradaIntervalo">Entrada intervalo</label>
                       <input
-                        id="horaEntrada3"
-                        name="horaEntrada3"
-                        className="form-input"
+                        id="horaEntradaIntervalo"
+                        name="horaEntradaIntervalo"
+                        className="form-input w-20 text-center px-1 py-1 text-sm"
                         type="time"
-                        value={horaEntrada3}
-                        onChange={(e) => setHoraEntrada3(e.target.value)}
+                        value={horaEntradaIntervalo}
+                        onChange={(e) => setHoraEntradaIntervalo(e.target.value)}
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="horaSaida3">Saída 3</label>
+                      <label htmlFor="horaSaidaIntervalo">Saída intervalo</label>
                       <input
-                        id="horaSaida3"
-                        name="horaSaida3"
-                        className="form-input"
+                        id="horaSaidaIntervalo"
+                        name="horaSaidaIntervalo"
+                        className="form-input w-20 text-center px-1 py-1 text-sm"
                         type="time"
-                        value={horaSaida3}
-                        onChange={(e) => setHoraSaida3(e.target.value)}
+                        value={horaSaidaIntervalo}
+                        onChange={(e) => setHoraSaidaIntervalo(e.target.value)}
                       />
                     </div>
                   </div>
