@@ -1,8 +1,10 @@
+import type { Row } from "@libsql/client";
+
 import { db } from "./client";
 
 export type RegistroSalario = {
   ID_SALARIO: number;
-  ID_FUNCIONARIO: string;
+  ID_FUNCIONARIO: number;
   DATA_INICIO_VIGENCIA: string;
   DATA_FIM_VIGENCIA: string | null;
   TIPO_SALARIO: string;
@@ -25,7 +27,24 @@ export async function getSalarioAtual(
     args: [idFuncionario],
   });
 
-  return (resultado.rows?.[0] as RegistroSalario | undefined) ?? null;
+  const row = resultado.rows?.[0] as Row | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  const salarioAtual: RegistroSalario = {
+    ID_SALARIO: Number(row.ID_SALARIO),
+    ID_FUNCIONARIO: Number(row.ID_FUNCIONARIO),
+    DATA_INICIO_VIGENCIA: String(row.DATA_INICIO_VIGENCIA),
+    DATA_FIM_VIGENCIA:
+      (row.DATA_FIM_VIGENCIA as string | null | undefined) ?? null,
+    TIPO_SALARIO: String(row.TIPO_SALARIO),
+    VALOR: Number(row.VALOR),
+    OBSERVACAO: (row.OBSERVACAO as string | null | undefined) ?? null,
+  };
+
+  return salarioAtual;
 }
 
 export async function listarHistoricoSalarios(
@@ -42,7 +61,20 @@ export async function listarHistoricoSalarios(
     args: [idFuncionario],
   });
 
-  return (resultado.rows as RegistroSalario[]) ?? [];
+  const rows = (resultado.rows ?? []) as Row[];
+
+  const historico: RegistroSalario[] = rows.map((row) => ({
+    ID_SALARIO: Number(row.ID_SALARIO),
+    ID_FUNCIONARIO: Number(row.ID_FUNCIONARIO),
+    DATA_INICIO_VIGENCIA: String(row.DATA_INICIO_VIGENCIA),
+    DATA_FIM_VIGENCIA:
+      (row.DATA_FIM_VIGENCIA as string | null | undefined) ?? null,
+    TIPO_SALARIO: String(row.TIPO_SALARIO),
+    VALOR: Number(row.VALOR),
+    OBSERVACAO: (row.OBSERVACAO as string | null | undefined) ?? null,
+  }));
+
+  return historico;
 }
 
 export async function atualizarSalario(
