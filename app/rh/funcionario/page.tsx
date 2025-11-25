@@ -57,6 +57,36 @@ function limparCpf(valor: string): string {
   return (valor ?? "").replace(/\D/g, "").slice(0, 11);
 }
 
+function formatarMoedaAPartirTexto(valor: string): string {
+  const apenasDigitos = (valor ?? "").replace(/\D/g, "");
+
+  if (!apenasDigitos) return "";
+
+  const numero = Number(apenasDigitos) / 100;
+
+  return numero.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function formatarNumeroParaMoeda(valor?: number | null): string {
+  if (valor === undefined || valor === null || Number.isNaN(valor)) return "";
+
+  return Number(valor).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function converterMoedaParaNumero(valor: string): number {
+  if (!valor) return Number.NaN;
+
+  const normalizado = valor.replace(/\./g, "").replace(/,/g, ".");
+
+  return Number(normalizado);
+}
+
 function aplicarMascaraCpf(valor: string): string {
   const numeros = limparCpf(valor);
   const partes: string[] = [];
@@ -240,11 +270,7 @@ export default function FuncionarioPage() {
     setAtivo(funcionario.ATIVO === 1 && !funcionario.DATA_DEMISSAO);
     setErroFormulario(null);
     setTipoSalario(funcionario.TIPO_SALARIO || "MENSALISTA");
-    setSalarioBase(
-      funcionario.SALARIO_BASE !== undefined && funcionario.SALARIO_BASE !== null
-        ? String(funcionario.SALARIO_BASE)
-        : ""
-    );
+    setSalarioBase(formatarNumeroParaMoeda(funcionario.SALARIO_BASE));
     setCargaHorariaMensalReferencia(
       funcionario.CARGA_HORARIA_MENSAL_REFERENCIA !== undefined &&
         funcionario.CARGA_HORARIA_MENSAL_REFERENCIA !== null
@@ -278,7 +304,7 @@ export default function FuncionarioPage() {
     const cpfLimpo = limparCpf(cpf);
     const dataAdmissaoValida = dataAdmissao || "";
     const dataDemissaoValida = dataDemissao || "";
-    const salarioBaseNumero = Number(salarioBase);
+    const salarioBaseNumero = converterMoedaParaNumero(salarioBase);
     const cargaHorariaNumero = Number(cargaHorariaMensalReferencia);
     const erroDatas = validarDatas(dataAdmissaoValida, dataDemissaoValida);
 
@@ -313,7 +339,7 @@ export default function FuncionarioPage() {
     }
 
     if (!Number.isFinite(salarioBaseNumero) || salarioBaseNumero <= 0) {
-      setErroSalario("Informe um salário base válido.");
+      setErroSalario("Informe um salário base válido e maior que zero.");
       return;
     }
 
@@ -566,12 +592,14 @@ export default function FuncionarioPage() {
                       id="salarioBase"
                       name="salarioBase"
                       className="form-input"
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      placeholder="Ex.: 2500,00"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Ex.: 2.500,00"
                       value={salarioBase}
-                      onChange={(e) => setSalarioBase(e.target.value)}
+                      onChange={(e) => {
+                        setSalarioBase(formatarMoedaAPartirTexto(e.target.value));
+                        setErroSalario(null);
+                      }}
                       style={{ textAlign: "right" }}
                       required
                     />
