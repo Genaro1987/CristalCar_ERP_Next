@@ -1,14 +1,5 @@
--- Alinha códigos e módulos das telas de segurança e ponto
-UPDATE CORE_TELA
-   SET CODIGO_TELA = 'LAN001_RH_PONTO',
-       CAMINHO_ROTA = '/rh/ponto',
-       MODULO = 'RH'
- WHERE CODIGO_TELA = 'CAD007_RH_PONTO';
-
-UPDATE CORE_AJUDA_TELA
-   SET CODIGO_TELA = 'LAN001_RH_PONTO'
- WHERE CODIGO_TELA = 'CAD007_RH_PONTO';
-
-UPDATE CORE_TELA
-   SET MODULO = 'EMPRESA'
- WHERE CODIGO_TELA = 'CAD006_SEG_PERFIL';
+-- 044_CORE_TELA_ALINHAMENTOS_SEG_RH.sql
+-- Migration intencionalmente vazia.
+-- Os alinhamentos de telas e módulos de SEG/RH já foram ajustados
+-- nas migrations anteriores e/ou diretamente no banco.
+-- Esta migration existe apenas para manter a sequência de versões.
