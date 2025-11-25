@@ -1,0 +1,3 @@
+-- Remove registros de ajuda da tela legada CAD007_RH_PONTO
+DELETE FROM CORE_AJUDA_TELA
+WHERE CODIGO_TELA = 'CAD007_RH_PONTO';

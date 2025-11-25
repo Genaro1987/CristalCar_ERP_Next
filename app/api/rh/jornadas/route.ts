@@ -9,12 +9,12 @@ type JornadaPayload = {
   NOME_JORNADA?: string;
   DESCRICAO?: string | null;
   CARGA_SEMANAL_HORAS?: number;
-  HORA_ENTRADA_1?: string | null;
-  HORA_SAIDA_1?: string | null;
-  HORA_ENTRADA_2?: string | null;
-  HORA_SAIDA_2?: string | null;
-  HORA_ENTRADA_3?: string | null;
-  HORA_SAIDA_3?: string | null;
+  HORA_ENTRADA_MANHA?: string | null;
+  HORA_SAIDA_MANHA?: string | null;
+  HORA_ENTRADA_TARDE?: string | null;
+  HORA_SAIDA_TARDE?: string | null;
+  HORA_ENTRADA_INTERVALO?: string | null;
+  HORA_SAIDA_INTERVALO?: string | null;
   ATIVO?: number;
 };
 
@@ -24,12 +24,12 @@ const CAMPOS_JORNADA = [
   "NOME_JORNADA",
   "DESCRICAO",
   "CARGA_SEMANAL_HORAS",
-  "HORA_ENTRADA_1",
-  "HORA_SAIDA_1",
-  "HORA_ENTRADA_2",
-  "HORA_SAIDA_2",
-  "HORA_ENTRADA_3",
-  "HORA_SAIDA_3",
+  "HORA_ENTRADA_MANHA",
+  "HORA_SAIDA_MANHA",
+  "HORA_ENTRADA_TARDE",
+  "HORA_SAIDA_TARDE",
+  "HORA_ENTRADA_INTERVALO",
+  "HORA_SAIDA_INTERVALO",
   "ATIVO",
   "CRIADO_EM",
   "ATUALIZADO_EM",
@@ -148,12 +148,12 @@ export async function POST(request: NextRequest) {
     );
     const descricao = descricaoNormalizada || null;
     const cargaSemanal = Number(body?.CARGA_SEMANAL_HORAS ?? 0);
-    const horaEntrada1 = normalizarHorario(body?.HORA_ENTRADA_1);
-    const horaSaida1 = normalizarHorario(body?.HORA_SAIDA_1);
-    const horaEntrada2 = normalizarHorario(body?.HORA_ENTRADA_2);
-    const horaSaida2 = normalizarHorario(body?.HORA_SAIDA_2);
-    const horaEntrada3 = normalizarHorario(body?.HORA_ENTRADA_3);
-    const horaSaida3 = normalizarHorario(body?.HORA_SAIDA_3);
+    const horaEntradaManha = normalizarHorario(body?.HORA_ENTRADA_MANHA);
+    const horaSaidaManha = normalizarHorario(body?.HORA_SAIDA_MANHA);
+    const horaEntradaTarde = normalizarHorario(body?.HORA_ENTRADA_TARDE);
+    const horaSaidaTarde = normalizarHorario(body?.HORA_SAIDA_TARDE);
+    const horaEntradaIntervalo = normalizarHorario(body?.HORA_ENTRADA_INTERVALO);
+    const horaSaidaIntervalo = normalizarHorario(body?.HORA_SAIDA_INTERVALO);
     const ativo = interpretarAtivo(body?.ATIVO);
 
     if (!nomeJornada) {
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!horaEntrada1 || !horaSaida1) {
+    if (!horaEntradaManha || !horaSaidaManha) {
       return NextResponse.json(
         { success: false, error: "HORARIO_OBRIGATORIO" },
         { status: 400 }
@@ -187,16 +187,16 @@ export async function POST(request: NextRequest) {
           NOME_JORNADA,
           DESCRICAO,
           CARGA_SEMANAL_HORAS,
-          HORA_ENTRADA_1,
-          HORA_SAIDA_1,
-          HORA_ENTRADA_2,
-          HORA_SAIDA_2,
-          HORA_ENTRADA_3,
-          HORA_SAIDA_3,
-          ATIVO,
-          CRIADO_EM,
-          ATUALIZADO_EM
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      HORA_ENTRADA_MANHA,
+      HORA_SAIDA_MANHA,
+      HORA_ENTRADA_TARDE,
+      HORA_SAIDA_TARDE,
+      HORA_ENTRADA_INTERVALO,
+      HORA_SAIDA_INTERVALO,
+      ATIVO,
+      CRIADO_EM,
+      ATUALIZADO_EM
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
       `,
       args: [
         novoId,
@@ -204,12 +204,12 @@ export async function POST(request: NextRequest) {
         nomeJornada,
         descricao,
         cargaSemanal,
-        horaEntrada1,
-        horaSaida1,
-        horaEntrada2,
-        horaSaida2,
-        horaEntrada3,
-        horaSaida3,
+        horaEntradaManha,
+        horaSaidaManha,
+        horaEntradaTarde,
+        horaSaidaTarde,
+        horaEntradaIntervalo,
+        horaSaidaIntervalo,
         ativo,
       ],
     });
@@ -253,12 +253,12 @@ export async function PUT(request: NextRequest) {
     );
     const descricao = descricaoNormalizada || null;
     const cargaSemanal = Number(body?.CARGA_SEMANAL_HORAS ?? 0);
-    const horaEntrada1 = normalizarHorario(body?.HORA_ENTRADA_1);
-    const horaSaida1 = normalizarHorario(body?.HORA_SAIDA_1);
-    const horaEntrada2 = normalizarHorario(body?.HORA_ENTRADA_2);
-    const horaSaida2 = normalizarHorario(body?.HORA_SAIDA_2);
-    const horaEntrada3 = normalizarHorario(body?.HORA_ENTRADA_3);
-    const horaSaida3 = normalizarHorario(body?.HORA_SAIDA_3);
+    const horaEntradaManha = normalizarHorario(body?.HORA_ENTRADA_MANHA);
+    const horaSaidaManha = normalizarHorario(body?.HORA_SAIDA_MANHA);
+    const horaEntradaTarde = normalizarHorario(body?.HORA_ENTRADA_TARDE);
+    const horaSaidaTarde = normalizarHorario(body?.HORA_SAIDA_TARDE);
+    const horaEntradaIntervalo = normalizarHorario(body?.HORA_ENTRADA_INTERVALO);
+    const horaSaidaIntervalo = normalizarHorario(body?.HORA_SAIDA_INTERVALO);
     const ativo = interpretarAtivo(body?.ATIVO);
 
     if (!nomeJornada) {
@@ -275,7 +275,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (!horaEntrada1 || !horaSaida1) {
+    if (!horaEntradaManha || !horaSaidaManha) {
       return NextResponse.json(
         { success: false, error: "HORARIO_OBRIGATORIO" },
         { status: 400 }
@@ -288,12 +288,12 @@ export async function PUT(request: NextRequest) {
         SET NOME_JORNADA = ?,
             DESCRICAO = ?,
             CARGA_SEMANAL_HORAS = ?,
-            HORA_ENTRADA_1 = ?,
-            HORA_SAIDA_1 = ?,
-            HORA_ENTRADA_2 = ?,
-            HORA_SAIDA_2 = ?,
-            HORA_ENTRADA_3 = ?,
-            HORA_SAIDA_3 = ?,
+            HORA_ENTRADA_MANHA = ?,
+            HORA_SAIDA_MANHA = ?,
+            HORA_ENTRADA_TARDE = ?,
+            HORA_SAIDA_TARDE = ?,
+            HORA_ENTRADA_INTERVALO = ?,
+            HORA_SAIDA_INTERVALO = ?,
             ATIVO = ?,
             ATUALIZADO_EM = datetime('now')
         WHERE ID_JORNADA = ? AND ID_EMPRESA = ?
@@ -302,12 +302,12 @@ export async function PUT(request: NextRequest) {
         nomeJornada,
         descricao,
         cargaSemanal,
-        horaEntrada1,
-        horaSaida1,
-        horaEntrada2,
-        horaSaida2,
-        horaEntrada3,
-        horaSaida3,
+        horaEntradaManha,
+        horaSaidaManha,
+        horaEntradaTarde,
+        horaSaidaTarde,
+        horaEntradaIntervalo,
+        horaSaidaIntervalo,
         ativo,
         idJornada,
         empresaId,

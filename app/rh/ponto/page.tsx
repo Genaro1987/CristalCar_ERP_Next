@@ -16,12 +16,12 @@ interface Funcionario {
 interface Jornada {
   ID_JORNADA: string;
   NOME_JORNADA: string;
-  HORA_ENTRADA_1?: string | null;
-  HORA_SAIDA_1?: string | null;
-  HORA_ENTRADA_2?: string | null;
-  HORA_SAIDA_2?: string | null;
-  HORA_ENTRADA_3?: string | null;
-  HORA_SAIDA_3?: string | null;
+  HORA_ENTRADA_MANHA?: string | null;
+  HORA_SAIDA_MANHA?: string | null;
+  HORA_ENTRADA_TARDE?: string | null;
+  HORA_SAIDA_TARDE?: string | null;
+  HORA_ENTRADA_INTERVALO?: string | null;
+  HORA_SAIDA_INTERVALO?: string | null;
   HORA_ENTRADA_EXTRA?: string | null;
   HORA_SAIDA_EXTRA?: string | null;
 }
@@ -35,6 +35,9 @@ interface LancamentoDia {
   entradaExtra?: string | null;
   saidaExtra?: string | null;
   statusDia?: string;
+  tipoOcorrencia?: string;
+  idMotivoFalta?: number | null;
+  obsFalta?: string | null;
   observacao?: string | null;
   minutosTrabalhados?: number | null;
   minutosExtras?: number | null;
@@ -64,6 +67,7 @@ function gerarGradeVazia(competencia: string): LancamentoDia[] {
   for (let dia = 1; dia <= ultimoDia; dia++) {
     dias.push({
       dataReferencia: `${competencia}-${String(dia).padStart(2, "0")}`,
+      tipoOcorrencia: "NORMAL",
       statusDia: "NORMAL",
     });
   }
@@ -97,6 +101,14 @@ function minutosParaHora(min: number): string {
 }
 
 function recalcularTotaisDia(dia: LancamentoDia, minutosJornadaDia?: number | null): LancamentoDia {
+  if (dia.tipoOcorrencia && dia.tipoOcorrencia !== "NORMAL") {
+    return {
+      ...dia,
+      minutosTrabalhados: 0,
+      minutosExtras: 0,
+    };
+  }
+
   const em = parseHoraParaMinutos(dia.entradaManha);
   const sm = parseHoraParaMinutos(dia.saidaManha);
   const et = parseHoraParaMinutos(dia.entradaTarde);
@@ -119,23 +131,27 @@ function recalcularTotaisDia(dia: LancamentoDia, minutosJornadaDia?: number | nu
 }
 
 function calcularMinutosJornadaDiaria(jornada?: {
-  HORA_ENTRADA_1?: string | null;
-  HORA_SAIDA_1?: string | null;
-  HORA_ENTRADA_2?: string | null;
-  HORA_SAIDA_2?: string | null;
-  HORA_ENTRADA_3?: string | null;
-  HORA_SAIDA_3?: string | null;
+  HORA_ENTRADA_MANHA?: string | null;
+  HORA_SAIDA_MANHA?: string | null;
+  HORA_ENTRADA_TARDE?: string | null;
+  HORA_SAIDA_TARDE?: string | null;
+  HORA_ENTRADA_INTERVALO?: string | null;
+  HORA_SAIDA_INTERVALO?: string | null;
   HORA_ENTRADA_EXTRA?: string | null;
   HORA_SAIDA_EXTRA?: string | null;
 }): number | null {
   if (!jornada) return null;
 
-  const em = parseHoraParaMinutos(jornada.HORA_ENTRADA_1);
-  const sm = parseHoraParaMinutos(jornada.HORA_SAIDA_1);
-  const et = parseHoraParaMinutos(jornada.HORA_ENTRADA_2);
-  const st = parseHoraParaMinutos(jornada.HORA_SAIDA_2);
-  const ei = parseHoraParaMinutos(jornada.HORA_ENTRADA_EXTRA ?? jornada.HORA_ENTRADA_3);
-  const si = parseHoraParaMinutos(jornada.HORA_SAIDA_EXTRA ?? jornada.HORA_SAIDA_3);
+  const em = parseHoraParaMinutos(jornada.HORA_ENTRADA_MANHA);
+  const sm = parseHoraParaMinutos(jornada.HORA_SAIDA_MANHA);
+  const et = parseHoraParaMinutos(jornada.HORA_ENTRADA_TARDE);
+  const st = parseHoraParaMinutos(jornada.HORA_SAIDA_TARDE);
+  const ei = parseHoraParaMinutos(
+    jornada.HORA_ENTRADA_EXTRA ?? jornada.HORA_ENTRADA_INTERVALO
+  );
+  const si = parseHoraParaMinutos(
+    jornada.HORA_SAIDA_EXTRA ?? jornada.HORA_SAIDA_INTERVALO
+  );
 
   const diff = (inicio: number | null, fim: number | null) =>
     inicio != null && fim != null && fim > inicio ? fim - inicio : 0;
@@ -160,6 +176,17 @@ export default function PontoPage() {
     type: "success" | "error" | "info";
     message: string;
   } | null>(null);
+  const [motivosFalta, setMotivosFalta] = useState<
+    { ID_MOTIVO: number; DESCRICAO: string }[]
+  >([]);
+  const [indiceFaltaSelecionado, setIndiceFaltaSelecionado] = useState<number | null>(
+    null
+  );
+  const [tipoFaltaSelecionada, setTipoFaltaSelecionada] = useState<
+    "FALTA_JUSTIFICADA" | "FALTA_NAO_JUSTIFICADA"
+  >("FALTA_JUSTIFICADA");
+  const [motivoFaltaSelecionado, setMotivoFaltaSelecionado] = useState("");
+  const [observacaoFalta, setObservacaoFalta] = useState("");
 
   const empresaId = empresa?.id ?? null;
 
@@ -201,12 +228,14 @@ export default function PontoPage() {
 
     return {
       ...diaAtual,
-      entradaManha: jornada.HORA_ENTRADA_1 ?? diaAtual.entradaManha,
-      saidaManha: jornada.HORA_SAIDA_1 ?? diaAtual.saidaManha,
-      entradaTarde: jornada.HORA_ENTRADA_2 ?? diaAtual.entradaTarde,
-      saidaTarde: jornada.HORA_SAIDA_2 ?? diaAtual.saidaTarde,
-      entradaExtra: jornada.HORA_ENTRADA_3 ?? jornada.HORA_ENTRADA_EXTRA ?? diaAtual.entradaExtra,
-      saidaExtra: jornada.HORA_SAIDA_3 ?? jornada.HORA_SAIDA_EXTRA ?? diaAtual.saidaExtra,
+      entradaManha: jornada.HORA_ENTRADA_MANHA ?? diaAtual.entradaManha,
+      saidaManha: jornada.HORA_SAIDA_MANHA ?? diaAtual.saidaManha,
+      entradaTarde: jornada.HORA_ENTRADA_TARDE ?? diaAtual.entradaTarde,
+      saidaTarde: jornada.HORA_SAIDA_TARDE ?? diaAtual.saidaTarde,
+      entradaExtra:
+        jornada.HORA_ENTRADA_INTERVALO ?? jornada.HORA_ENTRADA_EXTRA ?? diaAtual.entradaExtra,
+      saidaExtra:
+        jornada.HORA_SAIDA_INTERVALO ?? jornada.HORA_SAIDA_EXTRA ?? diaAtual.saidaExtra,
     };
   };
 
@@ -216,10 +245,82 @@ export default function PontoPage() {
     setDiasPonto((diasAnteriores) => {
       const copia = [...diasAnteriores];
       const diaAtual = copia[indexDia];
+
+      if (diaAtual.tipoOcorrencia && diaAtual.tipoOcorrencia !== "NORMAL") {
+        return copia;
+      }
+
       const comJornada = montarHorariosJornadaParaDia(diaAtual, jornadaFuncionario);
       copia[indexDia] = recalcularTotaisDia(comJornada, minutosJornadaDia);
       return copia;
     });
+  };
+
+  const abrirFaltaParaDia = (indexDia: number) => {
+    const diaAtual = diasPonto[indexDia];
+    setIndiceFaltaSelecionado(indexDia);
+    setTipoFaltaSelecionada(
+      diaAtual?.tipoOcorrencia === "FALTA_NAO_JUSTIFICADA"
+        ? "FALTA_NAO_JUSTIFICADA"
+        : "FALTA_JUSTIFICADA"
+    );
+    setMotivoFaltaSelecionado(
+      diaAtual?.idMotivoFalta ? String(diaAtual.idMotivoFalta) : ""
+    );
+    setObservacaoFalta(diaAtual?.obsFalta ?? "");
+  };
+
+  const confirmarFaltaDia = () => {
+    if (indiceFaltaSelecionado === null) return;
+
+    setDiasPonto((diasAnteriores) => {
+      const copia = [...diasAnteriores];
+      const diaAtual = copia[indiceFaltaSelecionado];
+
+      const tipoOcorrencia = tipoFaltaSelecionada;
+      const idMotivo =
+        tipoOcorrencia === "FALTA_JUSTIFICADA" && motivoFaltaSelecionado
+          ? Number(motivoFaltaSelecionado)
+          : null;
+
+      const atualizado: LancamentoDia = {
+        ...diaAtual,
+        tipoOcorrencia,
+        idMotivoFalta: Number.isFinite(idMotivo) ? idMotivo : null,
+        obsFalta: tipoOcorrencia === "FALTA_JUSTIFICADA" ? observacaoFalta || null : null,
+        statusDia: tipoOcorrencia,
+        entradaManha: null,
+        saidaManha: null,
+        entradaTarde: null,
+        saidaTarde: null,
+        entradaExtra: null,
+        saidaExtra: null,
+      };
+
+      copia[indiceFaltaSelecionado] = recalcularTotaisDia(atualizado, minutosJornadaDia);
+      return copia;
+    });
+
+    setIndiceFaltaSelecionado(null);
+  };
+
+  const removerFaltaDia = (indexDia: number) => {
+    setDiasPonto((diasAnteriores) => {
+      const copia = [...diasAnteriores];
+      const diaAtual = copia[indexDia];
+
+      const normalizado: LancamentoDia = {
+        ...diaAtual,
+        tipoOcorrencia: "NORMAL",
+        idMotivoFalta: null,
+        obsFalta: null,
+        statusDia: "NORMAL",
+      };
+
+      copia[indexDia] = recalcularTotaisDia(normalizado, minutosJornadaDia);
+      return copia;
+    });
+    setIndiceFaltaSelecionado(null);
   };
 
   const handleChangeHora = (indexDia: number, campo: keyof LancamentoDia, valor: string) => {
@@ -277,10 +378,24 @@ export default function PontoPage() {
     return [];
   };
 
+  const carregarMotivosFalta = async () => {
+    try {
+      const resposta = await fetch(`/api/rh/faltas/motivos`);
+      const json = await resposta.json();
+
+      if (json?.success) {
+        setMotivosFalta(json.data ?? []);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     if (carregando) return;
     carregarFuncionarios();
     carregarJornadas();
+    carregarMotivosFalta();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [carregando, empresaId]);
 
@@ -332,6 +447,9 @@ export default function PontoPage() {
               entradaExtra: dia.entradaExtra ?? "",
               saidaExtra: dia.saidaExtra ?? "",
               statusDia: dia.statusDia ?? "NORMAL",
+              tipoOcorrencia: dia.tipoOcorrencia ?? "NORMAL",
+              idMotivoFalta: dia.idMotivoFalta ?? null,
+              obsFalta: dia.obsFalta ?? null,
               observacao: dia.observacao ?? "",
             },
             minutosJornadaDia
@@ -390,7 +508,11 @@ export default function PontoPage() {
         const data = new Date(dia.dataReferencia);
         const ehFimDeSemana = data.getDay() === 0 || data.getDay() === 6;
 
-        if (ehFimDeSemana || !camposVazios(dia)) {
+        if (
+          ehFimDeSemana ||
+          !camposVazios(dia) ||
+          (dia.tipoOcorrencia && dia.tipoOcorrencia !== "NORMAL")
+        ) {
           return dia;
         }
 
@@ -433,6 +555,9 @@ export default function PontoPage() {
       entradaExtra: dia.entradaExtra || null,
       saidaExtra: dia.saidaExtra || null,
       statusDia: dia.statusDia || "NORMAL",
+      tipoOcorrencia: dia.tipoOcorrencia || "NORMAL",
+      idMotivoFalta: dia.idMotivoFalta ?? null,
+      obsFalta: dia.obsFalta || null,
       observacao: dia.observacao || null,
     }));
 
@@ -477,13 +602,17 @@ export default function PontoPage() {
     setDiasPonto([]);
     setErroFormulario(null);
     setNotification(null);
+    setIndiceFaltaSelecionado(null);
+    setMotivoFaltaSelecionado("");
+    setObservacaoFalta("");
+    setTipoFaltaSelecionada("FALTA_JUSTIFICADA");
   };
 
   return (
     <LayoutShell>
       <div className="page-container">
         <HeaderBar
-          codigoTela="CAD007_RH_PONTO"
+          codigoTela="LAN001_RH_PONTO"
           nomeTela="LANCAMENTO DE PONTO"
           caminhoRota="/rh/ponto"
           modulo="RH"
@@ -569,7 +698,7 @@ export default function PontoPage() {
               )}
 
               {diasPonto.length > 0 && (
-                <div className="departamento-tabela-wrapper">
+                <div className="departamento-tabela-wrapper ponto-tabela">
                   <table className="data-table">
                     <thead>
                       <tr>
@@ -580,8 +709,8 @@ export default function PontoPage() {
                         <th>Saída tarde</th>
                         <th>Entrada intervalo</th>
                         <th>Saída intervalo</th>
-                        <th className="text-right">Tempo trabalhado</th>
-                        <th className="text-right">Horas extras</th>
+                        <th className="text-center">Tempo trabalhado</th>
+                        <th className="text-center">Horas extras</th>
                         <th className="text-right">Ações</th>
                       </tr>
                     </thead>
@@ -589,6 +718,11 @@ export default function PontoPage() {
                       {diasPonto.map((dia, index) => {
                         const data = new Date(dia.dataReferencia);
                         const ehFimDeSemana = data.getDay() === 0 || data.getDay() === 6;
+                        const tipoOcorrencia = dia.tipoOcorrencia ?? "NORMAL";
+                        const isFalta = tipoOcorrencia !== "NORMAL";
+                        const motivoDescricao = isFalta && dia.idMotivoFalta
+                          ? motivosFalta.find((m) => m.ID_MOTIVO === dia.idMotivoFalta)?.DESCRICAO
+                          : "";
 
                         return (
                           <tr
@@ -596,71 +730,197 @@ export default function PontoPage() {
                             style={ehFimDeSemana ? { color: "#6b7280" } : undefined}
                           >
                             <td>{formatarDia(dia.dataReferencia)}</td>
-                            <td>
-                              <input
-                                className={timeInputClasses}
-                                type="time"
-                                value={dia.entradaManha ?? ""}
-                                onChange={(e) => handleChangeHora(index, "entradaManha", e.target.value)}
-                              />
+                            <td className="text-center">
+                              {isFalta ? (
+                                <div className="falta-indicador">
+                                  <span className="falta-indicador-titulo">
+                                    {tipoOcorrencia === "FALTA_JUSTIFICADA"
+                                      ? "Falta justificada"
+                                      : "Falta não justificada"}
+                                  </span>
+                                  {motivoDescricao && (
+                                    <span className="falta-indicador-detalhe">{motivoDescricao}</span>
+                                  )}
+                                  {dia.obsFalta && (
+                                    <span className="falta-indicador-detalhe">{dia.obsFalta}</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <input
+                                  className={timeInputClasses}
+                                  type="time"
+                                  value={dia.entradaManha ?? ""}
+                                  onChange={(e) => handleChangeHora(index, "entradaManha", e.target.value)}
+                                />
+                              )}
                             </td>
-                            <td>
-                              <input
-                                className={timeInputClasses}
-                                type="time"
-                                value={dia.saidaManha ?? ""}
-                                onChange={(e) => handleChangeHora(index, "saidaManha", e.target.value)}
-                              />
+                            <td className="text-center">
+                              {isFalta ? (
+                                <span className="falta-placeholder">--</span>
+                              ) : (
+                                <input
+                                  className={timeInputClasses}
+                                  type="time"
+                                  value={dia.saidaManha ?? ""}
+                                  onChange={(e) => handleChangeHora(index, "saidaManha", e.target.value)}
+                                />
+                              )}
                             </td>
-                            <td>
-                              <input
-                                className={timeInputClasses}
-                                type="time"
-                                value={dia.entradaTarde ?? ""}
-                                onChange={(e) => handleChangeHora(index, "entradaTarde", e.target.value)}
-                              />
+                            <td className="text-center">
+                              {isFalta ? (
+                                <span className="falta-placeholder">--</span>
+                              ) : (
+                                <input
+                                  className={timeInputClasses}
+                                  type="time"
+                                  value={dia.entradaTarde ?? ""}
+                                  onChange={(e) => handleChangeHora(index, "entradaTarde", e.target.value)}
+                                />
+                              )}
                             </td>
-                            <td>
-                              <input
-                                className={timeInputClasses}
-                                type="time"
-                                value={dia.saidaTarde ?? ""}
-                                onChange={(e) => handleChangeHora(index, "saidaTarde", e.target.value)}
-                              />
+                            <td className="text-center">
+                              {isFalta ? (
+                                <span className="falta-placeholder">--</span>
+                              ) : (
+                                <input
+                                  className={timeInputClasses}
+                                  type="time"
+                                  value={dia.saidaTarde ?? ""}
+                                  onChange={(e) => handleChangeHora(index, "saidaTarde", e.target.value)}
+                                />
+                              )}
                             </td>
-                            <td>
-                              <input
-                                className={timeInputClasses}
-                                type="time"
-                                value={dia.entradaExtra ?? ""}
-                                onChange={(e) => handleChangeHora(index, "entradaExtra", e.target.value)}
-                              />
+                            <td className="text-center">
+                              {isFalta ? (
+                                <span className="falta-placeholder">--</span>
+                              ) : (
+                                <input
+                                  className={timeInputClasses}
+                                  type="time"
+                                  value={dia.entradaExtra ?? ""}
+                                  onChange={(e) => handleChangeHora(index, "entradaExtra", e.target.value)}
+                                />
+                              )}
                             </td>
-                            <td>
-                              <input
-                                className={timeInputClasses}
-                                type="time"
-                                value={dia.saidaExtra ?? ""}
-                                onChange={(e) => handleChangeHora(index, "saidaExtra", e.target.value)}
-                              />
+                            <td className="text-center">
+                              {isFalta ? (
+                                <span className="falta-placeholder">--</span>
+                              ) : (
+                                <input
+                                  className={timeInputClasses}
+                                  type="time"
+                                  value={dia.saidaExtra ?? ""}
+                                  onChange={(e) => handleChangeHora(index, "saidaExtra", e.target.value)}
+                                />
+                              )}
                             </td>
-                            <td className="text-right text-sm">
+                            <td className="text-center text-sm">
                               {dia.minutosTrabalhados != null
                                 ? minutosParaHora(dia.minutosTrabalhados)
                                 : "--:--"}
                             </td>
-                            <td className="text-right text-sm">
+                            <td className="text-center text-sm">
                               {dia.minutosExtras != null ? minutosParaHora(dia.minutosExtras) : "--:--"}
                             </td>
                             <td className="text-right">
-                              <button
-                                type="button"
-                                className="text-xs text-orange-600 hover:underline"
-                                onClick={() => aplicarJornadaNoDia(index)}
-                                disabled={!jornadaFuncionario}
-                              >
-                                Aplicar jornada
-                              </button>
+                              <div className="acoes-dia">
+                                <button
+                                  type="button"
+                                  className="button button-secondary button-compact"
+                                  onClick={() => aplicarJornadaNoDia(index)}
+                                  disabled={!jornadaFuncionario}
+                                >
+                                  Aplicar jornada
+                                </button>
+                                <button
+                                  type="button"
+                                  className="button button-secondary button-compact"
+                                  onClick={() => abrirFaltaParaDia(index)}
+                                >
+                                  Falta
+                                </button>
+                                {isFalta && (
+                                  <button
+                                    type="button"
+                                    className="button button-secondary button-compact"
+                                    onClick={() => removerFaltaDia(index)}
+                                  >
+                                    Remover falta
+                                  </button>
+                                )}
+                                {indiceFaltaSelecionado === index && (
+                                  <div className="falta-popover">
+                                    <p className="falta-popover-title">Registrar falta</p>
+                                    <div className="falta-opcoes">
+                                      <label className="checkbox-row">
+                                        <input
+                                          type="radio"
+                                          name={`faltaTipo-${dia.dataReferencia}`}
+                                          checked={tipoFaltaSelecionada === "FALTA_JUSTIFICADA"}
+                                          onChange={() => setTipoFaltaSelecionada("FALTA_JUSTIFICADA")}
+                                        />
+                                        <span>Falta justificada</span>
+                                      </label>
+                                      <label className="checkbox-row">
+                                        <input
+                                          type="radio"
+                                          name={`faltaTipo-${dia.dataReferencia}`}
+                                          checked={tipoFaltaSelecionada === "FALTA_NAO_JUSTIFICADA"}
+                                          onChange={() => setTipoFaltaSelecionada("FALTA_NAO_JUSTIFICADA")}
+                                        />
+                                        <span>Falta não justificada</span>
+                                      </label>
+                                    </div>
+                                    {tipoFaltaSelecionada === "FALTA_JUSTIFICADA" && (
+                                      <>
+                                        <label className="falta-select-label" htmlFor={`motivo-${dia.dataReferencia}`}>
+                                          Motivo
+                                        </label>
+                                        <select
+                                          id={`motivo-${dia.dataReferencia}`}
+                                          className="form-input"
+                                          value={motivoFaltaSelecionado}
+                                          onChange={(e) => setMotivoFaltaSelecionado(e.target.value)}
+                                        >
+                                          <option value="">Selecione</option>
+                                          {motivosFalta.map((motivo) => (
+                                            <option key={motivo.ID_MOTIVO} value={motivo.ID_MOTIVO}>
+                                              {motivo.DESCRICAO}
+                                            </option>
+                                          ))}
+                                        </select>
+                                        <label className="falta-select-label" htmlFor={`obs-${dia.dataReferencia}`}>
+                                          Observação
+                                        </label>
+                                        <textarea
+                                          id={`obs-${dia.dataReferencia}`}
+                                          className="form-input"
+                                          value={observacaoFalta}
+                                          onChange={(e) => setObservacaoFalta(e.target.value)}
+                                          rows={2}
+                                        />
+                                      </>
+                                    )}
+
+                                    <div className="falta-popover-actions">
+                                      <button
+                                        type="button"
+                                        className="button button-primary button-compact"
+                                        onClick={confirmarFaltaDia}
+                                      >
+                                        Confirmar
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="button button-secondary button-compact"
+                                        onClick={() => setIndiceFaltaSelecionado(null)}
+                                      >
+                                        Fechar
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );

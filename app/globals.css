@@ -1177,3 +1177,111 @@ a {
 .text-center {
   text-align: center;
 }
+
+.falta-indicador {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  padding: 6px 8px;
+  background-color: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.falta-indicador-titulo {
+  font-weight: 600;
+  color: #92400e;
+}
+
+.falta-indicador-detalhe {
+  color: #92400e;
+}
+
+.falta-placeholder {
+  display: inline-block;
+  padding: 6px 8px;
+  color: #6b7280;
+}
+
+.falta-popover {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 10;
+  width: 280px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin-top: 8px;
+}
+
+.falta-popover-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.falta-opcoes {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.falta-select-label {
+  font-size: 12px;
+  color: #374151;
+  margin-top: 6px;
+}
+
+.falta-popover-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.button-compact {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.acoes-dia {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.ponto-tabela {
+  margin-bottom: 20px;
+}
+
+.ponto-tabela table td {
+  vertical-align: middle;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 960px;
+  max-height: 80vh;
+  overflow: auto;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}

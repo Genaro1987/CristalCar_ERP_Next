@@ -49,6 +49,7 @@ type SalarioHistorico = {
   ID_FUNCIONARIO: string;
   DATA_INICIO_VIGENCIA: string;
   DATA_FIM_VIGENCIA: string | null;
+  TIPO_SALARIO?: string;
   VALOR: number;
   OBSERVACAO: string | null;
 };
@@ -171,6 +172,8 @@ export default function FuncionarioPage() {
   const [erroCargaHoraria, setErroCargaHoraria] = useState<string | null>(null);
   const [historicoSalarios, setHistoricoSalarios] = useState<SalarioHistorico[]>([]);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
+  const [mostrandoHistorico, setMostrandoHistorico] = useState(false);
+  const [erroHistorico, setErroHistorico] = useState<string | null>(null);
 
   const empresaId = empresa?.id ?? null;
 
@@ -306,7 +309,7 @@ export default function FuncionarioPage() {
     setCarregandoHistorico(true);
     try {
       const resposta = await fetch(
-        `/api/rh/funcionarios?id=${encodeURIComponent(funcionario.ID_FUNCIONARIO)}&incluirHistorico=true`,
+        `/api/rh/funcionarios?id=${encodeURIComponent(funcionario.ID_FUNCIONARIO)}&incluirHistorico=false`,
         { headers: headersPadrao }
       );
       const json = await resposta.json();
@@ -315,13 +318,45 @@ export default function FuncionarioPage() {
         const dados = json.data as Funcionario;
         setTipoSalario(dados.TIPO_SALARIO || "MENSALISTA");
         setSalarioBase(formatarNumeroParaMoeda(dados.SALARIO_BASE));
-        setHistoricoSalarios(dados.HISTORICO_SALARIOS || []);
       }
     } catch (error) {
       console.error(error);
     } finally {
       setCarregandoHistorico(false);
     }
+  };
+
+  const abrirHistoricoSalarios = async () => {
+    if (!funcionarioEmEdicao) return;
+
+    setMostrandoHistorico(true);
+    setErroHistorico(null);
+    setCarregandoHistorico(true);
+
+    try {
+      const resposta = await fetch(
+        `/api/rh/funcionarios/${encodeURIComponent(funcionarioEmEdicao.ID_FUNCIONARIO)}/salarios`,
+        { headers: headersPadrao }
+      );
+      const json = await resposta.json();
+
+      if (json?.success) {
+        setHistoricoSalarios(json.data ?? []);
+      } else {
+        setErroHistorico("Não foi possível carregar o histórico de salários.");
+      }
+    } catch (error) {
+      console.error(error);
+      setErroHistorico("Erro ao buscar histórico de salários.");
+    } finally {
+      setCarregandoHistorico(false);
+    }
+  };
+
+  const fecharHistoricoSalarios = () => {
+    setMostrandoHistorico(false);
+    setHistoricoSalarios([]);
+    setErroHistorico(null);
   };
 
   const validarDatas = (admissao: string, demissao: string) => {
@@ -450,8 +485,9 @@ export default function FuncionarioPage() {
   };
 
   return (
-    <LayoutShell>
-      <div className="page-container">
+    <>
+      <LayoutShell>
+        <div className="page-container">
         <HeaderBar
           codigoTela="CAD005_RH_FUNCIONARIO"
           nomeTela="CADASTRO DE FUNCIONARIO"
@@ -668,6 +704,17 @@ export default function FuncionarioPage() {
                   </div>
                 </div>
 
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="button button-secondary"
+                    onClick={abrirHistoricoSalarios}
+                    disabled={!funcionarioEmEdicao}
+                  >
+                    Consultar histórico de salários
+                  </button>
+                </div>
+
                 <div className="form-actions departamentos-actions">
                   <label className="checkbox-row" htmlFor="funcionarioAtivo">
                     <input
@@ -695,44 +742,6 @@ export default function FuncionarioPage() {
                   </div>
                 </div>
               </form>
-
-              <div className="panel-subsection">
-                <header className="form-section-header">
-                  <h3>Histórico de salários</h3>
-                  <p>Registros de vigência e valores já aplicados ao funcionário.</p>
-                </header>
-
-                {carregandoHistorico && <p>Carregando histórico de salários...</p>}
-
-                {!carregandoHistorico && historicoSalarios.length === 0 && (
-                  <p className="helper-text">Nenhum histórico de salário encontrado.</p>
-                )}
-
-                {!carregandoHistorico && historicoSalarios.length > 0 && (
-                  <div className="departamento-tabela-wrapper">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Início vigência</th>
-                          <th>Fim vigência</th>
-                          <th>Valor</th>
-                          <th>Observação</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {historicoSalarios.map((registro) => (
-                          <tr key={registro.ID_SALARIO}>
-                            <td>{formatarData(registro.DATA_INICIO_VIGENCIA)}</td>
-                            <td>{formatarData(registro.DATA_FIM_VIGENCIA)}</td>
-                            <td>R$ {formatarNumeroParaMoeda(registro.VALOR)}</td>
-                            <td>{registro.OBSERVACAO || "-"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
             </section>
 
             <section className="panel">
@@ -804,6 +813,63 @@ export default function FuncionarioPage() {
           </div>
         </main>
       </div>
-    </LayoutShell>
+      </LayoutShell>
+
+      {mostrandoHistorico && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <header className="form-section-header">
+              <div>
+                <h3>Histórico de salários do funcionário</h3>
+                <p>
+                  {funcionarioEmEdicao?.ID_FUNCIONARIO} - {funcionarioEmEdicao?.NOME_COMPLETO}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="button button-secondary button-compact"
+                onClick={fecharHistoricoSalarios}
+              >
+                Fechar
+              </button>
+            </header>
+
+            {carregandoHistorico && <p>Carregando histórico de salários...</p>}
+            {erroHistorico && <p className="error-text">{erroHistorico}</p>}
+
+            {!carregandoHistorico && !erroHistorico && historicoSalarios.length === 0 && (
+              <p className="helper-text">Nenhum histórico de salário encontrado.</p>
+            )}
+
+            {!carregandoHistorico && historicoSalarios.length > 0 && (
+              <div className="departamento-tabela-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Início vigência</th>
+                      <th>Fim vigência</th>
+                      <th>Tipo</th>
+                      <th>Valor</th>
+                      <th>Observação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historicoSalarios.map((registro) => (
+                      <tr key={registro.ID_SALARIO}>
+                        <td>{formatarData(registro.DATA_INICIO_VIGENCIA)}</td>
+                        <td>{formatarData(registro.DATA_FIM_VIGENCIA)}</td>
+                        <td>{registro.TIPO_SALARIO || "-"}</td>
+                        <td className="text-right">R$ {formatarNumeroParaMoeda(registro.VALOR)}</td>
+                        <td>{registro.OBSERVACAO || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
