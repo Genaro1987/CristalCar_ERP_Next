@@ -13,12 +13,13 @@ interface Jornada {
   NOME_JORNADA: string;
   DESCRICAO?: string | null;
   CARGA_SEMANAL_HORAS: number;
-  HORA_ENTRADA_1?: string | null;
-  HORA_SAIDA_1?: string | null;
-  HORA_ENTRADA_2?: string | null;
-  HORA_SAIDA_2?: string | null;
-  HORA_ENTRADA_3?: string | null;
-  HORA_SAIDA_3?: string | null;
+  HORA_ENTRADA_MANHA?: string | null;
+  HORA_SAIDA_MANHA?: string | null;
+  HORA_ENTRADA_TARDE?: string | null;
+  HORA_SAIDA_TARDE?: string | null;
+  HORA_ENTRADA_INTERVALO?: string | null;
+  HORA_SAIDA_INTERVALO?: string | null;
+  TOLERANCIA_MINUTOS?: number;
   ATIVO: 0 | 1;
   CRIADO_EM?: string;
   ATUALIZADO_EM?: string;
@@ -48,16 +49,16 @@ function formatarCodigoJornada(codigo?: string) {
 function montarResumoHorarios(jornada: Jornada) {
   const blocos: string[] = [];
 
-  if (jornada.HORA_ENTRADA_1 && jornada.HORA_SAIDA_1) {
-    blocos.push(`${jornada.HORA_ENTRADA_1}-${jornada.HORA_SAIDA_1}`);
+  if (jornada.HORA_ENTRADA_MANHA && jornada.HORA_SAIDA_MANHA) {
+    blocos.push(`${jornada.HORA_ENTRADA_MANHA}-${jornada.HORA_SAIDA_MANHA}`);
   }
 
-  if (jornada.HORA_ENTRADA_2 && jornada.HORA_SAIDA_2) {
-    blocos.push(`${jornada.HORA_ENTRADA_2}-${jornada.HORA_SAIDA_2}`);
+  if (jornada.HORA_ENTRADA_TARDE && jornada.HORA_SAIDA_TARDE) {
+    blocos.push(`${jornada.HORA_ENTRADA_TARDE}-${jornada.HORA_SAIDA_TARDE}`);
   }
 
-  if (jornada.HORA_ENTRADA_3 && jornada.HORA_SAIDA_3) {
-    blocos.push(`${jornada.HORA_ENTRADA_3}-${jornada.HORA_SAIDA_3}`);
+  if (jornada.HORA_ENTRADA_INTERVALO && jornada.HORA_SAIDA_INTERVALO) {
+    blocos.push(`${jornada.HORA_ENTRADA_INTERVALO}-${jornada.HORA_SAIDA_INTERVALO}`);
   }
 
   return blocos.join(" / ") || "-";
@@ -85,6 +86,7 @@ export default function JornadaPage() {
   const [horaSaida2, setHoraSaida2] = useState("");
   const [horaEntrada3, setHoraEntrada3] = useState("");
   const [horaSaida3, setHoraSaida3] = useState("");
+  const [tolerancia, setTolerancia] = useState("0");
   const [ativo, setAtivo] = useState(true);
   const [jornadaEmEdicao, setJornadaEmEdicao] = useState<Jornada | null>(null);
 
@@ -141,6 +143,7 @@ export default function JornadaPage() {
     setHoraSaida2("");
     setHoraEntrada3("");
     setHoraSaida3("");
+    setTolerancia("0");
     setAtivo(true);
   };
 
@@ -154,12 +157,13 @@ export default function JornadaPage() {
     setNomeJornada(normalizarTextoBasico(jornada.NOME_JORNADA ?? ""));
     setDescricao(normalizarDescricao(jornada.DESCRICAO ?? ""));
     setCargaSemanal(String(jornada.CARGA_SEMANAL_HORAS ?? ""));
-    setHoraEntrada1(jornada.HORA_ENTRADA_1 ?? "");
-    setHoraSaida1(jornada.HORA_SAIDA_1 ?? "");
-    setHoraEntrada2(jornada.HORA_ENTRADA_2 ?? "");
-    setHoraSaida2(jornada.HORA_SAIDA_2 ?? "");
-    setHoraEntrada3(jornada.HORA_ENTRADA_3 ?? "");
-    setHoraSaida3(jornada.HORA_SAIDA_3 ?? "");
+    setHoraEntrada1(jornada.HORA_ENTRADA_MANHA ?? "");
+    setHoraSaida1(jornada.HORA_SAIDA_MANHA ?? "");
+    setHoraEntrada2(jornada.HORA_ENTRADA_TARDE ?? "");
+    setHoraSaida2(jornada.HORA_SAIDA_TARDE ?? "");
+    setHoraEntrada3(jornada.HORA_ENTRADA_INTERVALO ?? "");
+    setHoraSaida3(jornada.HORA_SAIDA_INTERVALO ?? "");
+    setTolerancia(String(jornada.TOLERANCIA_MINUTOS ?? 0));
     setAtivo(jornada.ATIVO === 1);
   };
 
@@ -197,12 +201,13 @@ export default function JornadaPage() {
       NOME_JORNADA: nomeNormalizado,
       DESCRICAO: descricaoNormalizada,
       CARGA_SEMANAL_HORAS: cargaNumero,
-      HORA_ENTRADA_1: horaEntrada1,
-      HORA_SAIDA_1: horaSaida1,
-      HORA_ENTRADA_2: horaEntrada2 || null,
-      HORA_SAIDA_2: horaSaida2 || null,
-      HORA_ENTRADA_3: horaEntrada3 || null,
-      HORA_SAIDA_3: horaSaida3 || null,
+      HORA_ENTRADA_MANHA: horaEntrada1,
+      HORA_SAIDA_MANHA: horaSaida1,
+      HORA_ENTRADA_TARDE: horaEntrada2 || null,
+      HORA_SAIDA_TARDE: horaSaida2 || null,
+      HORA_ENTRADA_INTERVALO: horaEntrada3 || null,
+      HORA_SAIDA_INTERVALO: horaSaida3 || null,
+      TOLERANCIA_MINUTOS: Number(tolerancia || 0),
       ATIVO: ativo ? 1 : 0,
     };
 
@@ -352,7 +357,7 @@ export default function JornadaPage() {
                   <h3>Horários</h3>
                   <div className="form-grid horarios-grid">
                     <div className="form-group">
-                      <label htmlFor="horaEntrada1">Entrada 1 *</label>
+                      <label htmlFor="horaEntrada1">Entrada manhã *</label>
                       <input
                         id="horaEntrada1"
                         name="horaEntrada1"
@@ -364,7 +369,7 @@ export default function JornadaPage() {
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="horaSaida1">Saída 1 *</label>
+                      <label htmlFor="horaSaida1">Saída manhã *</label>
                       <input
                         id="horaSaida1"
                         name="horaSaida1"
@@ -376,7 +381,7 @@ export default function JornadaPage() {
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="horaEntrada2">Entrada 2</label>
+                      <label htmlFor="horaEntrada2">Entrada tarde</label>
                       <input
                         id="horaEntrada2"
                         name="horaEntrada2"
@@ -387,7 +392,7 @@ export default function JornadaPage() {
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="horaSaida2">Saída 2</label>
+                      <label htmlFor="horaSaida2">Saída tarde</label>
                       <input
                         id="horaSaida2"
                         name="horaSaida2"
@@ -398,7 +403,7 @@ export default function JornadaPage() {
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="horaEntrada3">Entrada 3</label>
+                      <label htmlFor="horaEntrada3">Entrada intervalo</label>
                       <input
                         id="horaEntrada3"
                         name="horaEntrada3"
@@ -409,7 +414,7 @@ export default function JornadaPage() {
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="horaSaida3">Saída 3</label>
+                      <label htmlFor="horaSaida3">Saída intervalo</label>
                       <input
                         id="horaSaida3"
                         name="horaSaida3"
@@ -417,6 +422,18 @@ export default function JornadaPage() {
                         type="time"
                         value={horaSaida3}
                         onChange={(e) => setHoraSaida3(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="tolerancia">Tolerância (min)</label>
+                      <input
+                        id="tolerancia"
+                        name="tolerancia"
+                        className="form-input"
+                        type="number"
+                        min={0}
+                        value={tolerancia}
+                        onChange={(e) => setTolerancia(e.target.value)}
                       />
                     </div>
                   </div>

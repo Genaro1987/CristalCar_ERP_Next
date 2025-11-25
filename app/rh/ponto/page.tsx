@@ -16,10 +16,13 @@ interface Funcionario {
 interface Jornada {
   ID_JORNADA: string;
   NOME_JORNADA: string;
-  HORA_ENTRADA_1?: string | null;
-  HORA_SAIDA_1?: string | null;
-  HORA_ENTRADA_2?: string | null;
-  HORA_SAIDA_2?: string | null;
+  HORA_ENTRADA_MANHA?: string | null;
+  HORA_SAIDA_MANHA?: string | null;
+  HORA_ENTRADA_TARDE?: string | null;
+  HORA_SAIDA_TARDE?: string | null;
+  HORA_ENTRADA_INTERVALO?: string | null;
+  HORA_SAIDA_INTERVALO?: string | null;
+  TOLERANCIA_MINUTOS?: number;
 }
 
 interface LancamentoDia {
@@ -262,10 +265,10 @@ export default function PontoPage() {
 
         return {
           ...dia,
-          entradaManha: jornada?.HORA_ENTRADA_1 ?? dia.entradaManha,
-          saidaManha: jornada?.HORA_SAIDA_1 ?? dia.saidaManha,
-          entradaTarde: jornada?.HORA_ENTRADA_2 ?? dia.entradaTarde,
-          saidaTarde: jornada?.HORA_SAIDA_2 ?? dia.saidaTarde,
+          entradaManha: jornada?.HORA_ENTRADA_MANHA ?? dia.entradaManha,
+          saidaManha: jornada?.HORA_SAIDA_MANHA ?? dia.saidaManha,
+          entradaTarde: jornada?.HORA_ENTRADA_TARDE ?? dia.entradaTarde,
+          saidaTarde: jornada?.HORA_SAIDA_TARDE ?? dia.saidaTarde,
         };
       })
     );
@@ -353,7 +356,7 @@ export default function PontoPage() {
     <LayoutShell>
       <div className="page-container">
         <HeaderBar
-          codigoTela="CAD007_RH_PONTO"
+          codigoTela="LAN001_RH_PONTO"
           nomeTela="LANCAMENTO DE PONTO"
           caminhoRota="/rh/ponto"
           modulo="RH"
