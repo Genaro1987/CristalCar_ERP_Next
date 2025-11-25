@@ -2,60 +2,134 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 
-type ModuloSistema = "CORE" | "EMPRESA" | "RH" | "SEGURANCA";
+type SecaoMenu = {
+  label: string;
+  itens: ItemMenu[];
+};
 
-interface ItemMenu {
+type ItemMenu = {
   label: string;
   rota: string;
-  modulo: ModuloSistema;
   requerEmpresa?: boolean;
+  codigoTela?: string;
+};
+
+const CHAVES_PERMISSOES = ["SEG_PERFIL_TELAS", "TELAS_PERMITIDAS", "TELAS_AUTORIZADAS"];
+
+function extrairCodigosTela(valor: string | null): string[] {
+  if (!valor) return [];
+
+  try {
+    const parsed = JSON.parse(valor);
+    if (Array.isArray(parsed)) {
+      if (parsed.every((item) => typeof item === "string")) {
+        return parsed as string[];
+      }
+
+      if (parsed.every((item) => typeof item === "object" && item !== null)) {
+        return parsed
+          .map((item) => {
+            const possivel = item as { CODIGO_TELA?: string; codigoTela?: string };
+            return possivel?.CODIGO_TELA ?? possivel?.codigoTela;
+          })
+          .filter((codigo): codigo is string => Boolean(codigo));
+      }
+    }
+  } catch (error) {
+    // Ignora erros de parse e tenta fallback abaixo
+  }
+
+  return valor
+    .split(",")
+    .map((parte) => parte.trim())
+    .filter(Boolean);
+}
+
+function lerTelasPermitidas(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+
+  for (const chave of CHAVES_PERMISSOES) {
+    const valor = window.localStorage.getItem(chave);
+    const codigos = extrairCodigosTela(valor).map((codigo) => codigo.toUpperCase());
+
+    if (codigos.length > 0) {
+      return new Set(codigos);
+    }
+  }
+
+  return new Set();
 }
 
 export function Sidebar() {
   const pathname = usePathname();
   const { empresa } = useEmpresaSelecionada();
 
-  const itensMenu: ItemMenu[] = useMemo(
+  const [telasPermitidas, setTelasPermitidas] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setTelasPermitidas(lerTelasPermitidas());
+
+    const listener = (event: StorageEvent) => {
+      if (event.key && CHAVES_PERMISSOES.includes(event.key)) {
+        setTelasPermitidas(lerTelasPermitidas());
+      }
+    };
+
+    window.addEventListener("storage", listener);
+    return () => window.removeEventListener("storage", listener);
+  }, [empresa?.id]);
+
+  const secoesMenu: SecaoMenu[] = useMemo(
     () => [
-      { label: "INICIAL", rota: "/", modulo: "CORE" },
       {
-        label: "EMPRESA",
-        rota: "/core/empresa/nova",
-        modulo: "EMPRESA",
-        requerEmpresa: true,
+        label: "CADASTROS",
+        itens: [
+          { label: "Inicial", rota: "/" },
+          {
+            label: "Empresa",
+            rota: "/core/empresa/nova",
+            requerEmpresa: true,
+            codigoTela: "CAD002_EMP_EMPRESA",
+          },
+          {
+            label: "Departamentos",
+            rota: "/emp/departamento",
+            requerEmpresa: true,
+            codigoTela: "CAD003_EMP_DEPARTAMENTO",
+          },
+          {
+            label: "Perfis de acesso",
+            rota: "/seg/perfil",
+            requerEmpresa: true,
+            codigoTela: "CAD006_SEG_PERFIL",
+          },
+        ],
       },
       {
-        label: "DEPARTAMENTOS",
-        rota: "/emp/departamento",
-        modulo: "EMPRESA",
-        requerEmpresa: true,
-      },
-      {
-        label: "JORNADAS",
-        rota: "/rh/jornada",
-        modulo: "RH",
-        requerEmpresa: true,
-      },
-      {
-        label: "FUNCIONARIOS",
-        rota: "/rh/funcionario",
-        modulo: "RH",
-        requerEmpresa: true,
-      },
-      {
-        label: "LANCAMENTO DE PONTO",
-        rota: "/rh/ponto",
-        modulo: "RH",
-        requerEmpresa: true,
-      },
-      {
-        label: "PERFIS DE ACESSO",
-        rota: "/seg/perfil",
-        modulo: "SEGURANCA",
-        requerEmpresa: true,
+        label: "RECURSOS HUMANOS",
+        itens: [
+          {
+            label: "Jornadas",
+            rota: "/rh/jornada",
+            requerEmpresa: true,
+            codigoTela: "CAD004_RH_JORNADA",
+          },
+          {
+            label: "Funcionários",
+            rota: "/rh/funcionario",
+            requerEmpresa: true,
+            codigoTela: "CAD005_RH_FUNCIONARIO",
+          },
+          {
+            label: "Lançamento de ponto",
+            rota: "/rh/ponto",
+            requerEmpresa: true,
+            codigoTela: "CAD007_RH_PONTO",
+          },
+        ],
       },
     ],
     []
@@ -63,10 +137,18 @@ export function Sidebar() {
 
   const possuiEmpresaSelecionada = Boolean(empresa?.id);
 
-  const itensVisiveis = itensMenu.filter((item) => {
-    if (item.requerEmpresa && !possuiEmpresaSelecionada) return false;
-    return true;
-  });
+  const usuarioTemPermissao = (codigoTela?: string) => {
+    if (!codigoTela) return true;
+    if (telasPermitidas.size === 0) return true;
+    return telasPermitidas.has(codigoTela.toUpperCase());
+  };
+
+  const filtrarItens = (itens: ItemMenu[]) =>
+    itens.filter((item) => {
+      if (item.requerEmpresa && !possuiEmpresaSelecionada) return false;
+      if (!usuarioTemPermissao(item.codigoTela)) return false;
+      return true;
+    });
 
   const isAjuda = pathname.startsWith("/ajuda");
 
@@ -85,26 +167,34 @@ export function Sidebar() {
           )}
         </div>
 
-        <div className="sidebar-section-header">CADASTROS</div>
+        {secoesMenu.map((secao) => {
+          const itensVisiveis = filtrarItens(secao.itens);
+          if (!itensVisiveis.length) return null;
 
-        <nav className="sidebar-nav">
-          {itensVisiveis.map((item) => {
-            const ativo =
-              item.rota === "/"
-                ? pathname === item.rota
-                : pathname.startsWith(item.rota);
+          return (
+            <div key={secao.label}>
+              <div className="sidebar-section-header">{secao.label}</div>
+              <nav className="sidebar-nav">
+                {itensVisiveis.map((item) => {
+                  const ativo =
+                    item.rota === "/"
+                      ? pathname === item.rota
+                      : pathname.startsWith(item.rota);
 
-            return (
-              <Link
-                key={item.rota}
-                href={item.rota}
-                className={ativo ? "sidebar-nav-item active" : "sidebar-nav-item"}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+                  return (
+                    <Link
+                      key={item.rota}
+                      href={item.rota}
+                      className={ativo ? "sidebar-nav-item active" : "sidebar-nav-item"}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          );
+        })}
       </div>
 
       <div className="sidebar-bottom">
