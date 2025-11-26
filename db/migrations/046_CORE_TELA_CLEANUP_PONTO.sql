@@ -1,31 +1,4 @@
 -- 046_CORE_TELA_CLEANUP_PONTO.sql
-
--- Reaponta qualquer referencia que ainda use o ID_TELA de CAD007_RH_PONTO
--- para o ID_TELA de LAN001_RH_PONTO em SEG_PERFIL_TELA
-
-UPDATE SEG_PERFIL_TELA
-SET ID_TELA = (
-  SELECT ID_TELA
-  FROM CORE_TELA
-  WHERE CODIGO_TELA = 'LAN001_RH_PONTO'
-)
-WHERE ID_TELA IN (
-  SELECT ID_TELA
-  FROM CORE_TELA
-  WHERE CODIGO_TELA = 'CAD007_RH_PONTO'
-);
-
--- Garante que a tabela de ajuda referencie apenas LAN001_RH_PONTO
-UPDATE CORE_AJUDA_TELA
-SET CODIGO_TELA = 'LAN001_RH_PONTO'
-WHERE CODIGO_TELA = 'CAD007_RH_PONTO';
-
--- Remove o registro legado de CAD007_RH_PONTO em CORE_TELA, se ainda existir
-DELETE FROM CORE_TELA
-WHERE CODIGO_TELA = 'CAD007_RH_PONTO';
-
--- Reclassifica a tela CAD006_SEG_PERFIL para o modulo EMPRESA
-UPDATE CORE_TELA
-SET MODULO = 'EMPRESA'
-WHERE CODIGO_TELA = 'CAD006_SEG_PERFIL';
-
+-- Migração propositalmente sem comandos.
+-- A limpeza de telas de ponto (CAD007 x LAN001) e ajuste do módulo da CAD006
+-- será feita em migrações posteriores.
