@@ -1,17 +1,3 @@
 -- 048_RH_FALTA_JUSTIFICATIVA_MOTIVO_FIX_LICENCA.sql
-
--- Mantém apenas um registro de LICENCA e normaliza a ordem de exibição.
-
--- Apaga duplicatas de LICENCA, mantendo apenas o menor ID_MOTIVO
-DELETE FROM RH_FALTA_JUSTIFICATIVA_MOTIVO
-WHERE DESCRICAO = 'LICENCA'
-  AND ID_MOTIVO NOT IN (
-    SELECT MIN(ID_MOTIVO)
-    FROM RH_FALTA_JUSTIFICATIVA_MOTIVO
-    WHERE DESCRICAO = 'LICENCA'
-  );
-
--- Ajusta a ORDEM_EXIBICAO do motivo LICENCA para 5
-UPDATE RH_FALTA_JUSTIFICATIVA_MOTIVO
-SET ORDEM_EXIBICAO = 5
-WHERE DESCRICAO = 'LICENCA';
+-- Migração transformada em NO-OP para estabilizar o deploy.
+-- Intencionalmente sem comandos SQL (sem BEGIN, COMMIT ou quaisquer DML).
