@@ -1,9 +1,5 @@
 -- 047_CORE_TELA_CLEANUP_PONTO_v2.sql
--- Migração transformada em no-op porque o cleanup de CAD007/LAN001
--- já foi realizado manualmente no banco de produção.
+-- Migração de NO-OP. O cleanup de CAD007 / LAN001 e ajustes de CAD006
+-- já foram realizados diretamente no banco de dados.
 
-BEGIN TRANSACTION;
-
--- Nenhuma alteração de dados aqui de propósito.
-
-COMMIT;
+-- Intencionalmente sem comandos SQL.
