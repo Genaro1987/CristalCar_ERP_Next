@@ -154,6 +154,23 @@ export default function JornadaPage() {
     setDescricao(normalizarDescricao(raw));
   };
 
+  const handleToleranciaChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+
+    if (raw === "") {
+      setToleranciaMinutos("");
+      return;
+    }
+
+    const numero = Number(raw);
+    if (!Number.isFinite(numero) || numero < 0) {
+      setToleranciaMinutos("0");
+      return;
+    }
+
+    setToleranciaMinutos(String(Math.trunc(numero)));
+  };
+
   const preencherParaEdicao = (jornada: Jornada) => {
     setJornadaEmEdicao(jornada);
     setNomeJornada(normalizarTextoBasico(jornada.NOME_JORNADA ?? ""));
@@ -202,6 +219,8 @@ export default function JornadaPage() {
 
     setSalvando(true);
 
+    const tolerancia = Math.max(0, Math.trunc(Number(toleranciaMinutos) || 0));
+
     const payload = {
       NOME_JORNADA: nomeNormalizado,
       DESCRICAO: descricaoNormalizada,
@@ -212,7 +231,7 @@ export default function JornadaPage() {
       HORA_SAIDA_TARDE: horaSaidaTarde || null,
       HORA_ENTRADA_INTERVALO: horaEntradaIntervalo || null,
       HORA_SAIDA_INTERVALO: horaSaidaIntervalo || null,
-      TOLERANCIA_MINUTOS: Number(toleranciaMinutos) || 0,
+      TOLERANCIA_MINUTOS: tolerancia,
       ATIVO: ativo ? 1 : 0,
     };
 
@@ -433,16 +452,16 @@ export default function JornadaPage() {
 
                   <div className="form-grid single-column">
                     <div className="form-group">
-                      <label htmlFor="toleranciaMinutos">Tolerância (min)</label>
-                      <input
-                        id="toleranciaMinutos"
-                        name="toleranciaMinutos"
-                        className="form-input w-24"
-                        type="number"
-                        min={0}
-                        value={toleranciaMinutos}
-                        onChange={(e) => setToleranciaMinutos(e.target.value)}
-                      />
+                    <label htmlFor="toleranciaMinutos">TOLERANCIA (MIN)</label>
+                    <input
+                      id="toleranciaMinutos"
+                      name="toleranciaMinutos"
+                      className="form-input w-24"
+                      type="number"
+                      min={0}
+                      value={toleranciaMinutos}
+                      onChange={handleToleranciaChange}
+                    />
                       <p className="helper-text">
                         Desconsidere diferenças diárias dentro desse limite ao apurar horas
                         extras ou faltas.
