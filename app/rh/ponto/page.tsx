@@ -24,6 +24,7 @@ interface Jornada {
   HORA_SAIDA_INTERVALO?: string | null;
   HORA_ENTRADA_EXTRA?: string | null;
   HORA_SAIDA_EXTRA?: string | null;
+  TOLERANCIA_MINUTOS?: number | null;
 }
 
 interface LancamentoDia {
@@ -109,7 +110,21 @@ function minutosParaHora(min: number): string {
   return `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
 }
 
-function recalcularTotaisDia(dia: LancamentoDia, minutosJornadaDia?: number | null): LancamentoDia {
+function normalizarToleranciaMinutos(valor?: number | null): number {
+  const numero = Number(valor ?? 0);
+
+  if (!Number.isFinite(numero) || numero <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.trunc(numero));
+}
+
+function recalcularTotaisDia(
+  dia: LancamentoDia,
+  minutosJornadaDia?: number | null,
+  toleranciaMinutos?: number | null
+): LancamentoDia {
   if (dia.tipoOcorrencia && dia.tipoOcorrencia !== "NORMAL") {
     return {
       ...dia,
@@ -130,7 +145,21 @@ function recalcularTotaisDia(dia: LancamentoDia, minutosJornadaDia?: number | nu
 
   const minutosTrabalhados = diff(em, sm) + diff(et, st) - diff(ei, si);
   const minutosJornada = minutosJornadaDia ?? 0;
-  const minutosExtras = minutosJornada > 0 ? Math.max(0, minutosTrabalhados - minutosJornada) : 0;
+  const tolerancia = normalizarToleranciaMinutos(toleranciaMinutos);
+
+  let minutosExtras = 0;
+
+  if (minutosJornada > 0) {
+    const diferenca = minutosTrabalhados - minutosJornada;
+
+    if (Math.abs(diferenca) > tolerancia) {
+      if (diferenca > tolerancia) {
+        minutosExtras = diferenca - tolerancia;
+      } else {
+        minutosExtras = 0;
+      }
+    }
+  }
 
   return {
     ...dia,
@@ -155,12 +184,8 @@ function calcularMinutosJornadaDiaria(jornada?: {
   const sm = parseHoraParaMinutos(jornada.HORA_SAIDA_MANHA);
   const et = parseHoraParaMinutos(jornada.HORA_ENTRADA_TARDE);
   const st = parseHoraParaMinutos(jornada.HORA_SAIDA_TARDE);
-  const ei = parseHoraParaMinutos(
-    jornada.HORA_ENTRADA_EXTRA ?? jornada.HORA_ENTRADA_INTERVALO
-  );
-  const si = parseHoraParaMinutos(
-    jornada.HORA_SAIDA_EXTRA ?? jornada.HORA_SAIDA_INTERVALO
-  );
+  const ei = parseHoraParaMinutos(jornada.HORA_ENTRADA_INTERVALO);
+  const si = parseHoraParaMinutos(jornada.HORA_SAIDA_INTERVALO);
 
   const diff = (inicio: number | null, fim: number | null) =>
     inicio != null && fim != null && fim > inicio ? fim - inicio : 0;
@@ -228,6 +253,11 @@ export default function PontoPage() {
     [jornadaFuncionario]
   );
 
+  const toleranciaMinutosJornada = useMemo(
+    () => normalizarToleranciaMinutos(jornadaFuncionario?.TOLERANCIA_MINUTOS),
+    [jornadaFuncionario?.TOLERANCIA_MINUTOS]
+  );
+
   const timeInputClasses = "form-input time-input text-center px-1 py-1 text-sm";
 
   const montarHorariosJornadaParaDia = (
@@ -261,7 +291,11 @@ export default function PontoPage() {
       }
 
       const comJornada = montarHorariosJornadaParaDia(diaAtual, jornadaFuncionario);
-      copia[indexDia] = recalcularTotaisDia(comJornada, minutosJornadaDia);
+      copia[indexDia] = recalcularTotaisDia(
+        comJornada,
+        minutosJornadaDia,
+        toleranciaMinutosJornada
+      );
       return copia;
     });
   };
@@ -313,7 +347,11 @@ export default function PontoPage() {
         minutosTrabalhados: 0,
       };
 
-      copia[indiceFaltaSelecionado] = recalcularTotaisDia(atualizado, minutosJornadaDia);
+      copia[indiceFaltaSelecionado] = recalcularTotaisDia(
+        atualizado,
+        minutosJornadaDia,
+        toleranciaMinutosJornada
+      );
       return copia;
     });
 
@@ -347,7 +385,11 @@ export default function PontoPage() {
         minutosTrabalhados: 0,
       };
 
-      copia[indexDia] = recalcularTotaisDia(normalizado, minutosJornadaDia);
+      copia[indexDia] = recalcularTotaisDia(
+        normalizado,
+        minutosJornadaDia,
+        toleranciaMinutosJornada
+      );
       return copia;
     });
     setIndiceFaltaSelecionado(null);
@@ -361,7 +403,11 @@ export default function PontoPage() {
         ...copia[indexDia],
         [campo]: valor,
       };
-      copia[indexDia] = recalcularTotaisDia(atualizado, minutosJornadaDia);
+      copia[indexDia] = recalcularTotaisDia(
+        atualizado,
+        minutosJornadaDia,
+        toleranciaMinutosJornada
+      );
       return copia;
     });
   };
@@ -433,8 +479,10 @@ export default function PontoPage() {
   useEffect(() => {
     if (!diasPonto.length) return;
 
-    setDiasPonto((dias) => dias.map((dia) => recalcularTotaisDia(dia, minutosJornadaDia)));
-  }, [diasPonto.length, minutosJornadaDia]);
+    setDiasPonto((dias) =>
+      dias.map((dia) => recalcularTotaisDia(dia, minutosJornadaDia, toleranciaMinutosJornada))
+    );
+  }, [diasPonto.length, minutosJornadaDia, toleranciaMinutosJornada]);
 
   const carregarPonto = async () => {
     setErroFormulario(null);
@@ -508,7 +556,8 @@ export default function PontoPage() {
               obsFalta: combinado.obsFalta ?? null,
               observacao: combinado.observacao ?? "",
             },
-            minutosJornadaDia
+            minutosJornadaDia,
+            toleranciaMinutosJornada
           );
         });
 
@@ -570,7 +619,11 @@ export default function PontoPage() {
 
         const comHorarios = montarHorariosJornadaParaDia(dia, jornada);
 
-        return recalcularTotaisDia(comHorarios, minutosJornadaDia);
+        return recalcularTotaisDia(
+          comHorarios,
+          minutosJornadaDia,
+          toleranciaMinutosJornada
+        );
       })
     );
 
