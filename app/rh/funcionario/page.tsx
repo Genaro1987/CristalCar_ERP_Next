@@ -97,6 +97,12 @@ function formatarData(valor?: string | null): string {
   return `${dia}/${mes}/${ano}`;
 }
 
+function formatarFimVigencia(valor?: string | null): string {
+  if (!valor) return "VIGENTE";
+
+  return formatarData(valor);
+}
+
 function converterMoedaParaNumero(valor: string): number {
   if (!valor) return Number.NaN;
 
@@ -327,7 +333,11 @@ export default function FuncionarioPage() {
   };
 
   const abrirHistoricoSalarios = async () => {
-    if (!funcionarioEmEdicao) return;
+    if (!funcionarioEmEdicao?.ID_FUNCIONARIO) {
+      setErroHistorico("Selecione um funcionário para consultar o histórico.");
+      setMostrandoHistorico(true);
+      return;
+    }
 
     setMostrandoHistorico(true);
     setErroHistorico(null);
@@ -709,9 +719,9 @@ export default function FuncionarioPage() {
                     type="button"
                     className="button button-secondary"
                     onClick={abrirHistoricoSalarios}
-                    disabled={!funcionarioEmEdicao}
+                    disabled={!funcionarioEmEdicao?.ID_FUNCIONARIO}
                   >
-                    Consultar histórico de salários
+                    HISTORICO DE SALARIOS
                   </button>
                 </div>
 
@@ -857,7 +867,7 @@ export default function FuncionarioPage() {
                     {historicoSalarios.map((registro) => (
                       <tr key={registro.ID_SALARIO}>
                         <td>{formatarData(registro.DATA_INICIO_VIGENCIA)}</td>
-                        <td>{formatarData(registro.DATA_FIM_VIGENCIA)}</td>
+                        <td>{formatarFimVigencia(registro.DATA_FIM_VIGENCIA)}</td>
                         <td>{registro.TIPO_SALARIO || "-"}</td>
                         <td className="text-right">R$ {formatarNumeroParaMoeda(registro.VALOR)}</td>
                         <td>{registro.OBSERVACAO || "-"}</td>
