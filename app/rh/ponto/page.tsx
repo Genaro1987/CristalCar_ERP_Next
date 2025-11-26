@@ -258,7 +258,7 @@ export default function PontoPage() {
     [jornadaFuncionario?.TOLERANCIA_MINUTOS]
   );
 
-  const timeInputClasses = "form-input time-input text-center px-1 py-1 text-sm";
+  const timeInputClasses = "form-input time-input text-center px-1 py-1 text-sm w-24";
 
   const montarHorariosJornadaParaDia = (
     diaAtual: LancamentoDia,
@@ -813,12 +813,7 @@ export default function PontoPage() {
                     <thead>
                       <tr>
                         <th className="text-center">Dia</th>
-                        <th className="text-center">Entrada manhã</th>
-                        <th className="text-center">Saída manhã</th>
-                        <th className="text-center">Entrada tarde</th>
-                        <th className="text-center">Saída tarde</th>
-                        <th className="text-center">Entrada intervalo</th>
-                        <th className="text-center">Saída intervalo</th>
+                        <th className="text-center">Horários</th>
                         <th className="text-center">Tempo trabalhado</th>
                         <th className="text-center">Horas extras</th>
                         <th className="text-center">Ações</th>
@@ -846,60 +841,74 @@ export default function PontoPage() {
                             key={dia.dataReferencia}
                             style={ehFimDeSemana ? { color: "#6b7280" } : undefined}
                           >
-                            <td className="text-center">{formatarDia(dia.dataReferencia)}</td>
-                            <td className="text-center">
-                              <input
-                                className={timeInputClasses}
-                                type="time"
-                                value={dia.entradaManha ?? ""}
-                                onChange={(e) => handleChangeHora(index, "entradaManha", e.target.value)}
-                                disabled={isFalta}
-                              />
+                            <td className="text-center whitespace-nowrap">
+                              {formatarDia(dia.dataReferencia)}
                             </td>
                             <td className="text-center">
-                              <input
-                                className={timeInputClasses}
-                                type="time"
-                                value={dia.saidaManha ?? ""}
-                                onChange={(e) => handleChangeHora(index, "saidaManha", e.target.value)}
-                                disabled={isFalta}
-                              />
-                            </td>
-                            <td className="text-center">
-                              <input
-                                className={timeInputClasses}
-                                type="time"
-                                value={dia.entradaTarde ?? ""}
-                                onChange={(e) => handleChangeHora(index, "entradaTarde", e.target.value)}
-                                disabled={isFalta}
-                              />
-                            </td>
-                            <td className="text-center">
-                              <input
-                                className={timeInputClasses}
-                                type="time"
-                                value={dia.saidaTarde ?? ""}
-                                onChange={(e) => handleChangeHora(index, "saidaTarde", e.target.value)}
-                                disabled={isFalta}
-                              />
-                            </td>
-                            <td className="text-center">
-                              <input
-                                className={timeInputClasses}
-                                type="time"
-                                value={dia.entradaExtra ?? ""}
-                                onChange={(e) => handleChangeHora(index, "entradaExtra", e.target.value)}
-                                disabled={isFalta}
-                              />
-                            </td>
-                            <td className="text-center">
-                              <input
-                                className={timeInputClasses}
-                                type="time"
-                                value={dia.saidaExtra ?? ""}
-                                onChange={(e) => handleChangeHora(index, "saidaExtra", e.target.value)}
-                                disabled={isFalta}
-                              />
+                              <div className="flex items-center justify-center gap-6">
+                                <div className="flex gap-2">
+                                  <input
+                                    className={timeInputClasses}
+                                    type="time"
+                                    value={dia.entradaManha ?? ""}
+                                    onChange={(e) =>
+                                      handleChangeHora(index, "entradaManha", e.target.value)
+                                    }
+                                    disabled={isFalta}
+                                  />
+                                  <input
+                                    className={timeInputClasses}
+                                    type="time"
+                                    value={dia.saidaManha ?? ""}
+                                    onChange={(e) =>
+                                      handleChangeHora(index, "saidaManha", e.target.value)
+                                    }
+                                    disabled={isFalta}
+                                  />
+                                </div>
+
+                                <div className="flex gap-2 ml-4">
+                                  <input
+                                    className={timeInputClasses}
+                                    type="time"
+                                    value={dia.entradaTarde ?? ""}
+                                    onChange={(e) =>
+                                      handleChangeHora(index, "entradaTarde", e.target.value)
+                                    }
+                                    disabled={isFalta}
+                                  />
+                                  <input
+                                    className={timeInputClasses}
+                                    type="time"
+                                    value={dia.saidaTarde ?? ""}
+                                    onChange={(e) =>
+                                      handleChangeHora(index, "saidaTarde", e.target.value)
+                                    }
+                                    disabled={isFalta}
+                                  />
+                                </div>
+
+                                <div className="flex gap-2 ml-4">
+                                  <input
+                                    className={timeInputClasses}
+                                    type="time"
+                                    value={dia.entradaExtra ?? ""}
+                                    onChange={(e) =>
+                                      handleChangeHora(index, "entradaExtra", e.target.value)
+                                    }
+                                    disabled={isFalta}
+                                  />
+                                  <input
+                                    className={timeInputClasses}
+                                    type="time"
+                                    value={dia.saidaExtra ?? ""}
+                                    onChange={(e) =>
+                                      handleChangeHora(index, "saidaExtra", e.target.value)
+                                    }
+                                    disabled={isFalta}
+                                  />
+                                </div>
+                              </div>
                             </td>
                             <td className="text-center text-sm">
                               {dia.minutosTrabalhados != null
@@ -909,8 +918,8 @@ export default function PontoPage() {
                             <td className="text-center text-sm">
                               {dia.minutosExtras != null ? minutosParaHora(dia.minutosExtras) : "--:--"}
                             </td>
-                            <td className="text-center">
-                              <div className="acoes-dia">
+                            <td className="text-center whitespace-nowrap">
+                              <div className="acoes-dia flex flex-row justify-center gap-2 whitespace-nowrap">
                                 <button
                                   type="button"
                                   className="button button-secondary button-compact"
@@ -981,13 +990,6 @@ export default function PontoPage() {
                 <h3>Registrar falta</h3>
                 <p>{formatarDia(diaSelecionadoParaFalta.dataReferencia)}</p>
               </div>
-              <button
-                type="button"
-                className="button button-secondary button-compact"
-                onClick={fecharModalFalta}
-              >
-                Fechar
-              </button>
             </header>
 
             <div className="falta-modal-opcoes">

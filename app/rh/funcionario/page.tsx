@@ -180,6 +180,8 @@ export default function FuncionarioPage() {
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
   const [mostrandoHistorico, setMostrandoHistorico] = useState(false);
   const [erroHistorico, setErroHistorico] = useState<string | null>(null);
+  const [selectedFuncionario, setSelectedFuncionario] = useState<Funcionario | null>(null);
+  const [selectedFuncionarioId, setSelectedFuncionarioId] = useState<string | null>(null);
 
   const empresaId = empresa?.id ?? null;
 
@@ -268,6 +270,67 @@ export default function FuncionarioPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [carregando, empresaId]);
 
+  useEffect(() => {
+    if (!selectedFuncionarioId) return;
+
+    const aindaExiste = funcionarios.some(
+      (funcionario) => funcionario.ID_FUNCIONARIO === selectedFuncionarioId
+    );
+
+    if (!aindaExiste) {
+      setSelectedFuncionario(null);
+      setSelectedFuncionarioId(null);
+    }
+  }, [funcionarios, selectedFuncionarioId]);
+
+  const buscarFuncionarioDetalhado = async (
+    funcionario: Funcionario
+  ): Promise<Funcionario | null> => {
+    if (!empresaId) return funcionario;
+
+    try {
+      const resposta = await fetch(
+        `/api/rh/funcionarios?id=${encodeURIComponent(funcionario.ID_FUNCIONARIO)}&incluirHistorico=false`,
+        { headers: headersPadrao }
+      );
+      const json = await resposta.json();
+
+      if (json?.success && json.data) {
+        return json.data as Funcionario;
+      }
+    } catch (error) {
+      console.error(error);
+    }
+
+    return funcionario;
+  };
+
+  const selecionarFuncionario = async (funcionario: Funcionario) => {
+    if (selectedFuncionarioId === funcionario.ID_FUNCIONARIO) {
+      setSelectedFuncionario(null);
+      setSelectedFuncionarioId(null);
+      return;
+    }
+
+    setSelectedFuncionario(funcionario);
+    setSelectedFuncionarioId(funcionario.ID_FUNCIONARIO);
+
+    const detalhes = await buscarFuncionarioDetalhado(funcionario);
+    if (detalhes) {
+      setSelectedFuncionario(detalhes);
+    }
+  };
+
+  const obterFuncionarioSelecionado = () => {
+    if (!selectedFuncionarioId) return null;
+
+    return (
+      selectedFuncionario ||
+      funcionarios.find((item) => item.ID_FUNCIONARIO === selectedFuncionarioId) ||
+      null
+    );
+  };
+
   const limparFormulario = () => {
     setFuncionarioEmEdicao(null);
     setNomeCompleto("");
@@ -289,6 +352,8 @@ export default function FuncionarioPage() {
 
   const preencherParaEdicao = async (funcionario: Funcionario) => {
     setFuncionarioEmEdicao(funcionario);
+    setSelectedFuncionario(funcionario);
+    setSelectedFuncionarioId(funcionario.ID_FUNCIONARIO);
     setNomeCompleto(normalizarTextoBasico(funcionario.NOME_COMPLETO ?? ""));
     setCpf(aplicarMascaraCpf(funcionario.CPF ?? ""));
     setDepartamentoSelecionado(String(funcionario.ID_DEPARTAMENTO ?? ""));
@@ -314,14 +379,10 @@ export default function FuncionarioPage() {
 
     setCarregandoHistorico(true);
     try {
-      const resposta = await fetch(
-        `/api/rh/funcionarios?id=${encodeURIComponent(funcionario.ID_FUNCIONARIO)}&incluirHistorico=false`,
-        { headers: headersPadrao }
-      );
-      const json = await resposta.json();
+      const dados = await buscarFuncionarioDetalhado(funcionario);
 
-      if (json?.success && json.data) {
-        const dados = json.data as Funcionario;
+      if (dados) {
+        setSelectedFuncionario(dados);
         setTipoSalario(dados.TIPO_SALARIO || "MENSALISTA");
         setSalarioBase(formatarNumeroParaMoeda(dados.SALARIO_BASE));
       }
@@ -333,7 +394,9 @@ export default function FuncionarioPage() {
   };
 
   const abrirHistoricoSalarios = async () => {
-    if (!funcionarioEmEdicao?.ID_FUNCIONARIO) {
+    const funcionarioParaHistorico = obterFuncionarioSelecionado();
+
+    if (!selectedFuncionarioId || !funcionarioParaHistorico) {
       setErroHistorico("Selecione um funcionário para consultar o histórico.");
       setMostrandoHistorico(true);
       return;
@@ -345,7 +408,7 @@ export default function FuncionarioPage() {
 
     try {
       const resposta = await fetch(
-        `/api/rh/funcionarios/${encodeURIComponent(funcionarioEmEdicao.ID_FUNCIONARIO)}/salarios`,
+        `/api/rh/funcionarios/${encodeURIComponent(selectedFuncionarioId)}/salarios`,
         { headers: headersPadrao }
       );
       const json = await resposta.json();
@@ -493,6 +556,8 @@ export default function FuncionarioPage() {
       setSalvando(false);
     }
   };
+
+  const funcionarioParaHistorico = obterFuncionarioSelecionado();
 
   return (
     <>
@@ -719,9 +784,9 @@ export default function FuncionarioPage() {
                     type="button"
                     className="button button-secondary"
                     onClick={abrirHistoricoSalarios}
-                    disabled={!funcionarioEmEdicao?.ID_FUNCIONARIO}
+                    disabled={!selectedFuncionarioId}
                   >
-                    HISTORICO DE SALARIOS
+                    HISTÓRICO DE SALÁRIOS
                   </button>
                 </div>
 
@@ -772,6 +837,7 @@ export default function FuncionarioPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
+                        <th className="col-acoes text-center">SEL.</th>
                         <th className="col-codigo">CÓDIGO</th>
                         <th className="col-nome">NOME</th>
                         <th className="col-nome">CPF</th>
@@ -785,6 +851,13 @@ export default function FuncionarioPage() {
                     <tbody>
                       {funcionarios.map((funcionario) => (
                         <tr key={funcionario.ID_FUNCIONARIO}>
+                          <td className="col-acoes text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedFuncionarioId === funcionario.ID_FUNCIONARIO}
+                              onChange={() => selecionarFuncionario(funcionario)}
+                            />
+                          </td>
                           <td className="col-codigo">{formatarCodigoFuncionario(funcionario.ID_FUNCIONARIO)}</td>
                           <td className="col-nome">{funcionario.NOME_COMPLETO}</td>
                           <td className="col-nome">{formatarCpf(funcionario.CPF)}</td>
@@ -832,7 +905,9 @@ export default function FuncionarioPage() {
               <div>
                 <h3>Histórico de salários do funcionário</h3>
                 <p>
-                  {funcionarioEmEdicao?.ID_FUNCIONARIO} - {funcionarioEmEdicao?.NOME_COMPLETO}
+                  {funcionarioParaHistorico
+                    ? `${funcionarioParaHistorico.ID_FUNCIONARIO} - ${funcionarioParaHistorico.NOME_COMPLETO}`
+                    : "Nenhum funcionário selecionado"}
                 </p>
               </div>
               <button
