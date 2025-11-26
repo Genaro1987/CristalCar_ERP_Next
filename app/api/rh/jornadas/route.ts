@@ -15,6 +15,7 @@ type JornadaPayload = {
   HORA_SAIDA_TARDE?: string | null;
   HORA_ENTRADA_INTERVALO?: string | null;
   HORA_SAIDA_INTERVALO?: string | null;
+  TOLERANCIA_MINUTOS?: number;
   ATIVO?: number;
 };
 
@@ -30,6 +31,7 @@ const CAMPOS_JORNADA = [
   "HORA_SAIDA_TARDE",
   "HORA_ENTRADA_INTERVALO",
   "HORA_SAIDA_INTERVALO",
+  "TOLERANCIA_MINUTOS",
   "ATIVO",
   "CRIADO_EM",
   "ATUALIZADO_EM",
@@ -63,6 +65,16 @@ function normalizarHorario(valor: unknown): string | null {
   if (!valor) return null;
   const texto = valor.toString().trim();
   return texto || null;
+}
+
+function interpretarToleranciaMinutos(valor: unknown): number {
+  const numero = Number(valor ?? 0);
+
+  if (!Number.isFinite(numero) || numero < 0) {
+    return 0;
+  }
+
+  return Math.trunc(numero);
 }
 
 async function gerarProximoIdJornada(empresaId: number): Promise<string> {
@@ -154,6 +166,9 @@ export async function POST(request: NextRequest) {
     const horaSaidaTarde = normalizarHorario(body?.HORA_SAIDA_TARDE);
     const horaEntradaIntervalo = normalizarHorario(body?.HORA_ENTRADA_INTERVALO);
     const horaSaidaIntervalo = normalizarHorario(body?.HORA_SAIDA_INTERVALO);
+    const toleranciaMinutos = interpretarToleranciaMinutos(
+      body?.TOLERANCIA_MINUTOS
+    );
     const ativo = interpretarAtivo(body?.ATIVO);
 
     if (!nomeJornada) {
@@ -188,15 +203,16 @@ export async function POST(request: NextRequest) {
           DESCRICAO,
           CARGA_SEMANAL_HORAS,
       HORA_ENTRADA_MANHA,
-      HORA_SAIDA_MANHA,
-      HORA_ENTRADA_TARDE,
-      HORA_SAIDA_TARDE,
-      HORA_ENTRADA_INTERVALO,
-      HORA_SAIDA_INTERVALO,
-      ATIVO,
-      CRIADO_EM,
-      ATUALIZADO_EM
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+          HORA_SAIDA_MANHA,
+          HORA_ENTRADA_TARDE,
+          HORA_SAIDA_TARDE,
+          HORA_ENTRADA_INTERVALO,
+          HORA_SAIDA_INTERVALO,
+          TOLERANCIA_MINUTOS,
+          ATIVO,
+          CRIADO_EM,
+          ATUALIZADO_EM
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
       `,
       args: [
         novoId,
@@ -210,6 +226,7 @@ export async function POST(request: NextRequest) {
         horaSaidaTarde,
         horaEntradaIntervalo,
         horaSaidaIntervalo,
+        toleranciaMinutos,
         ativo,
       ],
     });
@@ -259,6 +276,9 @@ export async function PUT(request: NextRequest) {
     const horaSaidaTarde = normalizarHorario(body?.HORA_SAIDA_TARDE);
     const horaEntradaIntervalo = normalizarHorario(body?.HORA_ENTRADA_INTERVALO);
     const horaSaidaIntervalo = normalizarHorario(body?.HORA_SAIDA_INTERVALO);
+    const toleranciaMinutos = interpretarToleranciaMinutos(
+      body?.TOLERANCIA_MINUTOS
+    );
     const ativo = interpretarAtivo(body?.ATIVO);
 
     if (!nomeJornada) {
@@ -294,6 +314,7 @@ export async function PUT(request: NextRequest) {
             HORA_SAIDA_TARDE = ?,
             HORA_ENTRADA_INTERVALO = ?,
             HORA_SAIDA_INTERVALO = ?,
+            TOLERANCIA_MINUTOS = ?,
             ATIVO = ?,
             ATUALIZADO_EM = datetime('now')
         WHERE ID_JORNADA = ? AND ID_EMPRESA = ?
@@ -308,6 +329,7 @@ export async function PUT(request: NextRequest) {
         horaSaidaTarde,
         horaEntradaIntervalo,
         horaSaidaIntervalo,
+        toleranciaMinutos,
         ativo,
         idJornada,
         empresaId,

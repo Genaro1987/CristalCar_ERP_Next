@@ -19,6 +19,7 @@ interface Jornada {
   HORA_SAIDA_TARDE?: string | null;
   HORA_ENTRADA_INTERVALO?: string | null;
   HORA_SAIDA_INTERVALO?: string | null;
+  TOLERANCIA_MINUTOS: number;
   ATIVO: 0 | 1;
   CRIADO_EM?: string;
   ATUALIZADO_EM?: string;
@@ -87,6 +88,7 @@ export default function JornadaPage() {
   const [horaSaidaTarde, setHoraSaidaTarde] = useState("");
   const [horaEntradaIntervalo, setHoraEntradaIntervalo] = useState("");
   const [horaSaidaIntervalo, setHoraSaidaIntervalo] = useState("");
+  const [toleranciaMinutos, setToleranciaMinutos] = useState("0");
   const [ativo, setAtivo] = useState(true);
   const [jornadaEmEdicao, setJornadaEmEdicao] = useState<Jornada | null>(null);
 
@@ -143,6 +145,7 @@ export default function JornadaPage() {
     setHoraSaidaTarde("");
     setHoraEntradaIntervalo("");
     setHoraSaidaIntervalo("");
+    setToleranciaMinutos("0");
     setAtivo(true);
   };
 
@@ -162,6 +165,7 @@ export default function JornadaPage() {
     setHoraSaidaTarde(jornada.HORA_SAIDA_TARDE ?? "");
     setHoraEntradaIntervalo(jornada.HORA_ENTRADA_INTERVALO ?? "");
     setHoraSaidaIntervalo(jornada.HORA_SAIDA_INTERVALO ?? "");
+    setToleranciaMinutos(String(jornada.TOLERANCIA_MINUTOS ?? "0"));
     setAtivo(jornada.ATIVO === 1);
   };
 
@@ -208,6 +212,7 @@ export default function JornadaPage() {
       HORA_SAIDA_TARDE: horaSaidaTarde || null,
       HORA_ENTRADA_INTERVALO: horaEntradaIntervalo || null,
       HORA_SAIDA_INTERVALO: horaSaidaIntervalo || null,
+      TOLERANCIA_MINUTOS: Number(toleranciaMinutos) || 0,
       ATIVO: ativo ? 1 : 0,
     };
 
@@ -423,6 +428,25 @@ export default function JornadaPage() {
                         value={horaSaidaIntervalo}
                         onChange={(e) => setHoraSaidaIntervalo(e.target.value)}
                       />
+                    </div>
+                  </div>
+
+                  <div className="form-grid single-column">
+                    <div className="form-group">
+                      <label htmlFor="toleranciaMinutos">Tolerância (min)</label>
+                      <input
+                        id="toleranciaMinutos"
+                        name="toleranciaMinutos"
+                        className="form-input w-24"
+                        type="number"
+                        min={0}
+                        value={toleranciaMinutos}
+                        onChange={(e) => setToleranciaMinutos(e.target.value)}
+                      />
+                      <p className="helper-text">
+                        Desconsidere diferenças diárias dentro desse limite ao apurar horas
+                        extras ou faltas.
+                      </p>
                     </div>
                   </div>
                 </div>
