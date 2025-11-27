@@ -32,8 +32,6 @@ interface TelaPermitida {
   PODE_EDITAR: boolean;
 }
 
-const MODULOS_ORDENADOS = ["CORE", "EMPRESA", "RH", "SEGURANCA"] as const;
-
 const CODIGO_PADRAO_PERFIL = "PER-XXX";
 
 function formatarCodigoPerfil(codigo?: string | null): string {
@@ -367,10 +365,6 @@ export default function PerfilPage() {
   };
 
   const telasPermissoes = useMemo<TelaPermissao[]>(() => {
-    const modulosPermitidos = new Set<string>(MODULOS_ORDENADOS);
-    const moduloIndex = (modulo: string) =>
-      MODULOS_ORDENADOS.indexOf(modulo as (typeof MODULOS_ORDENADOS)[number]);
-
     return telasPerfil
       .map((tela) => ({
         idTela: tela.ID_TELA,
@@ -381,9 +375,8 @@ export default function PerfilPage() {
         podeConsultar: tela.PODE_CONSULTAR,
         podeEditar: tela.PODE_EDITAR,
       }))
-      .filter((tela) => modulosPermitidos.has(tela.modulo))
       .sort((a, b) => {
-        const moduloDiff = moduloIndex(a.modulo) - moduloIndex(b.modulo);
+        const moduloDiff = a.modulo.localeCompare(b.modulo);
         if (moduloDiff !== 0) return moduloDiff;
         return a.codigoTela.localeCompare(b.codigoTela);
       });
