@@ -782,17 +782,6 @@ export default function FuncionarioPage() {
                   </div>
                 </div>
 
-                <div className="form-actions">
-                  <button
-                    type="button"
-                    className="button button-secondary"
-                    onClick={() => abrirHistoricoSalarios()}
-                    disabled={!selectedFuncionarioId}
-                  >
-                    HISTÓRICO DE SALÁRIOS
-                  </button>
-                </div>
-
                 <div className="form-actions departamentos-actions">
                   <label className="checkbox-row" htmlFor="funcionarioAtivo">
                     <input
@@ -873,7 +862,7 @@ export default function FuncionarioPage() {
                         <td className="w-24 px-2 py-2 text-center">
                           <button
                             type="button"
-                            className="btn-secondary text-xs"
+                            className="button button-secondary button-compact"
                             onClick={() => abrirHistoricoSalarios(funcionario)}
                           >
                             Consultar
