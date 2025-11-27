@@ -833,64 +833,60 @@ export default function FuncionarioPage() {
               )}
 
               {!carregandoLista && !erroLista && funcionarios.length > 0 && (
-                <div className="departamento-tabela-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th className="col-acoes text-center">SEL.</th>
-                        <th className="col-codigo">CÓDIGO</th>
-                        <th className="col-nome">NOME</th>
-                        <th className="col-nome">CPF</th>
-                        <th className="col-nome">DEPARTAMENTO</th>
-                        <th className="col-nome">JORNADA</th>
-                        <th className="col-nome">PERFIL</th>
-                        <th className="col-status">STATUS</th>
-                        <th className="col-acoes">AÇÕES</th>
+                <table className="w-full table-fixed border-collapse data-table">
+                  <thead>
+                    <tr>
+                      <th className="w-10 px-2 py-2 text-center">SEL.</th>
+                      <th className="w-24 px-2 py-2">CÓDIGO</th>
+                      <th className="w-64 px-2 py-2 truncate">NOME</th>
+                      <th className="w-32 px-2 py-2">CPF</th>
+                      <th className="w-40 px-2 py-2 truncate">DEPARTAMENTO</th>
+                      <th className="w-32 px-2 py-2 truncate">JORNADA</th>
+                      <th className="w-32 px-2 py-2 truncate">PERFIL</th>
+                      <th className="w-24 px-2 py-2 text-center">STATUS</th>
+                      <th className="w-24 px-2 py-2 text-center">AÇÕES</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {funcionarios.map((funcionario) => (
+                      <tr key={funcionario.ID_FUNCIONARIO}>
+                        <td className="w-10 px-2 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedFuncionarioId === funcionario.ID_FUNCIONARIO}
+                            onChange={() => selecionarFuncionario(funcionario)}
+                          />
+                        </td>
+                        <td className="w-24 px-2 py-2">{formatarCodigoFuncionario(funcionario.ID_FUNCIONARIO)}</td>
+                        <td className="w-64 px-2 py-2 truncate">{funcionario.NOME_COMPLETO}</td>
+                        <td className="w-32 px-2 py-2">{formatarCpf(funcionario.CPF)}</td>
+                        <td className="w-40 px-2 py-2 truncate">{funcionario.NOME_DEPARTAMENTO || "-"}</td>
+                        <td className="w-32 px-2 py-2 truncate">{funcionario.NOME_JORNADA || "-"}</td>
+                        <td className="w-32 px-2 py-2 truncate">{funcionario.NOME_PERFIL || "-"}</td>
+                        <td className="w-24 px-2 py-2 text-center">
+                          <span
+                            className={
+                              funcionario.ATIVO === 1 && !funcionario.DATA_DEMISSAO
+                                ? "badge badge-success"
+                                : "badge badge-danger"
+                            }
+                          >
+                            {funcionario.ATIVO === 1 && !funcionario.DATA_DEMISSAO ? "ATIVO" : "INATIVO"}
+                          </span>
+                        </td>
+                        <td className="w-24 px-2 py-2 text-center">
+                          <button
+                            type="button"
+                            className="button button-secondary button-compact"
+                            onClick={() => preencherParaEdicao(funcionario)}
+                          >
+                            Editar
+                          </button>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {funcionarios.map((funcionario) => (
-                        <tr key={funcionario.ID_FUNCIONARIO}>
-                          <td className="col-acoes text-center">
-                            <input
-                              type="checkbox"
-                              checked={selectedFuncionarioId === funcionario.ID_FUNCIONARIO}
-                              onChange={() => selecionarFuncionario(funcionario)}
-                            />
-                          </td>
-                          <td className="col-codigo">{formatarCodigoFuncionario(funcionario.ID_FUNCIONARIO)}</td>
-                          <td className="col-nome">{funcionario.NOME_COMPLETO}</td>
-                          <td className="col-nome">{formatarCpf(funcionario.CPF)}</td>
-                          <td className="col-nome">{funcionario.NOME_DEPARTAMENTO || "-"}</td>
-                          <td className="col-nome">{funcionario.NOME_JORNADA || "-"}</td>
-                          <td className="col-nome">{funcionario.NOME_PERFIL || "-"}</td>
-                          <td className="col-status">
-                            <span
-                              className={
-                                funcionario.ATIVO === 1 && !funcionario.DATA_DEMISSAO
-                                  ? "badge badge-success"
-                                  : "badge badge-danger"
-                              }
-                            >
-                              {funcionario.ATIVO === 1 && !funcionario.DATA_DEMISSAO
-                                ? "ATIVO"
-                                : "INATIVO"}
-                            </span>
-                          </td>
-                          <td className="col-acoes">
-                            <button
-                              type="button"
-                              className="button button-secondary"
-                              onClick={() => preencherParaEdicao(funcionario)}
-                            >
-                              Editar
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </section>
           </div>
