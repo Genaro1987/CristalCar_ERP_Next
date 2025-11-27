@@ -258,7 +258,7 @@ export default function PontoPage() {
     [jornadaFuncionario?.TOLERANCIA_MINUTOS]
   );
 
-  const timeInputClasses = "form-input time-input text-center px-1 py-1 text-sm w-24";
+  const timeInputClasses = "form-input time-input text-center px-1 py-1 text-sm w-20";
 
   const montarHorariosJornadaParaDia = (
     diaAtual: LancamentoDia,
@@ -809,14 +809,14 @@ export default function PontoPage() {
 
               {diasPonto.length > 0 && (
                 <div className="departamento-tabela-wrapper ponto-tabela">
-                  <table className="data-table">
+                  <table className="w-full table-fixed border-collapse data-table">
                     <thead>
                       <tr>
-                        <th className="text-center">Dia</th>
-                        <th className="text-center">Horários</th>
-                        <th className="text-center">Tempo trabalhado</th>
-                        <th className="text-center">Horas extras</th>
-                        <th className="text-center">Ações</th>
+                        <th className="w-32 px-4 py-2 text-left">Dia</th>
+                        <th className="px-4 py-2 text-center">Horários</th>
+                        <th className="w-32 px-4 py-2 text-center">Tempo trabalhado</th>
+                        <th className="w-32 px-4 py-2 text-center">Horas extras</th>
+                        <th className="w-40 px-4 py-2 text-center">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -841,11 +841,11 @@ export default function PontoPage() {
                             key={dia.dataReferencia}
                             style={ehFimDeSemana ? { color: "#6b7280" } : undefined}
                           >
-                            <td className="text-center whitespace-nowrap">
+                            <td className="w-32 px-4 py-2 text-left whitespace-nowrap">
                               {formatarDia(dia.dataReferencia)}
                             </td>
-                            <td className="text-center">
-                              <div className="flex items-center justify-center gap-6">
+                            <td className="px-4 py-2 text-center">
+                              <div className="flex flex-row items-center justify-center gap-4 flex-nowrap">
                                 <div className="flex gap-2">
                                   <input
                                     className={timeInputClasses}
@@ -867,7 +867,7 @@ export default function PontoPage() {
                                   />
                                 </div>
 
-                                <div className="flex gap-2 ml-4">
+                                <div className="flex gap-2">
                                   <input
                                     className={timeInputClasses}
                                     type="time"
@@ -888,7 +888,7 @@ export default function PontoPage() {
                                   />
                                 </div>
 
-                                <div className="flex gap-2 ml-4">
+                                <div className="flex gap-2">
                                   <input
                                     className={timeInputClasses}
                                     type="time"
@@ -910,15 +910,15 @@ export default function PontoPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="text-center text-sm">
+                            <td className="w-32 px-4 py-2 text-center text-sm">
                               {dia.minutosTrabalhados != null
                                 ? minutosParaHora(dia.minutosTrabalhados)
                                 : "--:--"}
                             </td>
-                            <td className="text-center text-sm">
+                            <td className="w-32 px-4 py-2 text-center text-sm">
                               {dia.minutosExtras != null ? minutosParaHora(dia.minutosExtras) : "--:--"}
                             </td>
-                            <td className="text-center whitespace-nowrap">
+                            <td className="w-40 px-4 py-2 text-center whitespace-nowrap">
                               <div className="acoes-dia flex flex-row justify-center gap-2 whitespace-nowrap">
                                 <button
                                   type="button"
