@@ -46,7 +46,7 @@ function formatarCodigoJornada(codigo?: string) {
   return codigo;
 }
 
-function montarResumoHorarios(jornada: Jornada) {
+function montarResumoHorariosTrabalho(jornada: Jornada) {
   const blocos: string[] = [];
 
   if (jornada.HORA_ENTRADA_MANHA && jornada.HORA_SAIDA_MANHA) {
@@ -57,13 +57,15 @@ function montarResumoHorarios(jornada: Jornada) {
     blocos.push(`${jornada.HORA_ENTRADA_TARDE}-${jornada.HORA_SAIDA_TARDE}`);
   }
 
+  return blocos.join(" / ") || "-";
+}
+
+function montarResumoIntervalo(jornada: Jornada) {
   if (jornada.HORA_ENTRADA_INTERVALO && jornada.HORA_SAIDA_INTERVALO) {
-    blocos.push(
-      `${jornada.HORA_ENTRADA_INTERVALO}-${jornada.HORA_SAIDA_INTERVALO}`
-    );
+    return `${jornada.HORA_ENTRADA_INTERVALO}-${jornada.HORA_SAIDA_INTERVALO}`;
   }
 
-  return blocos.join(" / ") || "-";
+  return "-";
 }
 
 export default function JornadaPage() {
@@ -521,6 +523,7 @@ export default function JornadaPage() {
                         <th className="col-descricao">DESCRIÇÃO</th>
                         <th className="col-carga">CARGA (H)</th>
                         <th className="col-horarios">HORÁRIOS</th>
+                        <th className="col-horarios">INTERVALO</th>
                         <th className="col-status">STATUS</th>
                         <th className="col-acoes">AÇÕES</th>
                       </tr>
@@ -532,7 +535,8 @@ export default function JornadaPage() {
                           <td className="col-nome">{jornada.NOME_JORNADA}</td>
                           <td className="col-descricao">{jornada.DESCRICAO || "-"}</td>
                           <td className="col-carga">{jornada.CARGA_SEMANAL_HORAS}</td>
-                          <td className="col-horarios">{montarResumoHorarios(jornada)}</td>
+                          <td className="col-horarios">{montarResumoHorariosTrabalho(jornada)}</td>
+                          <td className="col-horarios">{montarResumoIntervalo(jornada)}</td>
                           <td className="col-status">
                             <span
                               className={
