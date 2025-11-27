@@ -786,7 +786,7 @@ export default function FuncionarioPage() {
                   <button
                     type="button"
                     className="button button-secondary"
-                    onClick={abrirHistoricoSalarios}
+                    onClick={() => abrirHistoricoSalarios()}
                     disabled={!selectedFuncionarioId}
                   >
                     HISTÓRICO DE SALÁRIOS
