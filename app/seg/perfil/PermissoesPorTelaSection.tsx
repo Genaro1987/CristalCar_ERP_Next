@@ -22,7 +22,6 @@ export interface PermissoesPorTelaSectionProps {
   somenteConsulta?: boolean;
 }
 
-const moduloOrder = ["CORE", "EMPRESA", "RH", "SEGURANCA"];
 const colTemplate = "permissoes-grid permissoes-grid-template";
 
 export function PermissoesPorTelaSection({
@@ -33,7 +32,11 @@ export function PermissoesPorTelaSection({
   somenteConsulta = false,
 }: PermissoesPorTelaSectionProps) {
   const telasPorModulo = useMemo(() => {
-    return moduloOrder
+    const modulosOrdenados = Array.from(new Set(telas.map((t) => t.modulo))).sort((a, b) =>
+      a.localeCompare(b)
+    );
+
+    return modulosOrdenados
       .map((modulo) => ({
         modulo,
         telas: [...telas]

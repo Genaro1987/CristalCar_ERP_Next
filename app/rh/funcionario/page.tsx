@@ -305,22 +305,6 @@ export default function FuncionarioPage() {
     return funcionario;
   };
 
-  const selecionarFuncionario = async (funcionario: Funcionario) => {
-    if (selectedFuncionarioId === funcionario.ID_FUNCIONARIO) {
-      setSelectedFuncionario(null);
-      setSelectedFuncionarioId(null);
-      return;
-    }
-
-    setSelectedFuncionario(funcionario);
-    setSelectedFuncionarioId(funcionario.ID_FUNCIONARIO);
-
-    const detalhes = await buscarFuncionarioDetalhado(funcionario);
-    if (detalhes) {
-      setSelectedFuncionario(detalhes);
-    }
-  };
-
   const obterFuncionarioSelecionado = () => {
     if (!selectedFuncionarioId) return null;
 
@@ -393,10 +377,29 @@ export default function FuncionarioPage() {
     }
   };
 
-  const abrirHistoricoSalarios = async () => {
-    const funcionarioParaHistorico = obterFuncionarioSelecionado();
+  const prepararFuncionarioParaHistorico = async (funcionario: Funcionario) => {
+    if (selectedFuncionarioId !== funcionario.ID_FUNCIONARIO) {
+      setSelectedFuncionario(funcionario);
+      setSelectedFuncionarioId(funcionario.ID_FUNCIONARIO);
+    }
 
-    if (!selectedFuncionarioId || !funcionarioParaHistorico) {
+    const detalhes = await buscarFuncionarioDetalhado(funcionario);
+    if (detalhes) {
+      setSelectedFuncionario(detalhes);
+      return detalhes;
+    }
+
+    return funcionario;
+  };
+
+  const abrirHistoricoSalarios = async (funcionarioParaConsulta?: Funcionario) => {
+    const funcionarioAlvo = funcionarioParaConsulta
+      ? await prepararFuncionarioParaHistorico(funcionarioParaConsulta)
+      : obterFuncionarioSelecionado();
+
+    const funcionarioId = funcionarioAlvo?.ID_FUNCIONARIO || selectedFuncionarioId;
+
+    if (!funcionarioAlvo || !funcionarioId) {
       setErroHistorico("Selecione um funcionário para consultar o histórico.");
       setMostrandoHistorico(true);
       return;
@@ -408,7 +411,7 @@ export default function FuncionarioPage() {
 
     try {
       const resposta = await fetch(
-        `/api/rh/funcionarios/${encodeURIComponent(selectedFuncionarioId)}/salarios`,
+        `/api/rh/funcionarios/${encodeURIComponent(funcionarioId)}/salarios`,
         { headers: headersPadrao }
       );
       const json = await resposta.json();
@@ -779,17 +782,6 @@ export default function FuncionarioPage() {
                   </div>
                 </div>
 
-                <div className="form-actions">
-                  <button
-                    type="button"
-                    className="button button-secondary"
-                    onClick={abrirHistoricoSalarios}
-                    disabled={!selectedFuncionarioId}
-                  >
-                    HISTÓRICO DE SALÁRIOS
-                  </button>
-                </div>
-
                 <div className="form-actions departamentos-actions">
                   <label className="checkbox-row" htmlFor="funcionarioAtivo">
                     <input
@@ -836,31 +828,24 @@ export default function FuncionarioPage() {
                 <table className="w-full table-fixed border-collapse data-table">
                   <thead>
                     <tr>
-                      <th className="w-10 px-2 py-2 text-center">SEL.</th>
                       <th className="w-24 px-2 py-2">CÓDIGO</th>
                       <th className="w-64 px-2 py-2 truncate">NOME</th>
                       <th className="w-32 px-2 py-2">CPF</th>
-                      <th className="w-40 px-2 py-2 truncate">DEPARTAMENTO</th>
+                      <th className="w-44 px-2 py-2 truncate">DEPARTAMENTO</th>
                       <th className="w-32 px-2 py-2 truncate">JORNADA</th>
                       <th className="w-32 px-2 py-2 truncate">PERFIL</th>
                       <th className="w-24 px-2 py-2 text-center">STATUS</th>
+                      <th className="w-24 px-2 py-2 text-center">SALÁRIOS</th>
                       <th className="w-24 px-2 py-2 text-center">AÇÕES</th>
                     </tr>
                   </thead>
                   <tbody>
                     {funcionarios.map((funcionario) => (
                       <tr key={funcionario.ID_FUNCIONARIO}>
-                        <td className="w-10 px-2 py-2 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedFuncionarioId === funcionario.ID_FUNCIONARIO}
-                            onChange={() => selecionarFuncionario(funcionario)}
-                          />
-                        </td>
                         <td className="w-24 px-2 py-2">{formatarCodigoFuncionario(funcionario.ID_FUNCIONARIO)}</td>
                         <td className="w-64 px-2 py-2 truncate">{funcionario.NOME_COMPLETO}</td>
                         <td className="w-32 px-2 py-2">{formatarCpf(funcionario.CPF)}</td>
-                        <td className="w-40 px-2 py-2 truncate">{funcionario.NOME_DEPARTAMENTO || "-"}</td>
+                        <td className="w-44 px-2 py-2 truncate">{funcionario.NOME_DEPARTAMENTO || "-"}</td>
                         <td className="w-32 px-2 py-2 truncate">{funcionario.NOME_JORNADA || "-"}</td>
                         <td className="w-32 px-2 py-2 truncate">{funcionario.NOME_PERFIL || "-"}</td>
                         <td className="w-24 px-2 py-2 text-center">
@@ -873,6 +858,15 @@ export default function FuncionarioPage() {
                           >
                             {funcionario.ATIVO === 1 && !funcionario.DATA_DEMISSAO ? "ATIVO" : "INATIVO"}
                           </span>
+                        </td>
+                        <td className="w-24 px-2 py-2 text-center">
+                          <button
+                            type="button"
+                            className="button button-secondary button-compact"
+                            onClick={() => abrirHistoricoSalarios(funcionario)}
+                          >
+                            Consultar
+                          </button>
                         </td>
                         <td className="w-24 px-2 py-2 text-center">
                           <button
