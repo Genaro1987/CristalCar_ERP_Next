@@ -1,4 +1,5 @@
 import { db } from "@/db/client";
+import { intervaloCompetencia } from "@/db/rhPonto";
 import { NextRequest, NextResponse } from "next/server";
 import {
   obterEmpresaIdDaRequest,
@@ -18,6 +19,7 @@ interface LancamentoDiaPayload {
   idMotivoFalta?: number | null;
   obsFalta?: string | null;
   observacao?: string | null;
+  eFeriado?: "S" | "N";
 }
 
 interface PontoPayload {
@@ -37,25 +39,6 @@ function obterEmpresaDaRequestOuQuery(request: NextRequest): number | null {
   return headerId ?? queryValido;
 }
 
-function intervaloCompetencia(competencia?: string | null):
-  | { inicio: string; fim: string }
-  | null {
-  if (!competencia || !/^\d{4}-\d{2}$/.test(competencia)) return null;
-
-  const [anoStr, mesStr] = competencia.split("-");
-  const ano = Number(anoStr);
-  const mes = Number(mesStr);
-
-  if (!Number.isFinite(ano) || !Number.isFinite(mes)) return null;
-
-  const ultimoDia = new Date(ano, mes, 0).getDate();
-
-  return {
-    inicio: `${competencia}-01`,
-    fim: `${competencia}-${String(ultimoDia).padStart(2, "0")}`,
-  };
-}
-
 function normalizarHorario(valor?: string | null): string | null {
   if (!valor) return null;
   const texto = valor.toString().trim();
@@ -73,6 +56,7 @@ function devePersistirDia(payload: LancamentoDiaPayload): boolean {
   const tipoOcorrencia =
     (payload.tipoOcorrencia ?? "NORMAL").toString().trim().toUpperCase();
   const observacao = payload.observacao?.toString().trim();
+  const eFeriado = (payload.eFeriado ?? "N").toString().trim().toUpperCase();
   const horarios = [
     payload.entradaManha,
     payload.saidaManha,
@@ -86,6 +70,7 @@ function devePersistirDia(payload: LancamentoDiaPayload): boolean {
   if (status && status !== "NORMAL") return true;
   if (tipoOcorrencia !== "NORMAL") return true;
   if (observacao) return true;
+  if (eFeriado === "S") return true;
 
   return false;
 }
@@ -123,7 +108,8 @@ export async function GET(request: NextRequest) {
           ID_MOTIVO_FALTA as idMotivoFalta,
           OBS_FALTA as obsFalta,
           STATUS_DIA as statusDia,
-          OBSERVACAO as observacao
+          OBSERVACAO as observacao,
+          COALESCE(E_FERIADO, 'N') as eFeriado
         FROM RH_PONTO_LANCAMENTO
         WHERE ID_EMPRESA = ?
           AND ID_FUNCIONARIO = ?
@@ -193,6 +179,8 @@ export async function PUT(request: NextRequest) {
       const idMotivoFalta = Number(dia.idMotivoFalta ?? NaN);
       const observacao = dia.observacao?.toString().trim() || null;
       const obsFalta = dia.obsFalta?.toString().trim() || null;
+      const eFeriado =
+        (dia.eFeriado ?? "N").toString().trim().toUpperCase() === "S" ? "S" : "N";
 
       if (tipoOcorrencia !== "NORMAL") {
         entradaManha = null;
@@ -229,6 +217,7 @@ export async function PUT(request: NextRequest) {
           saidaTarde: saidaTarde === "INVALIDO" ? undefined : saidaTarde,
           entradaExtra: entradaExtra === "INVALIDO" ? undefined : entradaExtra,
           saidaExtra: saidaExtra === "INVALIDO" ? undefined : saidaExtra,
+          eFeriado,
         })
       ) {
         continue;
@@ -250,8 +239,9 @@ export async function PUT(request: NextRequest) {
             TIPO_OCORRENCIA,
             ID_MOTIVO_FALTA,
             OBS_FALTA,
-            OBSERVACAO
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            OBSERVACAO,
+            E_FERIADO
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         args: [
           empresaId,
@@ -268,6 +258,7 @@ export async function PUT(request: NextRequest) {
           Number.isFinite(idMotivoFalta) ? idMotivoFalta : null,
           obsFalta,
           observacao,
+          eFeriado,
         ],
       });
     }
