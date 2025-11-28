@@ -788,7 +788,7 @@ export default function PontoPage() {
                   <table className="w-full table-fixed border-collapse data-table">
                     <thead>
                       <tr>
-                        <th className="w-32 px-4 py-2 text-center">Dia</th>
+                        <th className="w-32 px-4 py-2 text-left">Dia</th>
                         <th className="px-4 py-2 text-center">Horários</th>
                         <th className="w-40 px-4 py-2 text-center">Intervalo</th>
                         <th className="w-32 px-4 py-2 text-center">Tempo trabalhado</th>
@@ -833,7 +833,7 @@ export default function PontoPage() {
                             key={dia.dataReferencia}
                             style={Object.keys(estiloLinha).length ? estiloLinha : undefined}
                           >
-                            <td className="w-32 px-4 py-2 whitespace-nowrap text-center">
+                            <td className="w-32 px-4 py-2 text-left whitespace-nowrap">
                               {formatarDia(dia.dataReferencia)}
                             </td>
                             <td className="px-4 py-2 text-center">
@@ -852,25 +852,25 @@ export default function PontoPage() {
                                   </span>
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-2 whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                                   <TimeInput
                                     value={dia.entradaManha ?? ""}
                                     onChange={(e) => handleChangeHora(index, "entradaManha", e.target.value)}
                                     disabled={isFalta}
                                   />
-                                  <span className="px-1">-</span>
+                                  <span>-</span>
                                   <TimeInput
                                     value={dia.saidaManha ?? ""}
                                     onChange={(e) => handleChangeHora(index, "saidaManha", e.target.value)}
                                     disabled={isFalta}
                                   />
-                                  <span className="px-1">/</span>
+                                  <span>/</span>
                                   <TimeInput
                                     value={dia.entradaTarde ?? ""}
                                     onChange={(e) => handleChangeHora(index, "entradaTarde", e.target.value)}
                                     disabled={isFalta}
                                   />
-                                  <span className="px-1">-</span>
+                                  <span>-</span>
                                   <TimeInput
                                     value={dia.saidaTarde ?? ""}
                                     onChange={(e) => handleChangeHora(index, "saidaTarde", e.target.value)}
@@ -879,7 +879,7 @@ export default function PontoPage() {
                                 </div>
                               )}
                             </td>
-                            <td className="w-40 px-4 py-2 align-top text-center">
+                            <td className="w-40 px-4 py-2 align-top">
                               {falta ? (
                                 <div className="flex flex-col gap-1 text-sm text-gray-700">
                                   <div className="font-medium">
@@ -890,13 +890,13 @@ export default function PontoPage() {
                                   )}
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-2 whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                                   <TimeInput
                                     value={dia.entradaExtra ?? ""}
                                     onChange={(e) => handleChangeHora(index, "entradaExtra", e.target.value)}
                                     disabled={isFalta}
                                   />
-                                  <span className="px-1">-</span>
+                                  <span>-</span>
                                   <TimeInput
                                     value={dia.saidaExtra ?? ""}
                                     onChange={(e) => handleChangeHora(index, "saidaExtra", e.target.value)}
@@ -905,12 +905,12 @@ export default function PontoPage() {
                                 </div>
                               )}
                             </td>
-                            <td className="w-32 px-4 py-2 text-center align-middle text-sm">
+                            <td className="w-32 px-4 py-2 text-center text-sm">
                               {dia.minutosTrabalhados != null
                                 ? minutosParaHora(dia.minutosTrabalhados)
                                 : "--:--"}
                             </td>
-                            <td className="w-32 px-4 py-2 text-center align-middle text-sm">
+                            <td className="w-32 px-4 py-2 text-center text-sm">
                               {dia.minutosExtras != null ? minutosParaHora(dia.minutosExtras) : "--:--"}
                             </td>
                             <td className="w-40 px-4 py-2 text-center whitespace-nowrap">
