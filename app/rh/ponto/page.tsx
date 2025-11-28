@@ -5,7 +5,6 @@ import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
-import clsx from "clsx";
 import { InputHTMLAttributes, useEffect, useMemo, useState } from "react";
 import {
   calcularMinutosJornadaDiaria,
@@ -62,14 +61,15 @@ interface LancamentoDia {
 const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function TimeInput(props: InputHTMLAttributes<HTMLInputElement>) {
+  const { className, ...rest } = props;
+
   return (
     <input
       type="time"
-      {...props}
-      className={clsx(
-        "w-[72px] h-8 rounded border border-gray-300 px-2 text-sm text-center",
-        props.className
-      )}
+      {...rest}
+      className={`w-[72px] h-8 rounded border border-gray-300 px-2 text-sm text-center${
+        className ? ` ${className}` : ""
+      }`}
     />
   );
 }
