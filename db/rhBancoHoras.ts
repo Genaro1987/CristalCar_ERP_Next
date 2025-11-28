@@ -38,18 +38,25 @@ function mapearFuncionarios(rows: Row[]): FuncionarioComJornada[] {
   return rows.map((row) => ({
     id: String(row.ID_FUNCIONARIO),
     nome: String(row.NOME_COMPLETO),
-    idDepartamento: row.ID_DEPARTAMENTO as number | null | undefined,
+    idDepartamento:
+      row.ID_DEPARTAMENTO === null || row.ID_DEPARTAMENTO === undefined
+        ? null
+        : (row.ID_DEPARTAMENTO as number),
     nomeDepartamento: (row.NOME_DEPARTAMENTO as string | null | undefined) ?? null,
-    minutosJornadaDia: calcularMinutosJornadaDiaria({
-      HORA_ENTRADA_MANHA: (row.HORA_ENTRADA_MANHA as string | null | undefined) ?? null,
-      HORA_SAIDA_MANHA: (row.HORA_SAIDA_MANHA as string | null | undefined) ?? null,
-      HORA_ENTRADA_TARDE: (row.HORA_ENTRADA_TARDE as string | null | undefined) ?? null,
-      HORA_SAIDA_TARDE: (row.HORA_SAIDA_TARDE as string | null | undefined) ?? null,
-      HORA_ENTRADA_INTERVALO:
-        (row.HORA_ENTRADA_INTERVALO as string | null | undefined) ?? null,
-      HORA_SAIDA_INTERVALO: (row.HORA_SAIDA_INTERVALO as string | null | undefined) ?? null,
-    }),
-    toleranciaMinutos: normalizarToleranciaMinutos(row.TOLERANCIA_MINUTOS as number),
+    minutosJornadaDia:
+      calcularMinutosJornadaDiaria({
+        HORA_ENTRADA_MANHA: (row.HORA_ENTRADA_MANHA as string | null | undefined) ?? null,
+        HORA_SAIDA_MANHA: (row.HORA_SAIDA_MANHA as string | null | undefined) ?? null,
+        HORA_ENTRADA_TARDE: (row.HORA_ENTRADA_TARDE as string | null | undefined) ?? null,
+        HORA_SAIDA_TARDE: (row.HORA_SAIDA_TARDE as string | null | undefined) ?? null,
+        HORA_ENTRADA_INTERVALO:
+          (row.HORA_ENTRADA_INTERVALO as string | null | undefined) ?? null,
+        HORA_SAIDA_INTERVALO:
+          (row.HORA_SAIDA_INTERVALO as string | null | undefined) ?? null,
+      }) ?? null,
+    toleranciaMinutos: normalizarToleranciaMinutos(
+      (row.TOLERANCIA_MINUTOS as number | null | undefined) ?? 0
+    ),
   }));
 }
 

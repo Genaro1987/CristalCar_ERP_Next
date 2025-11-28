@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       const inserts: { minutos: number; tipo: string }[] = [];
 
       if (minutosPagar > 0) {
-        inserts.push({ minutos: minutosPagar, tipo: "FECHAMENTO_PAGAR" });
+        inserts.push({ minutos: -minutosPagar, tipo: "FECHAMENTO_PAGAR" });
       }
 
       if (minutosDescontar > 0) {
