@@ -41,7 +41,7 @@ function mapearFuncionarios(rows: Row[]): FuncionarioComJornada[] {
     idDepartamento:
       row.ID_DEPARTAMENTO === null || row.ID_DEPARTAMENTO === undefined
         ? null
-        : (row.ID_DEPARTAMENTO as number),
+        : Number(row.ID_DEPARTAMENTO),
     nomeDepartamento: (row.NOME_DEPARTAMENTO as string | null | undefined) ?? null,
     minutosJornadaDia:
       calcularMinutosJornadaDiaria({

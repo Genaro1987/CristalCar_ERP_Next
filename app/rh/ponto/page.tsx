@@ -5,7 +5,7 @@ import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
-import { useEffect, useMemo, useState } from "react";
+import { InputHTMLAttributes, useEffect, useMemo, useState } from "react";
 import {
   calcularMinutosJornadaDiaria,
   calcularMinutosTrabalhados,
@@ -59,6 +59,20 @@ interface LancamentoDia {
 }
 
 const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+function TimeInput(props: InputHTMLAttributes<HTMLInputElement>) {
+  const { className, ...rest } = props;
+
+  return (
+    <input
+      type="time"
+      {...rest}
+      className={`w-[72px] h-8 rounded border border-gray-300 px-2 text-sm text-center ${
+        className ?? ""
+      }`}
+    />
+  );
+}
 
 function criarDataLocal(dataReferencia: string) {
   const [anoStr, mesStr, diaStr] = dataReferencia.split("-");
@@ -194,9 +208,6 @@ export default function PontoPage() {
     () => normalizarToleranciaMinutos(jornadaFuncionario?.TOLERANCIA_MINUTOS),
     [jornadaFuncionario?.TOLERANCIA_MINUTOS]
   );
-
-  const timeInputClasses =
-    "form-input text-center px-1 py-1 text-sm w-[72px] min-w-[72px]";
 
   const montarHorariosJornadaParaDia = (
     diaAtual: LancamentoDia,
@@ -843,34 +854,26 @@ export default function PontoPage() {
                                   </span>
                                 </div>
                               ) : (
-                                <div className="flex items-center justify-center gap-2 whitespace-nowrap">
-                                  <input
-                                    className={timeInputClasses}
-                                    type="time"
+                                <div className="flex items-center gap-2 whitespace-nowrap">
+                                  <TimeInput
                                     value={dia.entradaManha ?? ""}
                                     onChange={(e) => handleChangeHora(index, "entradaManha", e.target.value)}
                                     disabled={isFalta}
                                   />
                                   <span>-</span>
-                                  <input
-                                    className={timeInputClasses}
-                                    type="time"
+                                  <TimeInput
                                     value={dia.saidaManha ?? ""}
                                     onChange={(e) => handleChangeHora(index, "saidaManha", e.target.value)}
                                     disabled={isFalta}
                                   />
                                   <span>/</span>
-                                  <input
-                                    className={timeInputClasses}
-                                    type="time"
+                                  <TimeInput
                                     value={dia.entradaTarde ?? ""}
                                     onChange={(e) => handleChangeHora(index, "entradaTarde", e.target.value)}
                                     disabled={isFalta}
                                   />
                                   <span>-</span>
-                                  <input
-                                    className={timeInputClasses}
-                                    type="time"
+                                  <TimeInput
                                     value={dia.saidaTarde ?? ""}
                                     onChange={(e) => handleChangeHora(index, "saidaTarde", e.target.value)}
                                     disabled={isFalta}
@@ -889,18 +892,14 @@ export default function PontoPage() {
                                   )}
                                 </div>
                               ) : (
-                                <div className="flex items-center justify-center gap-2 whitespace-nowrap">
-                                  <input
-                                    className={timeInputClasses}
-                                    type="time"
+                                <div className="flex items-center gap-2 whitespace-nowrap">
+                                  <TimeInput
                                     value={dia.entradaExtra ?? ""}
                                     onChange={(e) => handleChangeHora(index, "entradaExtra", e.target.value)}
                                     disabled={isFalta}
                                   />
                                   <span>-</span>
-                                  <input
-                                    className={timeInputClasses}
-                                    type="time"
+                                  <TimeInput
                                     value={dia.saidaExtra ?? ""}
                                     onChange={(e) => handleChangeHora(index, "saidaExtra", e.target.value)}
                                     disabled={isFalta}
