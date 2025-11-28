@@ -479,7 +479,9 @@ export default function PontoPage() {
 
       if (resposta.ok && json?.success) {
         const baseGrade = gerarGradeVazia(competencia);
-        const diasApi = new Map(
+        type LancamentoDiaApi = LancamentoDia & { eFeriado?: "S" | "N" };
+
+        const diasApi = new Map<string, LancamentoDiaApi>(
           (json.data ?? [])
             .filter((dia: LancamentoDia) => {
               if (typeof dia?.dataReferencia !== "string") return false;
@@ -489,18 +491,16 @@ export default function PontoPage() {
                 dataLancamento.getFullYear() === anoComp && dataLancamento.getMonth() + 1 === mesComp
               );
             })
-            .map((dia: LancamentoDia) => [dia.dataReferencia, dia])
+            .map((dia: LancamentoDiaApi) => [dia.dataReferencia, dia])
         );
 
         const dados: LancamentoDia[] = baseGrade.map((diaBase) => {
-          const diaApi = diasApi.get(diaBase.dataReferencia);
-          const combinado = diaApi
-            ? {
-                ...diaBase,
-                ...diaApi,
-                eFeriado: diaApi.eFeriado === "S" ? "S" : diaBase.eFeriado ?? "N",
-              }
-            : diaBase;
+          const diaApi: LancamentoDiaApi | undefined = diasApi.get(diaBase.dataReferencia);
+          const combinadoBase = diaApi ? { ...diaBase, ...diaApi } : diaBase;
+          const combinado: LancamentoDia = {
+            ...combinadoBase,
+            eFeriado: diaApi?.eFeriado === "S" ? "S" : combinadoBase.eFeriado ?? "N",
+          };
 
           return recalcularTotaisDia(
             {
