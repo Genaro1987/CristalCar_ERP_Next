@@ -195,7 +195,8 @@ export default function PontoPage() {
     [jornadaFuncionario?.TOLERANCIA_MINUTOS]
   );
 
-  const timeInputClasses = "form-input time-input text-center px-1 py-1 text-sm w-20";
+  const timeInputClasses =
+    "form-input text-center px-2 py-1 text-sm w-24 min-w-[96px]";
 
   const montarHorariosJornadaParaDia = (
     diaAtual: LancamentoDia,

@@ -1199,19 +1199,6 @@ a {
   line-height: 1.2;
 }
 
-.time-input {
-  width: 96px;
-  min-width: 96px;
-  padding-right: 28px;
-}
-
-.time-input::-webkit-calendar-picker-indicator {
-  width: 12px;
-  height: 12px;
-  transform: scale(0.85);
-  margin-left: 2px;
-}
-
 .button-compact {
   padding: 6px 10px;
   font-size: 12px;
