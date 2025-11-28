@@ -6,6 +6,16 @@ import { NotificationBar } from "@/components/NotificationBar";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { useEffect, useMemo, useState } from "react";
+import {
+  calcularMinutosJornadaDiaria,
+  calcularMinutosTrabalhados,
+  calcularSaldoDia,
+  competenciaAtual,
+  determinarTipoDia,
+  minutosParaHora,
+  normalizarToleranciaMinutos,
+  TipoDia,
+} from "@/lib/rhPontoCalculo";
 
 interface Funcionario {
   ID_FUNCIONARIO: string;
@@ -42,6 +52,10 @@ interface LancamentoDia {
   observacao?: string | null;
   minutosTrabalhados?: number | null;
   minutosExtras?: number | null;
+  saldoBancoMinutos?: number | null;
+  minutosPagosFeriadoFds?: number | null;
+  eFeriado?: "S" | "N";
+  tipoDia?: TipoDia;
 }
 
 const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -53,11 +67,6 @@ function criarDataLocal(dataReferencia: string) {
   const dia = Number(diaStr);
 
   return new Date(ano, mes, dia);
-}
-
-function competenciaAtual(): string {
-  const hoje = new Date();
-  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function formatarDia(dataReferencia: string) {
@@ -79,6 +88,7 @@ function gerarGradeVazia(competencia: string): LancamentoDia[] {
       dataReferencia: `${competencia}-${String(dia).padStart(2, "0")}`,
       tipoOcorrencia: "NORMAL",
       statusDia: "NORMAL",
+      eFeriado: "N",
     });
   }
 
@@ -96,101 +106,28 @@ function camposVazios(dia: LancamentoDia) {
   );
 }
 
-function parseHoraParaMinutos(hora?: string | null): number | null {
-  if (!hora || !hora.includes(":")) return null;
-  const [h, m] = hora.split(":").map(Number);
-  if (Number.isNaN(h) || Number.isNaN(m)) return null;
-  return h * 60 + m;
-}
-
-function minutosParaHora(min: number): string {
-  if (!Number.isFinite(min) || min <= 0) return "00:00";
-  const horas = Math.floor(min / 60);
-  const minutos = min % 60;
-  return `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
-}
-
-function normalizarToleranciaMinutos(valor?: number | null): number {
-  const numero = Number(valor ?? 0);
-
-  if (!Number.isFinite(numero) || numero <= 0) {
-    return 0;
-  }
-
-  return Math.max(0, Math.trunc(numero));
-}
-
 function recalcularTotaisDia(
   dia: LancamentoDia,
   minutosJornadaDia?: number | null,
   toleranciaMinutos?: number | null
 ): LancamentoDia {
-  if (dia.tipoOcorrencia && dia.tipoOcorrencia !== "NORMAL") {
-    return {
-      ...dia,
-      minutosTrabalhados: 0,
-      minutosExtras: 0,
-    };
-  }
+  const tipoDia = determinarTipoDia(dia.dataReferencia, dia.eFeriado);
+  const minutosTrabalhados =
+    dia.tipoOcorrencia && dia.tipoOcorrencia !== "NORMAL"
+      ? 0
+      : calcularMinutosTrabalhados(dia);
 
-  const em = parseHoraParaMinutos(dia.entradaManha);
-  const sm = parseHoraParaMinutos(dia.saidaManha);
-  const et = parseHoraParaMinutos(dia.entradaTarde);
-  const st = parseHoraParaMinutos(dia.saidaTarde);
-  const ei = parseHoraParaMinutos(dia.entradaExtra);
-  const si = parseHoraParaMinutos(dia.saidaExtra);
-
-  const diff = (inicio: number | null, fim: number | null) =>
-    inicio != null && fim != null && fim > inicio ? fim - inicio : 0;
-
-  const minutosTrabalhados = diff(em, sm) + diff(et, st) - diff(ei, si);
-  const minutosJornada = minutosJornadaDia ?? 0;
-  const tolerancia = normalizarToleranciaMinutos(toleranciaMinutos);
-
-  let minutosExtras = 0;
-
-  if (minutosJornada > 0) {
-    const diferenca = minutosTrabalhados - minutosJornada;
-
-    if (Math.abs(diferenca) > tolerancia) {
-      if (diferenca > tolerancia) {
-        minutosExtras = diferenca - tolerancia;
-      } else {
-        minutosExtras = 0;
-      }
-    }
-  }
+  const { saldoBancoMinutos, minutosPagosFeriadoFds, minutosExtrasExibicao } =
+    calcularSaldoDia(tipoDia, minutosTrabalhados, minutosJornadaDia ?? null, toleranciaMinutos ?? 0);
 
   return {
     ...dia,
+    tipoDia,
     minutosTrabalhados,
-    minutosExtras,
+    minutosExtras: minutosExtrasExibicao,
+    saldoBancoMinutos,
+    minutosPagosFeriadoFds,
   };
-}
-
-function calcularMinutosJornadaDiaria(jornada?: {
-  HORA_ENTRADA_MANHA?: string | null;
-  HORA_SAIDA_MANHA?: string | null;
-  HORA_ENTRADA_TARDE?: string | null;
-  HORA_SAIDA_TARDE?: string | null;
-  HORA_ENTRADA_INTERVALO?: string | null;
-  HORA_SAIDA_INTERVALO?: string | null;
-  HORA_ENTRADA_EXTRA?: string | null;
-  HORA_SAIDA_EXTRA?: string | null;
-}): number | null {
-  if (!jornada) return null;
-
-  const em = parseHoraParaMinutos(jornada.HORA_ENTRADA_MANHA);
-  const sm = parseHoraParaMinutos(jornada.HORA_SAIDA_MANHA);
-  const et = parseHoraParaMinutos(jornada.HORA_ENTRADA_TARDE);
-  const st = parseHoraParaMinutos(jornada.HORA_SAIDA_TARDE);
-  const ei = parseHoraParaMinutos(jornada.HORA_ENTRADA_INTERVALO);
-  const si = parseHoraParaMinutos(jornada.HORA_SAIDA_INTERVALO);
-
-  const diff = (inicio: number | null, fim: number | null) =>
-    inicio != null && fim != null && fim > inicio ? fim - inicio : 0;
-
-  return diff(em, sm) + diff(et, st) - diff(ei, si);
 }
 
 export default function PontoPage() {
@@ -412,6 +349,30 @@ export default function PontoPage() {
     });
   };
 
+  const alternarFeriado = (indexDia: number) => {
+    setDiasPonto((diasAnteriores) => {
+      const copia = [...diasAnteriores];
+      const atual = copia[indexDia];
+      const novoValor = atual.eFeriado === "S" ? "N" : "S";
+
+      const normalizado: LancamentoDia = {
+        ...atual,
+        eFeriado: novoValor,
+        tipoOcorrencia: novoValor === "S" ? "NORMAL" : atual.tipoOcorrencia ?? "NORMAL",
+        statusDia: novoValor === "S" ? "NORMAL" : atual.statusDia ?? "NORMAL",
+        idMotivoFalta: novoValor === "S" ? null : atual.idMotivoFalta ?? null,
+        obsFalta: novoValor === "S" ? null : atual.obsFalta ?? null,
+      };
+
+      copia[indexDia] = recalcularTotaisDia(
+        normalizado,
+        minutosJornadaDia,
+        toleranciaMinutosJornada
+      );
+      return copia;
+    });
+  };
+
   const carregarFuncionarios = async () => {
     if (!empresaId) return;
     setCarregandoLista(true);
@@ -537,6 +498,7 @@ export default function PontoPage() {
             ? {
                 ...diaBase,
                 ...diaApi,
+                eFeriado: diaApi.eFeriado === "S" ? "S" : diaBase.eFeriado ?? "N",
               }
             : diaBase;
 
@@ -555,6 +517,7 @@ export default function PontoPage() {
               idMotivoFalta: combinado.idMotivoFalta ?? null,
               obsFalta: combinado.obsFalta ?? null,
               observacao: combinado.observacao ?? "",
+              eFeriado: combinado.eFeriado === "S" ? "S" : "N",
             },
             minutosJornadaDia,
             toleranciaMinutosJornada
@@ -608,9 +571,11 @@ export default function PontoPage() {
       dias.map((dia) => {
         const data = criarDataLocal(dia.dataReferencia);
         const ehFimDeSemana = data.getDay() === 0 || data.getDay() === 6;
+        const ehFeriado = dia.eFeriado === "S";
 
         if (
           ehFimDeSemana ||
+          ehFeriado ||
           !camposVazios(dia) ||
           (dia.tipoOcorrencia && dia.tipoOcorrencia !== "NORMAL")
         ) {
@@ -664,6 +629,7 @@ export default function PontoPage() {
       idMotivoFalta: dia.idMotivoFalta ?? null,
       obsFalta: dia.obsFalta || null,
       observacao: dia.observacao || null,
+      eFeriado: dia.eFeriado === "S" ? "S" : "N",
     }));
 
     try {
@@ -823,7 +789,18 @@ export default function PontoPage() {
                     <tbody>
                       {diasPonto.map((dia, index) => {
                         const data = criarDataLocal(dia.dataReferencia);
-                        const ehFimDeSemana = data.getDay() === 0 || data.getDay() === 6;
+                        const tipoDia = dia.tipoDia ?? determinarTipoDia(dia.dataReferencia, dia.eFeriado);
+                        const ehFimDeSemana = tipoDia === "FIM_DE_SEMANA";
+                        const ehFeriado = tipoDia === "FERIADO";
+                        const estiloLinha: Record<string, string> = {};
+
+                        if (ehFimDeSemana) {
+                          estiloLinha.color = "#6b7280";
+                        }
+
+                        if (ehFeriado) {
+                          estiloLinha.backgroundColor = "#fff7ed";
+                        }
                         const tipoOcorrencia = dia.tipoOcorrencia ?? "NORMAL";
                         const isFalta = tipoOcorrencia !== "NORMAL";
                         const motivoDescricao =
@@ -844,7 +821,7 @@ export default function PontoPage() {
                         return (
                           <tr
                             key={dia.dataReferencia}
-                            style={ehFimDeSemana ? { color: "#6b7280" } : undefined}
+                            style={Object.keys(estiloLinha).length ? estiloLinha : undefined}
                           >
                             <td className="w-32 px-4 py-2 text-left whitespace-nowrap">
                               {formatarDia(dia.dataReferencia)}
@@ -947,6 +924,15 @@ export default function PontoPage() {
                                   disabled={!jornadaFuncionario || isFalta}
                                 >
                                   Jornada
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`button button-compact ${
+                                    ehFeriado ? "button-primary" : "button-secondary"
+                                  }`}
+                                  onClick={() => alternarFeriado(index)}
+                                >
+                                  {ehFeriado ? "Feriado Ativo" : "Feriado"}
                                 </button>
                                 <button
                                   type="button"
