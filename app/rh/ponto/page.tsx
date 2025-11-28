@@ -196,7 +196,7 @@ export default function PontoPage() {
   );
 
   const timeInputClasses =
-    "form-input text-center px-2 py-1 text-sm w-24 min-w-[96px]";
+    "form-input text-center px-1 py-1 text-sm w-[72px] min-w-[72px]";
 
   const montarHorariosJornadaParaDia = (
     diaAtual: LancamentoDia,
