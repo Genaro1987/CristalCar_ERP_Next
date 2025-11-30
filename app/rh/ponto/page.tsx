@@ -718,7 +718,7 @@ export default function PontoPage() {
 
                 {erroFormulario && <p className="error-text">{erroFormulario}</p>}
 
-                <div className="form-grid three-columns">
+                <div className="form-grid three-columns ponto-form-grid">
                   <div className="form-group">
                     <label htmlFor="funcionario">Funcionário *</label>
                     <select
