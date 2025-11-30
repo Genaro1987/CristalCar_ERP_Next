@@ -67,7 +67,9 @@ function TimeInput(props: InputHTMLAttributes<HTMLInputElement>) {
     <input
       type="time"
       {...rest}
-      className={`form-input h-9 w-[76px] rounded-md text-sm text-center ${className ?? ""}`}
+      className={`w-[72px] h-8 rounded border border-gray-300 px-2 text-sm text-center${
+        className ? ` ${className}` : ""
+      }`}
     />
   );
 }
@@ -716,7 +718,7 @@ export default function PontoPage() {
 
                 {erroFormulario && <p className="error-text">{erroFormulario}</p>}
 
-                <div className="form-grid three-columns">
+                <div className="form-grid three-columns ponto-form-grid">
                   <div className="form-group">
                     <label htmlFor="funcionario">Funcionário *</label>
                     <select
@@ -858,19 +860,19 @@ export default function PontoPage() {
                                     onChange={(e) => handleChangeHora(index, "entradaManha", e.target.value)}
                                     disabled={isFalta}
                                   />
-                                  <span>-</span>
+                                  <span> - </span>
                                   <TimeInput
                                     value={dia.saidaManha ?? ""}
                                     onChange={(e) => handleChangeHora(index, "saidaManha", e.target.value)}
                                     disabled={isFalta}
                                   />
-                                  <span>/</span>
+                                  <span> / </span>
                                   <TimeInput
                                     value={dia.entradaTarde ?? ""}
                                     onChange={(e) => handleChangeHora(index, "entradaTarde", e.target.value)}
                                     disabled={isFalta}
                                   />
-                                  <span>-</span>
+                                  <span> - </span>
                                   <TimeInput
                                     value={dia.saidaTarde ?? ""}
                                     onChange={(e) => handleChangeHora(index, "saidaTarde", e.target.value)}
@@ -896,7 +898,7 @@ export default function PontoPage() {
                                     onChange={(e) => handleChangeHora(index, "entradaExtra", e.target.value)}
                                     disabled={isFalta}
                                   />
-                                  <span>-</span>
+                                  <span> - </span>
                                   <TimeInput
                                     value={dia.saidaExtra ?? ""}
                                     onChange={(e) => handleChangeHora(index, "saidaExtra", e.target.value)}

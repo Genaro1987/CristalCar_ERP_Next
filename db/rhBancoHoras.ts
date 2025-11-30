@@ -35,29 +35,36 @@ interface FuncionarioComJornada {
 }
 
 function mapearFuncionarios(rows: Row[]): FuncionarioComJornada[] {
-  return rows.map((row) => ({
-    id: String(row.ID_FUNCIONARIO),
-    nome: String(row.NOME_COMPLETO),
-    idDepartamento:
+  return rows.map((row) => {
+    const idDepartamento =
       row.ID_DEPARTAMENTO === null || row.ID_DEPARTAMENTO === undefined
         ? null
-        : Number(row.ID_DEPARTAMENTO),
-    nomeDepartamento: (row.NOME_DEPARTAMENTO as string | null | undefined) ?? null,
-    minutosJornadaDia:
-      calcularMinutosJornadaDiaria({
-        HORA_ENTRADA_MANHA: (row.HORA_ENTRADA_MANHA as string | null | undefined) ?? null,
-        HORA_SAIDA_MANHA: (row.HORA_SAIDA_MANHA as string | null | undefined) ?? null,
-        HORA_ENTRADA_TARDE: (row.HORA_ENTRADA_TARDE as string | null | undefined) ?? null,
-        HORA_SAIDA_TARDE: (row.HORA_SAIDA_TARDE as string | null | undefined) ?? null,
-        HORA_ENTRADA_INTERVALO:
-          (row.HORA_ENTRADA_INTERVALO as string | null | undefined) ?? null,
-        HORA_SAIDA_INTERVALO:
-          (row.HORA_SAIDA_INTERVALO as string | null | undefined) ?? null,
-      }) ?? null,
-    toleranciaMinutos: normalizarToleranciaMinutos(
-      (row.TOLERANCIA_MINUTOS as number | null | undefined) ?? 0
-    ),
-  }));
+        : Number(row.ID_DEPARTAMENTO);
+
+    return {
+      id: String(row.ID_FUNCIONARIO),
+      nome: String(row.NOME_COMPLETO),
+      idDepartamento,
+      nomeDepartamento:
+        row.NOME_DEPARTAMENTO === null || row.NOME_DEPARTAMENTO === undefined
+          ? null
+          : String(row.NOME_DEPARTAMENTO),
+      minutosJornadaDia:
+        calcularMinutosJornadaDiaria({
+          HORA_ENTRADA_MANHA: (row.HORA_ENTRADA_MANHA as string | null | undefined) ?? null,
+          HORA_SAIDA_MANHA: (row.HORA_SAIDA_MANHA as string | null | undefined) ?? null,
+          HORA_ENTRADA_TARDE: (row.HORA_ENTRADA_TARDE as string | null | undefined) ?? null,
+          HORA_SAIDA_TARDE: (row.HORA_SAIDA_TARDE as string | null | undefined) ?? null,
+          HORA_ENTRADA_INTERVALO:
+            (row.HORA_ENTRADA_INTERVALO as string | null | undefined) ?? null,
+          HORA_SAIDA_INTERVALO:
+            (row.HORA_SAIDA_INTERVALO as string | null | undefined) ?? null,
+        }) ?? null,
+      toleranciaMinutos: normalizarToleranciaMinutos(
+        (row.TOLERANCIA_MINUTOS as number | null | undefined) ?? 0
+      ),
+    };
+  });
 }
 
 function construirMapaLancamentos(rows: Row[]) {

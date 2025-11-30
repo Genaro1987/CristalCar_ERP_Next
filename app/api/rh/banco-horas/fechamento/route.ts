@@ -65,12 +65,14 @@ export async function POST(request: NextRequest) {
 
       const inserts: { minutos: number; tipo: string }[] = [];
 
-      if (minutosPagar > 0) {
-        inserts.push({ minutos: -Math.abs(minutosPagar), tipo: "FECHAMENTO_PAGAR" });
+      const minutosFechamentoPagar = minutosPagar > 0 ? -Math.abs(minutosPagar) : 0;
+      if (minutosFechamentoPagar !== 0) {
+        inserts.push({ minutos: minutosFechamentoPagar, tipo: "FECHAMENTO_PAGAR" });
       }
 
-      if (minutosDescontar > 0) {
-        inserts.push({ minutos: -Math.abs(minutosDescontar), tipo: "FECHAMENTO_DESCONTAR" });
+      const minutosFechamentoDescontar = minutosDescontar > 0 ? -Math.abs(minutosDescontar) : 0;
+      if (minutosFechamentoDescontar !== 0) {
+        inserts.push({ minutos: minutosFechamentoDescontar, tipo: "FECHAMENTO_DESCONTAR" });
       }
 
       if (minutosCarregar !== 0) {
