@@ -45,7 +45,10 @@ function mapearFuncionarios(rows: Row[]): FuncionarioComJornada[] {
       id: String(row.ID_FUNCIONARIO),
       nome: String(row.NOME_COMPLETO),
       idDepartamento,
-      nomeDepartamento: row.NOME_DEPARTAMENTO ?? null,
+      nomeDepartamento:
+        row.NOME_DEPARTAMENTO === null || row.NOME_DEPARTAMENTO === undefined
+          ? null
+          : String(row.NOME_DEPARTAMENTO),
       minutosJornadaDia:
         calcularMinutosJornadaDiaria({
           HORA_ENTRADA_MANHA: (row.HORA_ENTRADA_MANHA as string | null | undefined) ?? null,
