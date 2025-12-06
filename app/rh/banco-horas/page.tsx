@@ -15,7 +15,20 @@ interface FuncionarioOption {
   NOME_COMPLETO: string;
 }
 
-const meses = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+const meses = [
+  { valor: "01", nome: "Janeiro" },
+  { valor: "02", nome: "Fevereiro" },
+  { valor: "03", nome: "Março" },
+  { valor: "04", nome: "Abril" },
+  { valor: "05", nome: "Maio" },
+  { valor: "06", nome: "Junho" },
+  { valor: "07", nome: "Julho" },
+  { valor: "08", nome: "Agosto" },
+  { valor: "09", nome: "Setembro" },
+  { valor: "10", nome: "Outubro" },
+  { valor: "11", nome: "Novembro" },
+  { valor: "12", nome: "Dezembro" },
+];
 
 function competenciaAtual() {
   const hoje = new Date();
@@ -28,6 +41,14 @@ function formatarMoeda(valor: number): string {
     currency: "BRL",
     minimumFractionDigits: 2,
   });
+}
+
+function horaParaMinutos(horaStr: string): number {
+  const partes = horaStr.split(":");
+  if (partes.length !== 2) return 0;
+  const horas = parseInt(partes[0]) || 0;
+  const minutos = parseInt(partes[1]) || 0;
+  return horas * 60 + minutos;
 }
 
 export default function BancoHorasPage() {
@@ -45,8 +66,8 @@ export default function BancoHorasPage() {
   const [politica, setPolitica] = useState<"COMPENSAR_COM_HORAS_EXTRAS" | "DESCONTAR_EM_FOLHA">(
     "COMPENSAR_COM_HORAS_EXTRAS"
   );
-  const [zerarBanco, setZerarBanco] = useState(true);
-  const [ajusteMinutos, setAjusteMinutos] = useState(0);
+  const [zerarBanco, setZerarBanco] = useState(false);
+  const [ajusteHoras, setAjusteHoras] = useState("");
   const [ajusteData, setAjusteData] = useState("");
   const [ajusteTipo, setAjusteTipo] = useState<"CREDITO" | "DEBITO">("CREDITO");
   const [ajusteObs, setAjusteObs] = useState("");
@@ -96,12 +117,18 @@ export default function BancoHorasPage() {
   };
 
   const incluirAjuste = async () => {
-    if (!idFuncionario || !ajusteData) {
-      setNotification({ type: "info", message: "Informe funcionário e data para o ajuste" });
+    if (!idFuncionario || !ajusteData || !ajusteHoras) {
+      setNotification({ type: "info", message: "Informe funcionário, data e horas para o ajuste" });
       return;
     }
 
-    const minutos = ajusteTipo === "CREDITO" ? Math.abs(ajusteMinutos) : -Math.abs(ajusteMinutos);
+    const minutosCalc = horaParaMinutos(ajusteHoras);
+    if (minutosCalc === 0) {
+      setNotification({ type: "info", message: "Informe as horas no formato HH:MM (ex: 02:30)" });
+      return;
+    }
+
+    const minutos = ajusteTipo === "CREDITO" ? Math.abs(minutosCalc) : -Math.abs(minutosCalc);
 
     try {
       setLoading(true);
@@ -119,7 +146,7 @@ export default function BancoHorasPage() {
       const json = await resp.json();
       if (json?.success) {
         setNotification({ type: "success", message: "Ajuste incluído com sucesso" });
-        setAjusteMinutos(0);
+        setAjusteHoras("");
         setAjusteData("");
         setAjusteObs("");
         await carregarResumo();
@@ -136,15 +163,18 @@ export default function BancoHorasPage() {
 
   return (
     <LayoutShell>
-      <HeaderBar
-        codigoTela="REL001_RH_BANCO_HORAS"
-        nomeTela="BANCO DE HORAS"
-        caminhoRota="/rh/banco-horas"
-        modulo="RH"
-      />
-      <div className="page-content">
-        <div className="panel">
+      <div className="page-container">
+        <HeaderBar
+          codigoTela="REL001_RH_BANCO_HORAS"
+          nomeTela="BANCO DE HORAS"
+          caminhoRota="/rh/banco-horas"
+          modulo="RH"
+        />
+
+        <main className="page-content-card">
           {notification && <NotificationBar type={notification.type} message={notification.message} />}
+
+          <div className="panel" style={{ maxWidth: "none" }}>
 
           <div className="form-section-header">
             <h2>Filtros</h2>
@@ -152,8 +182,8 @@ export default function BancoHorasPage() {
           </div>
 
           <div className="form">
-            <div className="form-grid three-columns">
-              <div className="form-group">
+            <div style={{ display: "flex", gap: "16px", alignItems: "flex-end", flexWrap: "wrap" }}>
+              <div className="form-group" style={{ flex: "2", minWidth: "250px" }}>
                 <label htmlFor="funcionario">Funcionário</label>
                 <select
                   id="funcionario"
@@ -170,7 +200,7 @@ export default function BancoHorasPage() {
                 </select>
               </div>
 
-              <div className="form-group">
+              <div className="form-group" style={{ flex: "0 0 120px" }}>
                 <label htmlFor="ano">Ano</label>
                 <input
                   id="ano"
@@ -181,7 +211,7 @@ export default function BancoHorasPage() {
                 />
               </div>
 
-              <div className="form-group">
+              <div className="form-group" style={{ flex: "1", minWidth: "150px" }}>
                 <label htmlFor="mes">Mês</label>
                 <select
                   id="mes"
@@ -190,51 +220,14 @@ export default function BancoHorasPage() {
                   className="form-input"
                 >
                   {meses.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
+                    <option key={m.valor} value={m.valor}>
+                      {m.nome}
                     </option>
                   ))}
                 </select>
               </div>
-            </div>
 
-            <div className="form-grid two-columns">
-              <div className="form-group">
-                <label>Política de faltas</label>
-                <div className="checkbox-row">
-                  <label className="checkbox-inline">
-                    <input
-                      type="radio"
-                      checked={politica === "COMPENSAR_COM_HORAS_EXTRAS"}
-                      onChange={() => setPolitica("COMPENSAR_COM_HORAS_EXTRAS")}
-                    />
-                    Compensar com horas extras
-                  </label>
-                  <label className="checkbox-inline">
-                    <input
-                      type="radio"
-                      checked={politica === "DESCONTAR_EM_FOLHA"}
-                      onChange={() => setPolitica("DESCONTAR_EM_FOLHA")}
-                    />
-                    Descontar em folha
-                  </label>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="checkbox-inline">
-                  <input
-                    type="checkbox"
-                    checked={zerarBanco}
-                    onChange={(e) => setZerarBanco(e.target.checked)}
-                  />
-                  Zerar banco ao final do mês
-                </label>
-              </div>
-            </div>
-
-            <div className="form-actions">
-              <div className="button-row">
+              <div style={{ flex: "0 0 auto" }}>
                 <button
                   onClick={carregarResumo}
                   disabled={loading}
@@ -334,6 +327,48 @@ export default function BancoHorasPage() {
                   <label>Saldo Final</label>
                   <div className="form-input" style={{ backgroundColor: "#fff3cd", fontWeight: 700 }}>
                     {minutosParaHora(resumo.saldoFinalBancoMin)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-section-header" style={{ marginTop: "32px" }}>
+                <h2>Ações Finais</h2>
+                <p>Defina a política de faltas e se deseja zerar o banco ao final do mês</p>
+              </div>
+
+              <div className="form">
+                <div className="form-grid two-columns">
+                  <div className="form-group">
+                    <label>Política de faltas</label>
+                    <div style={{ display: "flex", gap: "24px", marginTop: "8px" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                        <input
+                          type="radio"
+                          checked={politica === "COMPENSAR_COM_HORAS_EXTRAS"}
+                          onChange={() => setPolitica("COMPENSAR_COM_HORAS_EXTRAS")}
+                        />
+                        <span>Compensar com horas extras</span>
+                      </label>
+                      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                        <input
+                          type="radio"
+                          checked={politica === "DESCONTAR_EM_FOLHA"}
+                          onChange={() => setPolitica("DESCONTAR_EM_FOLHA")}
+                        />
+                        <span>Descontar em folha</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={zerarBanco}
+                        onChange={(e) => setZerarBanco(e.target.checked)}
+                      />
+                      <span>Zerar banco ao final do mês</span>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -477,13 +512,14 @@ export default function BancoHorasPage() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="ajusteMinutos">Minutos</label>
+                  <label htmlFor="ajusteHoras">Horas (HH:MM)</label>
                   <input
-                    id="ajusteMinutos"
-                    type="number"
-                    value={ajusteMinutos}
-                    onChange={(e) => setAjusteMinutos(Number(e.target.value))}
+                    id="ajusteHoras"
+                    type="text"
+                    value={ajusteHoras}
+                    onChange={(e) => setAjusteHoras(e.target.value)}
                     className="form-input"
+                    placeholder="Ex: 02:30"
                   />
                 </div>
               </div>
@@ -513,7 +549,8 @@ export default function BancoHorasPage() {
               </div>
             </>
           )}
-        </div>
+          </div>
+        </main>
       </div>
     </LayoutShell>
   );

@@ -15,7 +15,20 @@ interface FuncionarioOption {
   NOME_COMPLETO: string;
 }
 
-const meses = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+const meses = [
+  { valor: "01", nome: "Janeiro" },
+  { valor: "02", nome: "Fevereiro" },
+  { valor: "03", nome: "Março" },
+  { valor: "04", nome: "Abril" },
+  { valor: "05", nome: "Maio" },
+  { valor: "06", nome: "Junho" },
+  { valor: "07", nome: "Julho" },
+  { valor: "08", nome: "Agosto" },
+  { valor: "09", nome: "Setembro" },
+  { valor: "10", nome: "Outubro" },
+  { valor: "11", nome: "Novembro" },
+  { valor: "12", nome: "Dezembro" },
+];
 
 function competenciaAtual() {
   const hoje = new Date();
@@ -88,80 +101,80 @@ export default function BancoHorasConsultaPage() {
 
   return (
     <LayoutShell>
-      <HeaderBar
-        codigoTela="CONS001_RH_BANCO_HORAS"
-        nomeTela="CONSULTA BANCO DE HORAS"
-        caminhoRota="/rh/banco-horas/consulta"
-        modulo="RH"
-      />
-      <div className="page-content">
-        <div className="panel">
+      <div className="page-container">
+        <HeaderBar
+          codigoTela="CONS001_RH_BANCO_HORAS"
+          nomeTela="CONSULTA BANCO DE HORAS"
+          caminhoRota="/rh/banco-horas/consulta"
+          modulo="RH"
+        />
+
+        <main className="page-content-card">
           {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
-          <div className="form-section-header">
-            <h2>Filtros</h2>
-            <p>Selecione o funcionário e competência para consultar o banco de horas</p>
-          </div>
-
-          <div className="form">
-            <div className="form-grid three-columns">
-              <div className="form-group">
-                <label htmlFor="funcionario">Funcionário</label>
-                <select
-                  id="funcionario"
-                  value={idFuncionario}
-                  onChange={(e) => setIdFuncionario(e.target.value)}
-                  className="form-input"
-                >
-                  <option value="">Selecione</option>
-                  {funcionarios.map((f) => (
-                    <option key={f.ID_FUNCIONARIO} value={f.ID_FUNCIONARIO}>
-                      {f.NOME_COMPLETO}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="ano">Ano</label>
-                <input
-                  id="ano"
-                  type="number"
-                  value={ano}
-                  onChange={(e) => setAno(Number(e.target.value))}
-                  className="form-input"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="mes">Mês</label>
-                <select
-                  id="mes"
-                  value={mes}
-                  onChange={(e) => setMes(e.target.value)}
-                  className="form-input"
-                >
-                  {meses.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div className="panel" style={{ maxWidth: "none" }}>
+            <div className="form-section-header">
+              <h2>Filtros</h2>
+              <p>Selecione o funcionário e competência para consultar o banco de horas</p>
             </div>
 
-            <div className="form-actions">
-              <div className="button-row">
-                <button
-                  onClick={pesquisar}
-                  disabled={loading}
-                  className="button button-primary"
-                >
-                  {loading ? "Buscando..." : "Pesquisar"}
-                </button>
+            <div className="form">
+              <div style={{ display: "flex", gap: "16px", alignItems: "flex-end", flexWrap: "wrap" }}>
+                <div className="form-group" style={{ flex: "2", minWidth: "250px" }}>
+                  <label htmlFor="funcionario">Funcionário</label>
+                  <select
+                    id="funcionario"
+                    value={idFuncionario}
+                    onChange={(e) => setIdFuncionario(e.target.value)}
+                    className="form-input"
+                  >
+                    <option value="">Selecione</option>
+                    {funcionarios.map((f) => (
+                      <option key={f.ID_FUNCIONARIO} value={f.ID_FUNCIONARIO}>
+                        {f.NOME_COMPLETO}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ flex: "0 0 120px" }}>
+                  <label htmlFor="ano">Ano</label>
+                  <input
+                    id="ano"
+                    type="number"
+                    value={ano}
+                    onChange={(e) => setAno(Number(e.target.value))}
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-group" style={{ flex: "1", minWidth: "150px" }}>
+                  <label htmlFor="mes">Mês</label>
+                  <select
+                    id="mes"
+                    value={mes}
+                    onChange={(e) => setMes(e.target.value)}
+                    className="form-input"
+                  >
+                    {meses.map((m) => (
+                      <option key={m.valor} value={m.valor}>
+                        {m.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ flex: "0 0 auto" }}>
+                  <button
+                    onClick={pesquisar}
+                    disabled={loading}
+                    className="button button-primary"
+                  >
+                    {loading ? "Buscando..." : "Pesquisar"}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
           {resumo && (
             <>
@@ -259,7 +272,8 @@ export default function BancoHorasConsultaPage() {
               </div>
             </>
           )}
-        </div>
+          </div>
+        </main>
       </div>
     </LayoutShell>
   );
