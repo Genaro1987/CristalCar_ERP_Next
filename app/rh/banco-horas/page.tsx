@@ -337,39 +337,35 @@ export default function BancoHorasPage() {
               </div>
 
               <div className="form">
-                <div className="form-grid two-columns">
-                  <div className="form-group">
-                    <label>Política de faltas</label>
-                    <div style={{ display: "flex", gap: "24px", marginTop: "8px" }}>
-                      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-                        <input
-                          type="radio"
-                          checked={politica === "COMPENSAR_COM_HORAS_EXTRAS"}
-                          onChange={() => setPolitica("COMPENSAR_COM_HORAS_EXTRAS")}
-                        />
-                        <span>Compensar com horas extras</span>
-                      </label>
-                      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-                        <input
-                          type="radio"
-                          checked={politica === "DESCONTAR_EM_FOLHA"}
-                          onChange={() => setPolitica("DESCONTAR_EM_FOLHA")}
-                        />
-                        <span>Descontar em folha</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                <div style={{ display: "flex", gap: "32px", alignItems: "center", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                    <span style={{ marginRight: "8px", fontWeight: 500 }}>Política de faltas:</span>
+                    <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", whiteSpace: "nowrap" }}>
                       <input
-                        type="checkbox"
-                        checked={zerarBanco}
-                        onChange={(e) => setZerarBanco(e.target.checked)}
+                        type="radio"
+                        checked={politica === "COMPENSAR_COM_HORAS_EXTRAS"}
+                        onChange={() => setPolitica("COMPENSAR_COM_HORAS_EXTRAS")}
                       />
-                      <span>Zerar banco ao final do mês</span>
+                      <span>Compensar com horas extras</span>
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "16px", cursor: "pointer", whiteSpace: "nowrap" }}>
+                      <input
+                        type="radio"
+                        checked={politica === "DESCONTAR_EM_FOLHA"}
+                        onChange={() => setPolitica("DESCONTAR_EM_FOLHA")}
+                      />
+                      <span>Descontar em folha</span>
                     </label>
                   </div>
+
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", whiteSpace: "nowrap" }}>
+                    <input
+                      type="checkbox"
+                      checked={zerarBanco}
+                      onChange={(e) => setZerarBanco(e.target.checked)}
+                    />
+                    <span>Zerar banco ao final do mês</span>
+                  </label>
                 </div>
               </div>
 

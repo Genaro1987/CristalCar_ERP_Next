@@ -8,7 +8,13 @@ interface DadosExportacao {
   empresa: {
     nome: string;
     cnpj?: string;
+    razaoSocial?: string;
+    endereco?: string;
+    telefone?: string;
+    email?: string;
   };
+  politica: "COMPENSAR_COM_HORAS_EXTRAS" | "DESCONTAR_EM_FOLHA";
+  zerarBanco: boolean;
 }
 
 export function formatarMoeda(valor: number): string {
@@ -21,161 +27,159 @@ export function formatarMoeda(valor: number): string {
 
 export function exportarPDF(dados: DadosExportacao) {
   const { resumo, empresa } = dados;
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.width;
-  let yPos = 20;
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 10;
+  let yPos = 15;
 
-  // Cabeçalho
-  doc.setFontSize(16);
+  // CABEÇALHO (Logo e título) - Reduzido
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text("REGISTRO DE PONTO E BANCO DE HORAS", pageWidth / 2, yPos, { align: "center" });
-  yPos += 10;
+  doc.text("BANCO DE HORAS", pageWidth / 2, yPos, { align: "center" });
+  yPos += 7;
 
-  // Dados da empresa
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(empresa.nome, pageWidth / 2, yPos, { align: "center" });
-  yPos += 5;
-  if (empresa.cnpj) {
-    doc.text(`CNPJ: ${empresa.cnpj}`, pageWidth / 2, yPos, { align: "center" });
-    yPos += 10;
-  } else {
-    yPos += 5;
-  }
-
-  // Dados do funcionário
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("FUNCIONÁRIO", 15, yPos);
-  yPos += 6;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(`Nome: ${resumo.funcionario.nome}`, 15, yPos);
-  yPos += 5;
-  doc.text(`Departamento: ${resumo.funcionario.nomeDepartamento ?? "-"}`, 15, yPos);
-  yPos += 5;
-  doc.text(`Competência: ${String(resumo.competencia.mes).padStart(2, "0")}/${resumo.competencia.ano}`, 15, yPos);
-  yPos += 10;
-
-  // Resumo do mês
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("RESUMO DO MÊS", 15, yPos);
-  yPos += 6;
-  doc.setFont("helvetica", "normal");
+  // DADOS DO FUNCIONÁRIO - Em uma linha
   doc.setFontSize(9);
-
-  const resumoItens = [
-    ["Saldo Anterior", minutosParaHora(resumo.saldoAnteriorMin)],
-    ["Horas Extras 50%", minutosParaHora(resumo.extrasUteisMin)],
-    ["Horas Extras 100%", minutosParaHora(resumo.extras100Min)],
-    ["Horas Devidas", minutosParaHora(resumo.devidasMin)],
-    ["Ajustes Manuais", minutosParaHora(resumo.ajustesManuaisMin)],
-    ["Saldo Final", minutosParaHora(resumo.saldoFinalBancoMin)],
-  ];
-
-  resumoItens.forEach(([label, valor]) => {
-    doc.text(`${label}:`, 20, yPos);
-    doc.text(valor, 70, yPos);
-    yPos += 5;
-  });
-  yPos += 5;
-
-  // Valores a pagar/descontar
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("VALORES", 15, yPos);
-  yPos += 6;
+  doc.text("Funcionário:", margin, yPos);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-
-  const valores = [
-    ["Horas a Pagar 50%", minutosParaHora(resumo.horasPagar50Min), formatarMoeda((resumo.horasPagar50Min / 60) * resumo.funcionario.valorHora * 1.5)],
-    ["Horas a Pagar 100%", minutosParaHora(resumo.horasPagar100Min), formatarMoeda((resumo.horasPagar100Min / 60) * resumo.funcionario.valorHora * 2)],
-    ["Horas a Descontar", minutosParaHora(resumo.horasDescontarMin), formatarMoeda((resumo.horasDescontarMin / 60) * resumo.funcionario.valorHora)],
-  ];
-
-  valores.forEach(([label, horas, valor]) => {
-    doc.text(`${label}:`, 20, yPos);
-    doc.text(`${horas} = ${valor}`, 70, yPos);
-    yPos += 5;
-  });
-  yPos += 10;
-
-  // Tabela de detalhamento diário
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("DETALHAMENTO DIÁRIO", 15, yPos);
+  const nomeFuncionario = resumo.funcionario.nome.substring(0, 40);
+  const dept = (resumo.funcionario.nomeDepartamento || "-").substring(0, 20);
+  const comp = `${String(resumo.competencia.mes).padStart(2, "0")}/${resumo.competencia.ano}`;
+  doc.text(`${nomeFuncionario} | Depto: ${dept} | Competência: ${comp}`, margin + 22, yPos);
   yPos += 6;
+
+  // RESUMO DO MÊS - Layout compacto
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("RESUMO DO MÊS", margin, yPos);
+  yPos += 4;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+
+  const col1 = margin;
+  const col2 = margin + 50;
+  const col3 = margin + 100;
+  const col4 = margin + 150;
+
+  // Linha 1
+  doc.text(`Saldo Ant: ${minutosParaHora(resumo.saldoAnteriorMin)}`, col1, yPos);
+  doc.text(`Extras 50%: ${minutosParaHora(resumo.extrasUteisMin)}`, col2, yPos);
+  doc.text(`Extras 100%: ${minutosParaHora(resumo.extras100Min)}`, col3, yPos);
+  yPos += 4;
+
+  // Linha 2
+  doc.text(`Devidas: ${minutosParaHora(resumo.devidasMin)}`, col1, yPos);
+  doc.text(`Ajustes: ${minutosParaHora(resumo.ajustesManuaisMin)}`, col2, yPos);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Saldo Final: ${minutosParaHora(resumo.saldoFinalBancoMin)}`, col3, yPos);
+  doc.setFont("helvetica", "normal");
+  yPos += 6;
+
+  // VALORES - Em uma linha
+  doc.setFont("helvetica", "bold");
+  doc.text("VALORES:", margin, yPos);
+  doc.setFont("helvetica", "normal");
+  const vp50 = formatarMoeda((resumo.horasPagar50Min / 60) * resumo.funcionario.valorHora * 1.5);
+  const vp100 = formatarMoeda((resumo.horasPagar100Min / 60) * resumo.funcionario.valorHora * 2);
+  const vd = formatarMoeda((resumo.horasDescontarMin / 60) * resumo.funcionario.valorHora);
+  doc.text(`Pagar 50%: ${vp50} | Pagar 100%: ${vp100} | Descontar: ${vd}`, margin + 18, yPos);
+  yPos += 6;
+
+  // DETALHAMENTO DIÁRIO - Tabela compacta
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("DETALHAMENTO DIÁRIO", margin, yPos);
+  yPos += 4;
 
   // Cabeçalho da tabela
-  doc.setFontSize(8);
-  const colWidths = [25, 20, 20, 20, 20, 40];
-  const headers = ["Data", "Tipo", "Jornada", "Trab.", "Dif.", "Classificação"];
-  let xPos = 15;
-  headers.forEach((header, i) => {
-    doc.text(header, xPos, yPos);
-    xPos += colWidths[i];
-  });
-  yPos += 5;
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  const colDia = margin;
+  const colTipo = margin + 18;
+  const colJorn = margin + 36;
+  const colTrab = margin + 52;
+  const colDif = margin + 68;
+  const colClass = margin + 82;
 
-  // Linha separadora
-  doc.line(15, yPos, pageWidth - 15, yPos);
-  yPos += 4;
+  doc.text("Data", colDia, yPos);
+  doc.text("Tipo", colTipo, yPos);
+  doc.text("Jornada", colJorn, yPos);
+  doc.text("Trab.", colTrab, yPos);
+  doc.text("Dif.", colDif, yPos);
+  doc.text("Classificação", colClass, yPos);
+  yPos += 3;
+
+  // Linha da tabela
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  yPos += 3;
 
   // Dados da tabela
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
+  doc.setFontSize(6);
+
   resumo.dias.forEach((dia) => {
-    if (yPos > 270) {
-      doc.addPage();
-      yPos = 20;
-    }
+    if (yPos > 250) return; // Para não ultrapassar o rodapé
 
-    xPos = 15;
     const dataFormatada = dia.data.substring(8, 10) + "/" + dia.data.substring(5, 7);
-    doc.text(dataFormatada, xPos, yPos);
-    xPos += colWidths[0];
-    doc.text(dia.tipoDia.substring(0, 6), xPos, yPos);
-    xPos += colWidths[1];
-    doc.text(minutosParaHora(dia.jornadaPrevistaMin), xPos, yPos);
-    xPos += colWidths[2];
-    doc.text(minutosParaHora(dia.trabalhadoMin), xPos, yPos);
-    xPos += colWidths[3];
-    doc.text(minutosParaHora(dia.diferencaMin), xPos, yPos);
-    xPos += colWidths[4];
-    doc.text(dia.classificacao.substring(0, 12), xPos, yPos);
+    doc.text(dataFormatada, colDia, yPos);
+    doc.text(dia.tipoDia.substring(0, 6), colTipo, yPos);
+    doc.text(minutosParaHora(dia.jornadaPrevistaMin), colJorn, yPos);
+    doc.text(minutosParaHora(dia.trabalhadoMin), colTrab, yPos);
 
-    yPos += 4;
+    if (dia.diferencaMin !== 0) {
+      doc.setTextColor(dia.diferencaMin > 0 ? 0 : 255, dia.diferencaMin > 0 ? 100 : 0, 0);
+    }
+    doc.text(minutosParaHora(dia.diferencaMin), colDif, yPos);
+    doc.setTextColor(0, 0, 0);
+
+    doc.text(dia.classificacao.substring(0, 18), colClass, yPos);
+    yPos += 3;
   });
 
-  yPos += 10;
+  // Espaço antes da assinatura
+  yPos = Math.max(yPos + 5, 260);
 
-  // Assinaturas
-  if (yPos > 240) {
-    doc.addPage();
-    yPos = 20;
-  }
-
-  yPos += 10;
-  doc.setFontSize(9);
+  // ASSINATURAS
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-
-  const sigWidth = 70;
-  const sig1X = 20;
-  const sig2X = pageWidth - sigWidth - 20;
+  const sig1X = margin + 10;
+  const sig2X = pageWidth - margin - 60;
+  const sigWidth = 50;
 
   doc.line(sig1X, yPos, sig1X + sigWidth, yPos);
   doc.line(sig2X, yPos, sig2X + sigWidth, yPos);
-  yPos += 5;
+  yPos += 4;
   doc.text("Funcionário", sig1X + sigWidth / 2, yPos, { align: "center" });
   doc.text("Empresa", sig2X + sigWidth / 2, yPos, { align: "center" });
 
-  // Data e hora de emissão
-  yPos += 10;
-  const dataHoraEmissao = new Date().toLocaleString("pt-BR");
+  // RODAPÉ - Dados da empresa
+  yPos = pageHeight - 15;
   doc.setFontSize(7);
-  doc.text(`Emitido em: ${dataHoraEmissao}`, pageWidth / 2, yPos, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  if (empresa.razaoSocial) {
+    doc.text(empresa.razaoSocial, pageWidth / 2, yPos, { align: "center" });
+    yPos += 3;
+  }
+  if (empresa.cnpj) {
+    let rodape = `CNPJ: ${empresa.cnpj}`;
+    if (empresa.endereco) rodape += ` | ${empresa.endereco}`;
+    doc.text(rodape, pageWidth / 2, yPos, { align: "center" });
+    yPos += 3;
+  }
+  if (empresa.telefone || empresa.email) {
+    let contato = "";
+    if (empresa.telefone) contato += `Tel: ${empresa.telefone}`;
+    if (empresa.email) contato += (contato ? " | " : "") + `Email: ${empresa.email}`;
+    doc.text(contato, pageWidth / 2, yPos, { align: "center" });
+  }
+
+  // Data e hora de emissão
+  const dataHoraEmissao = new Date().toLocaleString("pt-BR");
+  doc.setFontSize(6);
+  doc.text(`Emitido em: ${dataHoraEmissao}`, pageWidth / 2, pageHeight - 5, { align: "center" });
 
   // Download
   const nomeArquivo = `banco_horas_${resumo.funcionario.nome.replace(/\s+/g, "_")}_${resumo.competencia.ano}_${String(resumo.competencia.mes).padStart(2, "0")}.pdf`;
