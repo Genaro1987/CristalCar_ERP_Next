@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
@@ -23,6 +24,7 @@ function competenciaAtual() {
 
 export default function BancoHorasPage() {
   useRequerEmpresaSelecionada({ ativo: true });
+  const { empresa } = useEmpresaSelecionada();
   const [funcionarios, setFuncionarios] = useState<FuncionarioOption[]>([]);
   const [resumo, setResumo] = useState<ResumoBancoHorasMes | null>(null);
   const [loading, setLoading] = useState(false);
@@ -41,12 +43,23 @@ export default function BancoHorasPage() {
   const [ajusteTipo, setAjusteTipo] = useState<"CREDITO" | "DEBITO">("CREDITO");
   const [ajusteObs, setAjusteObs] = useState("");
 
+  const empresaId = empresa?.id ?? null;
+
+  const headersPadrao = useMemo<HeadersInit>(() => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (empresaId) {
+      headers["x-empresa-id"] = String(empresaId);
+    }
+    return headers;
+  }, [empresaId]);
+
   useEffect(() => {
-    fetch("/api/rh/funcionarios")
+    if (!empresaId) return;
+    fetch("/api/rh/funcionarios", { headers: headersPadrao })
       .then((r) => r.json())
       .then((json) => setFuncionarios(json?.data ?? []))
       .catch(() => setFuncionarios([]));
-  }, []);
+  }, [empresaId, headersPadrao]);
 
   const carregarResumo = async () => {
     if (!idFuncionario) {
@@ -57,7 +70,8 @@ export default function BancoHorasPage() {
     setNotification(null);
     try {
       const resp = await fetch(
-        `/api/rh/banco-horas/resumo?idFuncionario=${idFuncionario}&ano=${ano}&mes=${mes}&politicaFaltas=${politica}&zerarBancoNoMes=${zerarBanco}`
+        `/api/rh/banco-horas/resumo?idFuncionario=${idFuncionario}&ano=${ano}&mes=${mes}&politicaFaltas=${politica}&zerarBancoNoMes=${zerarBanco}`,
+        { headers: headersPadrao }
       );
       const json = await resp.json();
       if (json?.success) {
@@ -85,7 +99,7 @@ export default function BancoHorasPage() {
       setLoading(true);
       const resp = await fetch("/api/rh/banco-horas/ajustes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: headersPadrao,
         body: JSON.stringify({
           idFuncionario,
           data: ajusteData,

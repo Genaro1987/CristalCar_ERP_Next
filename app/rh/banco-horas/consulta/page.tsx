@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
@@ -23,6 +24,7 @@ function competenciaAtual() {
 
 export default function BancoHorasConsultaPage() {
   useRequerEmpresaSelecionada({ ativo: true });
+  const { empresa } = useEmpresaSelecionada();
   const [funcionarios, setFuncionarios] = useState<FuncionarioOption[]>([]);
   const [resumo, setResumo] = useState<ResumoBancoHorasMes | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
@@ -32,12 +34,23 @@ export default function BancoHorasConsultaPage() {
   const [mes, setMes] = useState(compAtual.mes.toString().padStart(2, "0"));
   const [loading, setLoading] = useState(false);
 
+  const empresaId = empresa?.id ?? null;
+
+  const headersPadrao = useMemo<HeadersInit>(() => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (empresaId) {
+      headers["x-empresa-id"] = String(empresaId);
+    }
+    return headers;
+  }, [empresaId]);
+
   useEffect(() => {
-    fetch("/api/rh/funcionarios")
+    if (!empresaId) return;
+    fetch("/api/rh/funcionarios", { headers: headersPadrao })
       .then((r) => r.json())
       .then((json) => setFuncionarios(json?.data ?? []))
       .catch(() => setFuncionarios([]));
-  }, []);
+  }, [empresaId, headersPadrao]);
 
   const pesquisar = async () => {
     if (!idFuncionario) {
@@ -48,7 +61,8 @@ export default function BancoHorasConsultaPage() {
     setLoading(true);
     try {
       const resp = await fetch(
-        `/api/rh/banco-horas/resumo?idFuncionario=${idFuncionario}&ano=${ano}&mes=${mes}&politicaFaltas=COMPENSAR_COM_HORAS_EXTRAS&zerarBancoNoMes=true`
+        `/api/rh/banco-horas/resumo?idFuncionario=${idFuncionario}&ano=${ano}&mes=${mes}&politicaFaltas=COMPENSAR_COM_HORAS_EXTRAS&zerarBancoNoMes=true`,
+        { headers: headersPadrao }
       );
       const json = await resp.json();
       if (json?.success) {
