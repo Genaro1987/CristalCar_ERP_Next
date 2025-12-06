@@ -1,5 +1,6 @@
 import { db } from "@/db/client";
 import { intervaloCompetencia } from "@/db/rhPonto";
+import { registrarPeriodoDigitado } from "@/db/rhBancoHorasPeriodo";
 import { NextRequest, NextResponse } from "next/server";
 import {
   obterEmpresaIdDaRequest,
@@ -141,8 +142,24 @@ export async function PUT(request: NextRequest) {
   const funcionarioId = body?.funcionarioId ?? request.nextUrl.searchParams.get("funcionarioId") ?? "";
   const competencia = body?.competencia ?? request.nextUrl.searchParams.get("competencia") ?? "";
   const intervalo = intervaloCompetencia(competencia);
+  const [anoStr, mesStr] = competencia.split("-");
+  const anoReferencia = Number(anoStr);
+  const mesReferencia = Number(mesStr);
+  const usuarioUltimaAtualizacao =
+    request.headers.get("x-usuario-id") ||
+    request.headers.get("x-user-id") ||
+    request.headers.get("x-usuario") ||
+    null;
 
-  if (!funcionarioId || !intervalo || !Array.isArray(body?.dias)) {
+  if (
+    !funcionarioId ||
+    !intervalo ||
+    !Array.isArray(body?.dias) ||
+    !Number.isFinite(anoReferencia) ||
+    !Number.isFinite(mesReferencia) ||
+    mesReferencia < 1 ||
+    mesReferencia > 12
+  ) {
     return NextResponse.json(
       { success: false, error: "PARAMETROS_INVALIDOS" },
       { status: 400 }
@@ -262,6 +279,14 @@ export async function PUT(request: NextRequest) {
         ],
       });
     }
+
+    await registrarPeriodoDigitado({
+      idEmpresa: empresaId,
+      idFuncionario: funcionarioId,
+      anoReferencia,
+      mesReferencia,
+      idUsuarioUltimaAtualizacao: usuarioUltimaAtualizacao,
+    });
 
     await db.execute("COMMIT");
 

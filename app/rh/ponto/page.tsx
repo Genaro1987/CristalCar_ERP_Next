@@ -11,6 +11,7 @@ import {
   calcularMinutosTrabalhados,
   calcularSaldoDia,
   competenciaAtual,
+  criarDataLocal,
   determinarTipoDia,
   minutosParaHora,
   normalizarToleranciaMinutos,
@@ -72,15 +73,6 @@ function TimeInput(props: InputHTMLAttributes<HTMLInputElement>) {
       }`}
     />
   );
-}
-
-function criarDataLocal(dataReferencia: string) {
-  const [anoStr, mesStr, diaStr] = dataReferencia.split("-");
-  const ano = Number(anoStr);
-  const mes = Number(mesStr) - 1;
-  const dia = Number(diaStr);
-
-  return new Date(ano, mes, dia);
 }
 
 function formatarDia(dataReferencia: string) {
@@ -670,10 +662,12 @@ export default function PontoPage() {
         setErroFormulario("Horários devem estar no formato HH:MM.");
       } else {
         setErroFormulario("Não foi possível salvar o ponto.");
+        setNotification({ type: "error", message: "Erro ao salvar ponto. Tente novamente ou contate o suporte." });
       }
     } catch (error) {
       console.error(error);
       setErroFormulario("Erro ao salvar o ponto.");
+      setNotification({ type: "error", message: "Erro ao salvar ponto. Tente novamente ou contate o suporte." });
     } finally {
       setSalvando(false);
     }
@@ -802,7 +796,7 @@ export default function PontoPage() {
                       {diasPonto.map((dia, index) => {
                         const data = criarDataLocal(dia.dataReferencia);
                         const tipoDia = dia.tipoDia ?? determinarTipoDia(dia.dataReferencia, dia.eFeriado);
-                        const ehFimDeSemana = tipoDia === "FIM_DE_SEMANA";
+                        const ehFimDeSemana = tipoDia === "SABADO" || tipoDia === "DOMINGO";
                         const ehFeriado = tipoDia === "FERIADO";
                         const estiloLinha: Record<string, string> = {};
 

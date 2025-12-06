@@ -5,6 +5,7 @@ import {
   calcularMinutosJornadaDiaria,
   calcularMinutosTrabalhados,
   calcularSaldoDia,
+  criarDataLocal,
   determinarTipoDia,
   gerarDiasDaCompetencia,
   gerarIntervaloCompetencia,
@@ -355,19 +356,16 @@ function mapTipoAjuste(tipo?: string | null): MovimentoBancoHoras["tipo"] {
 }
 
 function tipoDiaDescricao(
-  valor: ReturnType<typeof determinarTipoDia>,
-  data: string
+  valor: ReturnType<typeof determinarTipoDia>
 ): "UTIL" | "SABADO" | "DOMINGO" | "FERIADO" {
   if (valor === "FERIADO") return "FERIADO";
-  if (valor === "FIM_DE_SEMANA") {
-    const d = new Date(data);
-    return d.getDay() === 6 ? "SABADO" : "DOMINGO";
-  }
+  if (valor === "SABADO") return "SABADO";
+  if (valor === "DOMINGO") return "DOMINGO";
   return "UTIL";
 }
 
 function diaDaSemana(data: string): string {
-  const d = new Date(data);
+  const d = criarDataLocal(data);
   const nomes = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
   return nomes[d.getDay()] ?? "";
 }
@@ -592,7 +590,7 @@ export async function calcularBancoHorasMes(
       data,
       (registro?.eFeriado as "S" | "N" | undefined) ?? "N"
     );
-    const tipoDia = tipoDiaDescricao(tipoDiaBase, data);
+    const tipoDia = tipoDiaDescricao(tipoDiaBase);
     const minutosTrabalhados =
       tipoOcorrencia !== "NORMAL"
         ? 0

@@ -76,7 +76,7 @@ export default function BancoHorasPage() {
   const compAtual = useMemo(() => competenciaAtual(), []);
   const [idFuncionario, setIdFuncionario] = useState("");
   const [ano, setAno] = useState(compAtual.ano);
-  const [mes, setMes] = useState(compAtual.mes.toString().padStart(2, "0"));
+  const [mes, setMes] = useState("");
   const [politica, setPolitica] = useState<"COMPENSAR_COM_HORAS_EXTRAS" | "DESCONTAR_EM_FOLHA">(
     "COMPENSAR_COM_HORAS_EXTRAS"
   );
@@ -108,6 +108,7 @@ export default function BancoHorasPage() {
   useEffect(() => {
     if (!empresaId || !idFuncionario) {
       setPeriodosDisponiveis([]);
+      setMes("");
       return;
     }
 
@@ -119,11 +120,13 @@ export default function BancoHorasPage() {
     )
       .then((r) => r.json())
       .then((json) => {
-        const periodos = (json?.data ?? []).map((p: { MES_REFERENCIA: number; SITUACAO_PERIODO: string }) => ({
-          valor: mesParaValor(p.MES_REFERENCIA),
-          nome: mesParaTexto(p.MES_REFERENCIA),
-          situacao: p.SITUACAO_PERIODO,
-        }));
+        const periodos = (json?.data ?? [])
+          .filter((p: { SITUACAO_PERIODO: string }) => p.SITUACAO_PERIODO !== "NAO_INICIADO")
+          .map((p: { MES_REFERENCIA: number; SITUACAO_PERIODO: string }) => ({
+            valor: mesParaValor(p.MES_REFERENCIA),
+            nome: mesParaTexto(p.MES_REFERENCIA),
+            situacao: p.SITUACAO_PERIODO,
+          }));
         setPeriodosDisponiveis(periodos);
       })
       .catch(() => setPeriodosDisponiveis([]));
@@ -132,7 +135,10 @@ export default function BancoHorasPage() {
   }, [empresaId, headersPadrao, idFuncionario, ano]);
 
   useEffect(() => {
-    if (periodosDisponiveis.length === 0) return;
+    if (periodosDisponiveis.length === 0) {
+      setMes("");
+      return;
+    }
     const mesAtualDisponivel = periodosDisponiveis.some((p) => p.valor === mes);
     if (!mesAtualDisponivel) {
       setMes(periodosDisponiveis[0].valor);
@@ -142,6 +148,14 @@ export default function BancoHorasPage() {
   const carregarResumo = async () => {
     if (!idFuncionario) {
       setNotification({ type: "info", message: "Selecione um funcionário" });
+      return;
+    }
+    if (!mes) {
+      setNotification({ type: "info", message: "Selecione um mês disponível" });
+      return;
+    }
+    if (!periodosDisponiveis.some((p) => p.valor === mes)) {
+      setNotification({ type: "info", message: "O mês selecionado não possui período disponível" });
       return;
     }
     setLoading(true);
@@ -280,7 +294,13 @@ export default function BancoHorasPage() {
               <div style={{ flex: "0 0 auto" }}>
                 <button
                   onClick={carregarResumo}
-                  disabled={loading}
+                  disabled={
+                    loading ||
+                    !idFuncionario ||
+                    !ano ||
+                    !mes ||
+                    !periodosDisponiveis.some((p) => p.valor === mes)
+                  }
                   className="button button-primary"
                 >
                   {loading ? "Calculando..." : "Calcular"}
