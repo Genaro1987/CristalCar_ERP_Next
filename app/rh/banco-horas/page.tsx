@@ -84,6 +84,12 @@ export default function BancoHorasPage() {
   const [ajusteData, setAjusteData] = useState("");
   const [ajusteTipo, setAjusteTipo] = useState<"CREDITO" | "DEBITO">("CREDITO");
   const [ajusteObs, setAjusteObs] = useState("");
+  const [situacaoPeriodo, setSituacaoPeriodo] = useState<string>("");
+  const [modalFechamentoAberto, setModalFechamentoAberto] = useState(false);
+  const [modalReaberturaAberto, setModalReaberturaAberto] = useState(false);
+  const [usuarioMaster, setUsuarioMaster] = useState("");
+  const [senhaMaster, setSenhaMaster] = useState("");
+  const [motivoReabertura, setMotivoReabertura] = useState("");
 
   const empresaId = empresa?.id ?? null;
 
@@ -143,6 +149,11 @@ export default function BancoHorasPage() {
     }
   }, [mes, periodosDisponiveis]);
 
+  useEffect(() => {
+    const situacaoSelecionada = periodosDisponiveis.find((p) => p.valor === mes)?.situacao ?? "";
+    setSituacaoPeriodo(situacaoSelecionada);
+  }, [mes, periodosDisponiveis]);
+
   const saldoAnteriorHoras = resumo?.saldoAnteriorMin ?? 0;
   const extras50Horas = resumo?.extrasUteisMin ?? 0;
   const extras100Horas = resumo?.extras100Min ?? 0;
@@ -179,6 +190,12 @@ export default function BancoHorasPage() {
 
     return { saldoFinalParaPagarHoras: saldoFinal, saldoBancoFinalHoras: saldoBanco };
   }, [horasMovimentacao, saldoAnteriorHoras, saldoMesHoras, tipoOperacaoBanco, zerarBancoAoFinal]);
+
+  const periodoSelecionado = Boolean(
+    idFuncionario && mes && periodosDisponiveis.some((p) => p.valor === mes)
+  );
+  const periodoFechado = situacaoPeriodo === "FECHADO";
+  const bloqueioEdicao = periodoFechado;
 
   const carregarResumo = async () => {
     if (!idFuncionario) {
@@ -217,6 +234,11 @@ export default function BancoHorasPage() {
   const incluirAjuste = async () => {
     if (!idFuncionario || !ajusteData || !ajusteHoras) {
       setNotification({ type: "info", message: "Informe funcionário, data e horas para o ajuste" });
+      return;
+    }
+
+    if (bloqueioEdicao) {
+      setNotification({ type: "info", message: "Período fechado. Reabra para editar." });
       return;
     }
 
@@ -259,6 +281,102 @@ export default function BancoHorasPage() {
     }
   };
 
+  const fecharPeriodo = async () => {
+    if (!resumo || !periodoSelecionado || periodoFechado) {
+      setNotification({ type: "info", message: "Selecione um período aberto para fechar." });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const resp = await fetch("/api/rh/banco-horas/fechamento/fechar-periodo", {
+        method: "POST",
+        headers: headersPadrao,
+        body: JSON.stringify({
+          idFuncionario,
+          anoReferencia: ano,
+          mesReferencia: Number(mes),
+          saldoAnteriorMinutos: saldoAnteriorHoras,
+          horasExtras50Minutos: extras50Horas,
+          horasExtras100Minutos: extras100Horas,
+          horasDevidasMinutos: horasDevidas,
+          ajustesMinutos: resumo.ajustesManuaisMin,
+          fechamentosMinutos: resumo.fechamentosMin,
+          saldoFinalBancoMinutos: saldoBancoFinalHoras,
+          saldoFinalParaPagarMinutos: saldoFinalParaPagarHoras,
+          valorHora,
+          zerouBanco: zerarBancoAoFinal,
+        }),
+      });
+
+      const json = await resp.json();
+      if (json?.success) {
+        setSituacaoPeriodo(json?.data?.situacaoPeriodo ?? "FECHADO");
+        setPeriodosDisponiveis((prev) =>
+          prev.map((p) => (p.valor === mes ? { ...p, situacao: json?.data?.situacaoPeriodo ?? "FECHADO" } : p))
+        );
+        setNotification({ type: "success", message: "Período fechado com sucesso." });
+      } else {
+        setNotification({ type: "error", message: "Não foi possível fechar o período." });
+      }
+    } catch (error) {
+      console.error(error);
+      setNotification({ type: "error", message: "Erro ao fechar período" });
+    } finally {
+      setLoading(false);
+      setModalFechamentoAberto(false);
+    }
+  };
+
+  const reabrirPeriodo = async () => {
+    if (!periodoSelecionado || !periodoFechado) {
+      setNotification({ type: "info", message: "Selecione um período fechado para reabrir." });
+      return;
+    }
+
+    if (!usuarioMaster || !senhaMaster) {
+      setNotification({ type: "info", message: "Informe usuário master e senha para reabrir." });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const resp = await fetch("/api/rh/banco-horas/fechamento/reabrir-periodo", {
+        method: "POST",
+        headers: headersPadrao,
+        body: JSON.stringify({
+          idFuncionario,
+          anoReferencia: ano,
+          mesReferencia: Number(mes),
+          usuarioMaster,
+          senhaMaster,
+          motivoLiberacao: motivoReabertura,
+        }),
+      });
+      const json = await resp.json();
+      if (json?.success) {
+        setSituacaoPeriodo(json?.data?.situacaoPeriodo ?? "REABERTO");
+        setPeriodosDisponiveis((prev) =>
+          prev.map((p) => (p.valor === mes ? { ...p, situacao: json?.data?.situacaoPeriodo ?? "REABERTO" } : p))
+        );
+        const usuarioMasterLiberador = json?.data?.usuarioMaster ? ` por ${json?.data?.usuarioMaster}` : "";
+        setNotification({
+          type: "success",
+          message: `Período reaberto para edição${usuarioMasterLiberador}.`,
+        });
+      } else {
+        setNotification({ type: "error", message: "Não foi possível reabrir o período." });
+      }
+    } catch (error) {
+      console.error(error);
+      setNotification({ type: "error", message: "Erro ao reabrir período" });
+    } finally {
+      setLoading(false);
+      setModalReaberturaAberto(false);
+      setSenhaMaster("");
+    }
+  };
+
   return (
     <LayoutShell>
       <div className="page-container">
@@ -277,6 +395,9 @@ export default function BancoHorasPage() {
               <header className="form-section-header">
                 <h2>FILTROS E CALCULAR</h2>
                 <p>Selecione EMPRESA/FUNCIONARIO/ANO/MES e acione CALCULAR PERIODO.</p>
+                <p style={{ fontWeight: 600, color: "#4b5563" }}>
+                  Status do período: {situacaoPeriodo || "N/D"}
+                </p>
               </header>
 
               <div className="form" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
@@ -496,6 +617,7 @@ export default function BancoHorasPage() {
                             )
                           }
                           className="form-input"
+                          disabled={bloqueioEdicao}
                         >
                           <option value="">Selecione</option>
                           <option value="ENVIAR_HORAS_PARA_BANCO">Enviar horas para banco (credito)</option>
@@ -517,6 +639,7 @@ export default function BancoHorasPage() {
                           min="00:01"
                           max="23:59"
                           step={60}
+                          disabled={bloqueioEdicao}
                         />
                         {tipoOperacaoBanco && horasMovimentacao <= 0 && (
                           <p className="error-text">Informe um valor de horas maior que zero.</p>
@@ -547,6 +670,7 @@ export default function BancoHorasPage() {
                             setZerarBancoAoFinal((prev) => !prev);
                             setZerarBanco((prev) => !prev);
                           }}
+                          disabled={bloqueioEdicao}
                         >
                           {zerarBancoAoFinal ? "Desfazer zerar banco" : "Zerar banco ao final do mes"}
                         </button>
@@ -665,6 +789,7 @@ export default function BancoHorasPage() {
                         value={ajusteData}
                         onChange={(e) => setAjusteData(e.target.value)}
                         className="form-input"
+                        disabled={bloqueioEdicao}
                       />
                     </div>
 
@@ -675,6 +800,7 @@ export default function BancoHorasPage() {
                         value={ajusteTipo}
                         onChange={(e) => setAjusteTipo(e.target.value as "CREDITO" | "DEBITO")}
                         className="form-input"
+                        disabled={bloqueioEdicao}
                       >
                         <option value="CREDITO">CREDITO</option>
                         <option value="DEBITO">DEBITO</option>
@@ -691,6 +817,7 @@ export default function BancoHorasPage() {
                         className="form-input"
                         placeholder="Ex: 02:30"
                         step={60}
+                        disabled={bloqueioEdicao}
                       />
                     </div>
                   </div>
@@ -704,6 +831,7 @@ export default function BancoHorasPage() {
                       onChange={(e) => setAjusteObs(e.target.value)}
                       className="form-input"
                       placeholder="Motivo do ajuste"
+                      disabled={bloqueioEdicao}
                     />
                   </div>
 
@@ -712,7 +840,7 @@ export default function BancoHorasPage() {
                       <button
                         onClick={incluirAjuste}
                         className="button button-primary"
-                        disabled={loading}
+                        disabled={loading || bloqueioEdicao}
                         style={{ backgroundColor: "#f97316", borderColor: "#ea580c" }}
                       >
                         Incluir Ajuste Manual
@@ -720,11 +848,168 @@ export default function BancoHorasPage() {
                     </div>
                   </div>
                 </section>
+
+                <CardDivider />
+
+                <section className="panel banco-horas-panel">
+                  <header className="form-section-header">
+                    <h2>FECHAMENTO DO PERIODO</h2>
+                    <p>Finalize ou libere a edição do período selecionado.</p>
+                  </header>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "12px" }}>
+                    {periodoFechado && (
+                      <button
+                        type="button"
+                        className="button"
+                        style={{ borderColor: "#f97316", color: "#f97316", backgroundColor: "white" }}
+                        onClick={() => setModalReaberturaAberto(true)}
+                        disabled={!periodoSelecionado || loading}
+                      >
+                        Reabrir período
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      style={{ backgroundColor: "#f97316", borderColor: "#ea580c" }}
+                      onClick={() => setModalFechamentoAberto(true)}
+                      disabled={!periodoSelecionado || !resumo || periodoFechado || loading}
+                    >
+                      Fechar período
+                    </button>
+                  </div>
+                </section>
               </>
             )}
           </div>
         </main>
       </div>
+
+      {modalFechamentoAberto && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              padding: "24px",
+              borderRadius: "12px",
+              maxWidth: "480px",
+              width: "100%",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+            }}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: "12px" }}>Confirmar fechamento do período?</h3>
+            <p style={{ color: "#4b5563", marginBottom: "16px" }}>
+              Após o fechamento, a edição ficará bloqueada e apenas um usuário master poderá reabrir o período.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+              <button className="button" onClick={() => setModalFechamentoAberto(false)}>
+                Cancelar
+              </button>
+              <button
+                className="button button-primary"
+                style={{ backgroundColor: "#f97316", borderColor: "#ea580c" }}
+                onClick={fecharPeriodo}
+                disabled={loading}
+              >
+                Confirmar fechamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalReaberturaAberto && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              padding: "24px",
+              borderRadius: "12px",
+              maxWidth: "520px",
+              width: "100%",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+            }}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: "12px" }}>Liberação master para reabertura</h3>
+            <p style={{ color: "#4b5563", marginBottom: "16px" }}>
+              Informe as credenciais do usuário master para reabrir o período fechado.
+            </p>
+
+            <div className="form-group">
+              <label>Usuário master</label>
+              <input
+                type="text"
+                className="form-input"
+                value={usuarioMaster}
+                onChange={(e) => setUsuarioMaster(e.target.value)}
+                placeholder="Login do usuário master"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Senha</label>
+              <input
+                type="password"
+                className="form-input"
+                value={senhaMaster}
+                onChange={(e) => setSenhaMaster(e.target.value)}
+                placeholder="Senha de liberação"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Motivo da reabertura</label>
+              <input
+                type="text"
+                className="form-input"
+                value={motivoReabertura}
+                onChange={(e) => setMotivoReabertura(e.target.value)}
+                placeholder="Opcional, descreva o motivo"
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "12px" }}>
+              <button className="button" onClick={() => setModalReaberturaAberto(false)}>
+                Cancelar
+              </button>
+              <button
+                className="button button-primary"
+                style={{ backgroundColor: "#f97316", borderColor: "#ea580c" }}
+                onClick={reabrirPeriodo}
+                disabled={loading}
+              >
+                Reabrir período
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </LayoutShell>
   );
 }
