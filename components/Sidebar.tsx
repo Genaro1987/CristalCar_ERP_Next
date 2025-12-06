@@ -130,6 +130,18 @@ export function Sidebar() {
             requerEmpresa: true,
             codigoTela: "LAN001_RH_PONTO",
           },
+          {
+            label: "Banco de Horas",
+            rota: "/rh/banco-horas",
+            requerEmpresa: true,
+            codigoTela: "REL001_RH_BANCO_HORAS",
+          },
+          {
+            label: "Consulta Banco de Horas",
+            rota: "/rh/banco-horas/consulta",
+            requerEmpresa: true,
+            codigoTela: "CONS001_RH_BANCO_HORAS",
+          },
         ],
       },
     ],
