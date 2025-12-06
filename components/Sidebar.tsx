@@ -16,6 +16,7 @@ type ItemMenu = {
   rota: string;
   requerEmpresa?: boolean;
   codigoTela?: string;
+  matchExact?: boolean;
 };
 
 const CHAVES_PERMISSOES = ["SEG_PERFIL_TELAS", "TELAS_PERMITIDAS", "TELAS_AUTORIZADAS"];
@@ -135,12 +136,14 @@ export function Sidebar() {
             rota: "/rh/banco-horas",
             requerEmpresa: true,
             codigoTela: "REL001_RH_BANCO_HORAS",
+            matchExact: true,
           },
           {
             label: "Consulta Banco de Horas",
             rota: "/rh/banco-horas/consulta",
             requerEmpresa: true,
             codigoTela: "CONS001_RH_BANCO_HORAS",
+            matchExact: true,
           },
         ],
       },
@@ -192,8 +195,9 @@ export function Sidebar() {
               <div className="sidebar-section-header">{secao.label}</div>
               <nav className="sidebar-nav">
                 {itensVisiveis.map((item) => {
-                  const ativo =
-                    item.rota === "/"
+                  const ativo = item.matchExact
+                    ? pathname === item.rota
+                    : item.rota === "/"
                       ? pathname === item.rota
                       : pathname.startsWith(item.rota);
 
