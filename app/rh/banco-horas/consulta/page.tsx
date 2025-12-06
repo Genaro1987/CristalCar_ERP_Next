@@ -22,12 +22,20 @@ function competenciaAtual() {
   return { ano: hoje.getFullYear(), mes: hoje.getMonth() + 1 };
 }
 
+function formatarMoeda(valor: number): string {
+  return valor.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+  });
+}
+
 export default function BancoHorasConsultaPage() {
   useRequerEmpresaSelecionada({ ativo: true });
   const { empresa } = useEmpresaSelecionada();
   const [funcionarios, setFuncionarios] = useState<FuncionarioOption[]>([]);
   const [resumo, setResumo] = useState<ResumoBancoHorasMes | null>(null);
-  const [notification, setNotification] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
   const compAtual = useMemo(() => competenciaAtual(), []);
   const [idFuncionario, setIdFuncionario] = useState("");
   const [ano, setAno] = useState(compAtual.ano);
@@ -54,7 +62,7 @@ export default function BancoHorasConsultaPage() {
 
   const pesquisar = async () => {
     if (!idFuncionario) {
-      setNotification("Selecione um funcionário");
+      setNotification({ type: "info", message: "Selecione um funcionário" });
       return;
     }
     setNotification(null);
@@ -68,11 +76,11 @@ export default function BancoHorasConsultaPage() {
       if (json?.success) {
         setResumo(json.data);
       } else {
-        setNotification("Não foi possível carregar o resumo");
+        setNotification({ type: "error", message: "Não foi possível carregar o resumo" });
       }
     } catch (error) {
       console.error(error);
-      setNotification("Erro ao consultar banco de horas");
+      setNotification({ type: "error", message: "Erro ao consultar banco de horas" });
     } finally {
       setLoading(false);
     }
@@ -86,109 +94,172 @@ export default function BancoHorasConsultaPage() {
         caminhoRota="/rh/banco-horas/consulta"
         modulo="RH"
       />
-      <div className="p-4 space-y-4">
-        {notification && <NotificationBar type="info" message={notification} />}
-        <div className="bg-white shadow rounded p-4 grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-          <label className="flex flex-col">
-            Funcionário
-            <select
-              value={idFuncionario}
-              onChange={(e) => setIdFuncionario(e.target.value)}
-              className="border rounded px-2 py-1"
-            >
-              <option value="">Selecione</option>
-              {funcionarios.map((f) => (
-                <option key={f.ID_FUNCIONARIO} value={f.ID_FUNCIONARIO}>
-                  {f.NOME_COMPLETO}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col">
-            Ano
-            <input
-              type="number"
-              value={ano}
-              onChange={(e) => setAno(Number(e.target.value))}
-              className="border rounded px-2 py-1"
-            />
-          </label>
-          <label className="flex flex-col">
-            Mês
-            <select
-              value={mes}
-              onChange={(e) => setMes(e.target.value)}
-              className="border rounded px-2 py-1"
-            >
-              {meses.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="flex items-end">
-            <button
-              onClick={pesquisar}
-              disabled={loading}
-              className="bg-blue-600 text-white px-4 py-2 rounded"
-            >
-              {loading ? "Buscando..." : "Pesquisar"}
-            </button>
+      <div className="page-content">
+        <div className="panel">
+          {notification && <NotificationBar type={notification.type} message={notification.message} />}
+
+          <div className="form-section-header">
+            <h2>Filtros</h2>
+            <p>Selecione o funcionário e competência para consultar o banco de horas</p>
           </div>
-        </div>
 
-        {resumo && (
-          <div className="bg-white shadow rounded p-4 text-sm space-y-2">
-            <div className="font-semibold">{resumo.funcionario.nome}</div>
-            <div className="text-gray-600">Competência: {String(resumo.competencia.mes).padStart(2, "0")}/{resumo.competencia.ano}</div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div>
-                <div>HE 50%</div>
-                <div className="font-semibold">{minutosParaHora(resumo.horasPagar50Min)}</div>
-              </div>
-              <div>
-                <div>HE 100%</div>
-                <div className="font-semibold">{minutosParaHora(resumo.horasPagar100Min)}</div>
-              </div>
-              <div>
-                <div>Horas devidas</div>
-                <div className="font-semibold">{minutosParaHora(resumo.horasDescontarMin)}</div>
-              </div>
-              <div>
-                <div>Saldo final banco</div>
-                <div className="font-semibold">{minutosParaHora(resumo.saldoFinalBancoMin)}</div>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-xs mt-2">
-                <thead>
-                  <tr className="bg-gray-100 text-left">
-                    <th className="p-2">Dia</th>
-                    <th className="p-2">Tipo</th>
-                    <th className="p-2">Jornada</th>
-                    <th className="p-2">Trabalhado</th>
-                    <th className="p-2">Diferença</th>
-                    <th className="p-2">Classificação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resumo.dias.map((dia) => (
-                    <tr key={dia.data} className="border-b">
-                      <td className="p-2 whitespace-nowrap">{dia.data} - {dia.diaSemana}</td>
-                      <td className="p-2">{dia.tipoDia}</td>
-                      <td className="p-2">{minutosParaHora(dia.jornadaPrevistaMin)}</td>
-                      <td className="p-2">{minutosParaHora(dia.trabalhadoMin)}</td>
-                      <td className="p-2">{minutosParaHora(dia.diferencaMin)}</td>
-                      <td className="p-2">{dia.classificacao}</td>
-                    </tr>
+          <div className="form">
+            <div className="form-grid three-columns">
+              <div className="form-group">
+                <label htmlFor="funcionario">Funcionário</label>
+                <select
+                  id="funcionario"
+                  value={idFuncionario}
+                  onChange={(e) => setIdFuncionario(e.target.value)}
+                  className="form-input"
+                >
+                  <option value="">Selecione</option>
+                  {funcionarios.map((f) => (
+                    <option key={f.ID_FUNCIONARIO} value={f.ID_FUNCIONARIO}>
+                      {f.NOME_COMPLETO}
+                    </option>
                   ))}
-                </tbody>
-              </table>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="ano">Ano</label>
+                <input
+                  id="ano"
+                  type="number"
+                  value={ano}
+                  onChange={(e) => setAno(Number(e.target.value))}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="mes">Mês</label>
+                <select
+                  id="mes"
+                  value={mes}
+                  onChange={(e) => setMes(e.target.value)}
+                  className="form-input"
+                >
+                  {meses.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="form-actions">
+              <div className="button-row">
+                <button
+                  onClick={pesquisar}
+                  disabled={loading}
+                  className="button button-primary"
+                >
+                  {loading ? "Buscando..." : "Pesquisar"}
+                </button>
+              </div>
             </div>
           </div>
-        )}
+
+          {resumo && (
+            <>
+              <div className="form-section-header" style={{ marginTop: "32px" }}>
+                <h2>{resumo.funcionario.nome}</h2>
+                <p>Competência: {String(resumo.competencia.mes).padStart(2, "0")}/{resumo.competencia.ano} |
+                   Departamento: {resumo.funcionario.nomeDepartamento ?? "-"}</p>
+              </div>
+
+              <div className="form-grid three-columns">
+                <div className="form-group">
+                  <label>Horas Extras 50%</label>
+                  <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669", fontWeight: 600 }}>
+                    {minutosParaHora(resumo.horasPagar50Min)} = {formatarMoeda((resumo.horasPagar50Min / 60) * resumo.funcionario.valorHora * 1.5)}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Horas Extras 100%</label>
+                  <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669", fontWeight: 600 }}>
+                    {minutosParaHora(resumo.horasPagar100Min)} = {formatarMoeda((resumo.horasPagar100Min / 60) * resumo.funcionario.valorHora * 2)}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Horas Devidas</label>
+                  <div className="form-input" style={{ backgroundColor: "#fef2f2", color: "#dc2626", fontWeight: 600 }}>
+                    {minutosParaHora(resumo.horasDescontarMin)} = {formatarMoeda((resumo.horasDescontarMin / 60) * resumo.funcionario.valorHora)}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Saldo Anterior</label>
+                  <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
+                    {minutosParaHora(resumo.saldoAnteriorMin)}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Ajustes e Fechamentos</label>
+                  <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
+                    {minutosParaHora(resumo.ajustesManuaisMin + resumo.fechamentosMin)}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Saldo Final</label>
+                  <div className="form-input" style={{ backgroundColor: "#fff3cd", fontWeight: 700 }}>
+                    {minutosParaHora(resumo.saldoFinalBancoMin)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-section-header" style={{ marginTop: "32px" }}>
+                <h2>Detalhamento Diário</h2>
+              </div>
+
+              <div className="departamento-tabela-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Dia</th>
+                      <th>Tipo</th>
+                      <th>Jornada</th>
+                      <th>Trabalhado</th>
+                      <th>Diferença</th>
+                      <th>Classificação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resumo.dias.map((dia) => (
+                      <tr key={dia.data}>
+                        <td className="whitespace-nowrap">{dia.data} - {dia.diaSemana}</td>
+                        <td>{dia.tipoDia}</td>
+                        <td>{minutosParaHora(dia.jornadaPrevistaMin)}</td>
+                        <td>{minutosParaHora(dia.trabalhadoMin)}</td>
+                        <td style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
+                          {minutosParaHora(dia.diferencaMin)}
+                        </td>
+                        <td>
+                          <span className={
+                            dia.classificacao === "EXTRA_UTIL" || dia.classificacao === "EXTRA_100"
+                              ? "badge badge-success"
+                              : dia.classificacao === "DEVEDOR" || dia.classificacao.includes("FALTA")
+                              ? "badge badge-danger"
+                              : "badge"
+                          }>
+                            {dia.classificacao}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </LayoutShell>
   );
