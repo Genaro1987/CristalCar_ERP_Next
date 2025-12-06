@@ -207,7 +207,7 @@ export default function BancoHorasConsultaPage() {
       <div className="page-container">
         <HeaderBar
           codigoTela="CONS001_RH_BANCO_HORAS"
-          nomeTela="CONSULTA BANCO DE HORAS"
+          nomeTela="CONSULTA DE BANCO DE HORAS"
           caminhoRota="/rh/banco-horas/consulta"
           modulo="RH"
         />
