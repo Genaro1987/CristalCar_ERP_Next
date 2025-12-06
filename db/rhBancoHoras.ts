@@ -695,7 +695,7 @@ export async function calcularBancoHorasMes(
     extras100Min,
     devidasMin,
     ajustesManuaisMin: ajustesMes,
-    fechamentosMin,
+    fechamentosMin: fechamentosMes,
     saldoTecnicoMin,
     horasPagar50Min,
     horasPagar100Min,

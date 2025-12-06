@@ -109,9 +109,14 @@ export default function BancoHorasPage() {
 
   return (
     <LayoutShell>
-      <HeaderBar title="REL001_RH_BANCO_HORAS" />
+      <HeaderBar
+        codigoTela="REL001_RH_BANCO_HORAS"
+        nomeTela="BANCO DE HORAS"
+        caminhoRota="/rh/banco-horas"
+        modulo="RH"
+      />
       <div className="p-4 space-y-4">
-        {notification && <NotificationBar type="warning" message={notification} />}
+        {notification && <NotificationBar type="info" message={notification} />}
         <div className="bg-white shadow rounded p-4 space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <label className="flex flex-col text-sm">

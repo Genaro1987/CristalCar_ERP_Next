@@ -73,7 +73,7 @@ export default function BancoHorasConsultaPage() {
         modulo="RH"
       />
       <div className="p-4 space-y-4">
-        {notification && <NotificationBar type="warning" message={notification} />}
+        {notification && <NotificationBar type="info" message={notification} />}
         <div className="bg-white shadow rounded p-4 grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
           <label className="flex flex-col">
             Funcionário
