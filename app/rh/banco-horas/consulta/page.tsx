@@ -66,7 +66,12 @@ export default function BancoHorasConsultaPage() {
 
   return (
     <LayoutShell>
-      <HeaderBar title="CONS001_RH_BANCO_HORAS" />
+      <HeaderBar
+        codigoTela="CONS001_RH_BANCO_HORAS"
+        nomeTela="CONSULTA BANCO DE HORAS"
+        caminhoRota="/rh/banco-horas/consulta"
+        modulo="RH"
+      />
       <div className="p-4 space-y-4">
         {notification && <NotificationBar type="warning" message={notification} />}
         <div className="bg-white shadow rounded p-4 grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
