@@ -73,6 +73,16 @@ export default function BancoHorasConsultaPage() {
   const [modalExportacaoAberto, setModalExportacaoAberto] = useState(false);
   const [periodosDisponiveis, setPeriodosDisponiveis] = useState<PeriodoOption[]>([]);
 
+  const periodoSelecionado = useMemo(
+    () => periodosDisponiveis.find((p) => p.valor === mes) ?? null,
+    [mes, periodosDisponiveis]
+  );
+
+  const pesquisaHabilitada =
+    !loading && !!idFuncionario && Number.isFinite(ano) && Boolean(mes) && Boolean(periodoSelecionado);
+
+  const exportacaoHabilitada = pesquisaHabilitada && periodoSelecionado?.situacao === "FECHADO";
+
   const empresaId = empresa?.id ?? null;
 
   const headersPadrao = useMemo<HeadersInit>(() => {
@@ -128,6 +138,10 @@ export default function BancoHorasConsultaPage() {
   const pesquisar = async () => {
     if (!idFuncionario) {
       setNotification({ type: "info", message: "Selecione um funcionário" });
+      return;
+    }
+    if (!mes || !periodoSelecionado) {
+      setNotification({ type: "info", message: "Selecione um período completo (ano e mês)" });
       return;
     }
     setNotification(null);
@@ -320,7 +334,7 @@ export default function BancoHorasConsultaPage() {
                 <div style={{ flex: "0 0 auto", display: "flex", gap: "8px" }}>
                   <button
                     onClick={pesquisar}
-                    disabled={loading}
+                    disabled={!pesquisaHabilitada}
                     className="button button-primary"
                   >
                     {loading ? "Buscando..." : "Pesquisar"}
@@ -328,8 +342,9 @@ export default function BancoHorasConsultaPage() {
                   <button
                     onClick={() => setModalExportacaoAberto(true)}
                     className="button"
+                    disabled={!exportacaoHabilitada}
                     style={{
-                      backgroundColor: "#059669",
+                      backgroundColor: exportacaoHabilitada ? "#059669" : "#9ca3af",
                       color: "white",
                     }}
                   >

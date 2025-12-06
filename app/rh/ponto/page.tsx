@@ -656,7 +656,9 @@ export default function PontoPage() {
 
       const json = await resposta.json();
 
-      if (resposta.ok && json?.success) {
+      const sucesso = (resposta.ok && json?.success !== false) || json?.success === true;
+
+      if (sucesso) {
         setNotification({ type: "success", message: "Ponto salvo com sucesso." });
       } else if (resposta.status === 400 && json?.error === "HORARIO_INVALIDO") {
         setErroFormulario("Horários devem estar no formato HH:MM.");

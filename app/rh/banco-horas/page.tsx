@@ -82,6 +82,11 @@ export default function BancoHorasPage() {
   );
   const [periodosDisponiveis, setPeriodosDisponiveis] = useState<PeriodoOption[]>([]);
   const [zerarBanco, setZerarBanco] = useState(false);
+  const [tipoOperacaoBanco, setTipoOperacaoBanco] = useState<
+    "ENVIAR_HORAS_PARA_BANCO" | "USAR_HORAS_DO_BANCO" | ""
+  >("");
+  const [horasBancoQuantidade, setHorasBancoQuantidade] = useState("");
+  const [zerarBancoAoFinal, setZerarBancoAoFinal] = useState(false);
   const [ajusteHoras, setAjusteHoras] = useState("");
   const [ajusteData, setAjusteData] = useState("");
   const [ajusteTipo, setAjusteTipo] = useState<"CREDITO" | "DEBITO">("CREDITO");
@@ -144,6 +149,43 @@ export default function BancoHorasPage() {
       setMes(periodosDisponiveis[0].valor);
     }
   }, [mes, periodosDisponiveis]);
+
+  const saldoAnteriorHoras = resumo?.saldoAnteriorMin ?? 0;
+  const extras50Horas = resumo?.extrasUteisMin ?? 0;
+  const extras100Horas = resumo?.extras100Min ?? 0;
+  const horasDevidas = resumo?.devidasMin ?? 0;
+  const valorHora = resumo?.funcionario.valorHora ?? 0;
+
+  const saldoMesHoras = saldoAnteriorHoras + extras50Horas + extras100Horas - horasDevidas;
+  const saldoMesValor =
+    saldoAnteriorHoras * (valorHora / 60) +
+    (extras50Horas / 60) * valorHora * 1.5 +
+    (extras100Horas / 60) * valorHora * 2 -
+    (horasDevidas / 60) * valorHora;
+
+  const horasMovimentacao = horaParaMinutos(horasBancoQuantidade);
+
+  const { saldoFinalParaPagarHoras, saldoBancoFinalHoras } = useMemo(() => {
+    let saldoFinal = saldoMesHoras;
+    let saldoBanco = saldoAnteriorHoras;
+
+    if (tipoOperacaoBanco && horasMovimentacao > 0) {
+      if (tipoOperacaoBanco === "ENVIAR_HORAS_PARA_BANCO") {
+        saldoFinal = saldoMesHoras - horasMovimentacao;
+        saldoBanco = saldoAnteriorHoras + horasMovimentacao;
+      } else {
+        saldoFinal = saldoMesHoras + horasMovimentacao;
+        saldoBanco = saldoAnteriorHoras - horasMovimentacao;
+      }
+    }
+
+    if (zerarBancoAoFinal && saldoBanco !== 0) {
+      saldoFinal += saldoBanco;
+      saldoBanco = 0;
+    }
+
+    return { saldoFinalParaPagarHoras: saldoFinal, saldoBancoFinalHoras: saldoBanco };
+  }, [horasMovimentacao, saldoAnteriorHoras, saldoMesHoras, tipoOperacaoBanco, zerarBancoAoFinal]);
 
   const carregarResumo = async () => {
     if (!idFuncionario) {
@@ -237,384 +279,462 @@ export default function BancoHorasPage() {
         <main className="page-content-card">
           {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
-          <div className="panel" style={{ maxWidth: "none" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            <section className="panel" style={{ maxWidth: "none", background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }}>
+              <header className="form-section-header">
+                <h2>Card 01 - FILTROS E CALCULAR</h2>
+                <p>Selecione EMPRESA/FUNCIONARIO/ANO/MES e acione CALCULAR PERIODO.</p>
+              </header>
 
-          <div className="form-section-header">
-            <h2>Filtros</h2>
-            <p>Selecione o funcionário e competência para calcular o banco de horas</p>
-          </div>
-
-          <div className="form">
-            <div style={{ display: "flex", gap: "16px", alignItems: "flex-end", flexWrap: "wrap" }}>
-              <div className="form-group" style={{ flex: "2", minWidth: "250px" }}>
-                <label htmlFor="funcionario">Funcionário</label>
-                <select
-                  id="funcionario"
-                  value={idFuncionario}
-                  onChange={(e) => setIdFuncionario(e.target.value)}
-                  className="form-input"
-                >
-                  <option value="">Selecione</option>
-                  {funcionarios.map((f) => (
-                    <option key={f.ID_FUNCIONARIO} value={f.ID_FUNCIONARIO}>
-                      {f.NOME_COMPLETO}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group" style={{ flex: "0 0 120px" }}>
-                <label htmlFor="ano">Ano</label>
-                <input
-                  id="ano"
-                  type="number"
-                  value={ano}
-                  onChange={(e) => setAno(Number(e.target.value))}
-                  className="form-input"
-                />
-              </div>
-
-              <div className="form-group" style={{ flex: "1", minWidth: "150px" }}>
-                <label htmlFor="mes">Mês</label>
-                <select
-                  id="mes"
-                  value={mes}
-                  onChange={(e) => setMes(e.target.value)}
-                  className="form-input"
-                >
-                  <option value="">Selecione</option>
-                  {periodosDisponiveis.map((m) => (
-                    <option key={`${m.valor}-${m.situacao}`} value={m.valor}>
-                      {m.nome} ({m.situacao})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ flex: "0 0 auto" }}>
-                <button
-                  onClick={carregarResumo}
-                  disabled={
-                    loading ||
-                    !idFuncionario ||
-                    !ano ||
-                    !mes ||
-                    !periodosDisponiveis.some((p) => p.valor === mes)
-                  }
-                  className="button button-primary"
-                >
-                  {loading ? "Calculando..." : "Calcular"}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {resumo && (
-            <>
-              <div className="form-section-header" style={{ marginTop: "32px" }}>
-                <h2>Dados do Funcionário</h2>
-              </div>
-
-              <div className="form-grid three-columns">
-                <div className="form-group">
-                  <label>Nome</label>
-                  <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
-                    {resumo.funcionario.nome}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Departamento</label>
-                  <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
-                    {resumo.funcionario.nomeDepartamento ?? "-"}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Valor Hora</label>
-                  <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
-                    {formatarMoeda(resumo.funcionario.valorHora)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-section-header" style={{ marginTop: "32px" }}>
-                <h2>Resumo do Mês</h2>
-                <p>Competência: {String(mes).padStart(2, "0")}/{ano}</p>
-              </div>
-
-              <div className="form-grid three-columns">
-                <div className="form-group">
-                  <label>Saldo Anterior</label>
-                  <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
-                    {minutosParaHora(resumo.saldoAnteriorMin)}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Extras Úteis (50%)</label>
-                  <div className="form-input" style={{ backgroundColor: "#f9fafb", color: "#059669" }}>
-                    {minutosParaHora(resumo.extrasUteisMin)}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Extras 100%</label>
-                  <div className="form-input" style={{ backgroundColor: "#f9fafb", color: "#059669" }}>
-                    {minutosParaHora(resumo.extras100Min)}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Horas Devidas</label>
-                  <div className="form-input" style={{ backgroundColor: "#f9fafb", color: "#dc2626" }}>
-                    {minutosParaHora(resumo.devidasMin)}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Ajustes Manuais</label>
-                  <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
-                    {minutosParaHora(resumo.ajustesManuaisMin)}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Fechamentos</label>
-                  <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
-                    {minutosParaHora(resumo.fechamentosMin)}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Saldo Técnico</label>
-                  <div className="form-input" style={{ backgroundColor: "#f9fafb", fontWeight: 700 }}>
-                    {minutosParaHora(resumo.saldoTecnicoMin)}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Saldo Final</label>
-                  <div className="form-input" style={{ backgroundColor: "#fff3cd", fontWeight: 700 }}>
-                    {minutosParaHora(resumo.saldoFinalBancoMin)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-section-header" style={{ marginTop: "32px" }}>
-                <h2>Ações Finais</h2>
-                <p>Defina a política de faltas e se deseja zerar o banco ao final do mês</p>
-              </div>
-
-              <div className="form">
-                <div style={{ display: "flex", gap: "32px", alignItems: "center", flexWrap: "wrap" }}>
-                  <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                    <span style={{ marginRight: "8px", fontWeight: 500 }}>Política de faltas:</span>
-                    <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", whiteSpace: "nowrap" }}>
-                      <input
-                        type="radio"
-                        checked={politica === "COMPENSAR_COM_HORAS_EXTRAS"}
-                        onChange={() => setPolitica("COMPENSAR_COM_HORAS_EXTRAS")}
-                      />
-                      <span>Compensar com horas extras</span>
-                    </label>
-                    <label style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "16px", cursor: "pointer", whiteSpace: "nowrap" }}>
-                      <input
-                        type="radio"
-                        checked={politica === "DESCONTAR_EM_FOLHA"}
-                        onChange={() => setPolitica("DESCONTAR_EM_FOLHA")}
-                      />
-                      <span>Descontar em folha</span>
-                    </label>
+              <div className="form" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
+                <div style={{ display: "flex", gap: "16px", alignItems: "flex-end", flexWrap: "wrap" }}>
+                  <div className="form-group" style={{ flex: "2", minWidth: "250px" }}>
+                    <label htmlFor="funcionario">FUNCIONARIO</label>
+                    <select
+                      id="funcionario"
+                      value={idFuncionario}
+                      onChange={(e) => setIdFuncionario(e.target.value)}
+                      className="form-input"
+                    >
+                      <option value="">Selecione</option>
+                      {funcionarios.map((f) => (
+                        <option key={f.ID_FUNCIONARIO} value={f.ID_FUNCIONARIO}>
+                          {f.NOME_COMPLETO}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", whiteSpace: "nowrap" }}>
+                  <div className="form-group" style={{ flex: "0 0 120px" }}>
+                    <label htmlFor="ano">ANO</label>
                     <input
-                      type="checkbox"
-                      checked={zerarBanco}
-                      onChange={(e) => setZerarBanco(e.target.checked)}
+                      id="ano"
+                      type="number"
+                      value={ano}
+                      onChange={(e) => setAno(Number(e.target.value))}
+                      className="form-input"
                     />
-                    <span>Zerar banco ao final do mês</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="form-section-header" style={{ marginTop: "32px" }}>
-                <h2>Valores a Pagar/Descontar</h2>
-              </div>
-
-              <div className="form-grid three-columns">
-                <div className="form-group">
-                  <label>Horas a Pagar 50%</label>
-                  <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
-                    {minutosParaHora(resumo.horasPagar50Min)} = {formatarMoeda((resumo.horasPagar50Min / 60) * resumo.funcionario.valorHora * 1.5)}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Horas a Pagar 100%</label>
-                  <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
-                    {minutosParaHora(resumo.horasPagar100Min)} = {formatarMoeda((resumo.horasPagar100Min / 60) * resumo.funcionario.valorHora * 2)}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Horas a Descontar</label>
-                  <div className="form-input" style={{ backgroundColor: "#f9fafb", color: "#dc2626" }}>
-                    {minutosParaHora(resumo.horasDescontarMin)} = {formatarMoeda((resumo.horasDescontarMin / 60) * resumo.funcionario.valorHora)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-section-header" style={{ marginTop: "32px" }}>
-                <h2>Detalhamento Diário</h2>
-              </div>
-
-              <div className="departamento-tabela-wrapper">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Dia</th>
-                      <th>Tipo</th>
-                      <th>Jornada</th>
-                      <th>Trabalhado</th>
-                      <th>Diferença</th>
-                      <th>Classificação</th>
-                      <th>Impacto</th>
-                      <th>Obs</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {resumo.dias.map((dia) => (
-                      <tr key={dia.data}>
-                        <td className="whitespace-nowrap">{dia.data} - {dia.diaSemana}</td>
-                        <td>{dia.tipoDia}</td>
-                        <td>{minutosParaHora(dia.jornadaPrevistaMin)}</td>
-                        <td>{minutosParaHora(dia.trabalhadoMin)}</td>
-                        <td style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
-                          {minutosParaHora(dia.diferencaMin)}
-                        </td>
-                        <td>
-                          <span className={
-                            dia.classificacao === "EXTRA_UTIL" || dia.classificacao === "EXTRA_100"
-                              ? "badge badge-success"
-                              : dia.classificacao === "DEVEDOR" || dia.classificacao.includes("FALTA")
-                              ? "badge badge-danger"
-                              : "badge"
-                          }>
-                            {dia.classificacao}
-                          </span>
-                        </td>
-                        <td style={{ color: dia.impactoBancoMin > 0 ? "#059669" : dia.impactoBancoMin < 0 ? "#dc2626" : "inherit" }}>
-                          {minutosParaHora(dia.impactoBancoMin)}
-                        </td>
-                        <td>{dia.observacao ?? "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {resumo.movimentos.length > 0 && (
-                <>
-                  <div className="form-section-header" style={{ marginTop: "32px" }}>
-                    <h2>Movimentos de Banco de Horas</h2>
                   </div>
 
-                  <div className="departamento-tabela-wrapper">
+                  <div className="form-group" style={{ flex: "1", minWidth: "150px" }}>
+                    <label htmlFor="mes">MES</label>
+                    <select
+                      id="mes"
+                      value={mes}
+                      onChange={(e) => setMes(e.target.value)}
+                      className="form-input"
+                    >
+                      <option value="">Selecione</option>
+                      {periodosDisponiveis.map((m) => (
+                        <option key={`${m.valor}-${m.situacao}`} value={m.valor}>
+                          {m.nome} ({m.situacao})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ flex: "0 0 auto" }}>
+                    <button
+                      onClick={carregarResumo}
+                      disabled={
+                        loading ||
+                        !idFuncionario ||
+                        !ano ||
+                        !mes ||
+                        !periodosDisponiveis.some((p) => p.valor === mes)
+                      }
+                      className="button button-primary"
+                      style={{ backgroundColor: "#f97316", borderColor: "#ea580c" }}
+                    >
+                      {loading ? "Calculando..." : "Calcular período"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {resumo && (
+              <>
+                <section className="panel" style={{ background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }}>
+                  <header className="form-section-header">
+                    <h2>Card 02 - DADOS DO FUNCIONARIO</h2>
+                    <p>Informações principais do colaborador.</p>
+                  </header>
+                  <div className="form-grid three-columns" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
+                    <div className="form-group">
+                      <label>MATRICULA</label>
+                      <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
+                        {resumo.funcionario.id}
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label>NOME</label>
+                      <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
+                        {resumo.funcionario.nome}
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label>SETOR</label>
+                      <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
+                        {resumo.funcionario.nomeDepartamento ?? "-"}
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label>VALOR HORA</label>
+                      <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
+                        {formatarMoeda(resumo.funcionario.valorHora)}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="panel" style={{ background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }}>
+                  <header className="form-section-header">
+                    <h2>Card 03 - RESUMO DO MES</h2>
+                    <p>Sequência em horas e valores para acompanhamento mensal.</p>
+                  </header>
+
+                  <div style={{ display: "grid", gap: "12px", borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "12px" }}>
+                      <div className="form-group">
+                        <label>SALDO ANTERIOR</label>
+                        <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>
+                          {minutosParaHora(saldoAnteriorHoras)}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>EXTRAS 50%</label>
+                        <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669" }}>
+                          {minutosParaHora(extras50Horas)}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>EXTRAS 100%</label>
+                        <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669" }}>
+                          {minutosParaHora(extras100Horas)}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>HORAS DEVIDAS</label>
+                        <div className="form-input" style={{ backgroundColor: "#fef2f2", color: "#dc2626" }}>
+                          {minutosParaHora(horasDevidas)}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>SALDO DO MES (HORAS)</label>
+                        <div className="form-input" style={{ backgroundColor: "#fff3cd", fontWeight: 700 }}>
+                          {minutosParaHora(saldoMesHoras)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "12px" }}>
+                      <div className="form-group">
+                        <label>SALDO ANTERIOR (VALOR)</label>
+                        <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>
+                          {formatarMoeda((saldoAnteriorHoras / 60) * valorHora)}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>EXTRAS 50% (VALOR)</label>
+                        <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669" }}>
+                          {formatarMoeda((extras50Horas / 60) * valorHora * 1.5)}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>EXTRAS 100% (VALOR)</label>
+                        <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669" }}>
+                          {formatarMoeda((extras100Horas / 60) * valorHora * 2)}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>VALOR DEVIDO</label>
+                        <div className="form-input" style={{ backgroundColor: "#fef2f2", color: "#dc2626" }}>
+                          {formatarMoeda((horasDevidas / 60) * valorHora)}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>SALDO DO MES (VALOR)</label>
+                        <div className="form-input" style={{ backgroundColor: "#fff3cd", fontWeight: 700 }}>
+                          {formatarMoeda(saldoMesValor)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="panel" style={{ background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }}>
+                  <header className="form-section-header">
+                    <h2>Card 04 - ACOES FINAIS</h2>
+                    <p>HORAS PARA BANCO DE HORAS e fechamento técnico.</p>
+                  </header>
+
+                  <div className="form" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
+                    <div className="form-grid three-columns">
+                      <div className="form-group">
+                        <label>SALDO MES HORAS</label>
+                        <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
+                          {minutosParaHora(saldoMesHoras)}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>SALDO BANCO ANTERIOR</label>
+                        <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
+                          {minutosParaHora(saldoAnteriorHoras)}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>TIPO DE OPERACAO</label>
+                        <select
+                          value={tipoOperacaoBanco}
+                          onChange={(e) =>
+                            setTipoOperacaoBanco(
+                              e.target.value as "ENVIAR_HORAS_PARA_BANCO" | "USAR_HORAS_DO_BANCO" | ""
+                            )
+                          }
+                          className="form-input"
+                        >
+                          <option value="">Selecione</option>
+                          <option value="ENVIAR_HORAS_PARA_BANCO">Enviar horas para banco (credito)</option>
+                          <option value="USAR_HORAS_DO_BANCO">Usar horas do banco (abater)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="form-grid three-columns">
+                      <div className="form-group">
+                        <label>HORAS BANCO (HH:MM)</label>
+                        <input
+                          type="text"
+                          value={horasBancoQuantidade}
+                          onChange={(e) => setHorasBancoQuantidade(e.target.value)}
+                          className="form-input"
+                          placeholder="Informe horas para movimento"
+                          required={Boolean(tipoOperacaoBanco)}
+                        />
+                        {tipoOperacaoBanco && horasMovimentacao <= 0 && (
+                          <p className="error-text">Informe um valor de horas maior que zero.</p>
+                        )}
+                      </div>
+                      <div className="form-group">
+                        <label>SALDO PARA PAGAR/DESCONTAR</label>
+                        <div className="form-input" style={{ backgroundColor: "#fff7ed", fontWeight: 600 }}>
+                          {minutosParaHora(saldoFinalParaPagarHoras)}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>SALDO FINAL DO BANCO</label>
+                        <div className="form-input" style={{ backgroundColor: "#fff7ed", fontWeight: 600 }}>
+                          {minutosParaHora(saldoBancoFinalHoras)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="form-grid three-columns">
+                      <div className="form-group">
+                        <label>POLITICA DE FALTAS</label>
+                        <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+                          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                            <input
+                              type="radio"
+                              checked={politica === "COMPENSAR_COM_HORAS_EXTRAS"}
+                              onChange={() => setPolitica("COMPENSAR_COM_HORAS_EXTRAS")}
+                            />
+                            <span>COMPENSAR COM HORAS EXTRAS</span>
+                          </label>
+                          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                            <input
+                              type="radio"
+                              checked={politica === "DESCONTAR_EM_FOLHA"}
+                              onChange={() => setPolitica("DESCONTAR_EM_FOLHA")}
+                            />
+                            <span>DESCONTAR EM FOLHA</span>
+                          </label>
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>ZERAR BANCO AO FINAL DO MES</label>
+                        <button
+                          type="button"
+                          className="button button-primary"
+                          style={{ backgroundColor: "#f97316", borderColor: "#ea580c" }}
+                          onClick={() => {
+                            setZerarBancoAoFinal((prev) => !prev);
+                            setZerarBanco((prev) => !prev);
+                          }}
+                        >
+                          {zerarBancoAoFinal ? "Desfazer zerar banco" : "Zerar banco ao final do mes"}
+                        </button>
+                      </div>
+                      <div className="form-group">
+                        <label>HORAS A PAGAR 100% (REFERENCIA)</label>
+                        <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>
+                          {minutosParaHora(resumo.horasPagar100Min)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="panel" style={{ background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }}>
+                  <header className="form-section-header">
+                    <h2>Card 05 - DETALHAMENTO DIARIO</h2>
+                    <p>Grade diária com impactos em horas e valores.</p>
+                  </header>
+
+                  <div className="departamento-tabela-wrapper" style={{ marginTop: "12px" }}>
                     <table className="data-table">
                       <thead>
                         <tr>
-                          <th>Data</th>
+                          <th>Dia</th>
                           <th>Tipo</th>
-                          <th>Minutos</th>
-                          <th>Observação</th>
+                          <th>Jornada</th>
+                          <th>Trabalhado</th>
+                          <th>Diferença</th>
+                          <th>Classificação</th>
+                          <th>Impacto</th>
+                          <th>Obs</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {resumo.movimentos.map((mov) => (
-                          <tr key={mov.id}>
-                            <td>{mov.data}</td>
-                            <td>{mov.tipo}</td>
-                            <td style={{ color: mov.minutos > 0 ? "#059669" : mov.minutos < 0 ? "#dc2626" : "inherit" }}>
-                              {minutosParaHora(mov.minutos)}
+                        {resumo.dias.map((dia) => (
+                          <tr key={dia.data}>
+                            <td className="whitespace-nowrap">{dia.data} - {dia.diaSemana}</td>
+                            <td>{dia.tipoDia}</td>
+                            <td>{minutosParaHora(dia.jornadaPrevistaMin)}</td>
+                            <td>{minutosParaHora(dia.trabalhadoMin)}</td>
+                            <td style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
+                              {minutosParaHora(dia.diferencaMin)}
                             </td>
-                            <td>{mov.observacao ?? "-"}</td>
+                            <td>
+                              <span
+                                className={
+                                  dia.classificacao === "EXTRA_UTIL" || dia.classificacao === "EXTRA_100"
+                                    ? "badge badge-success"
+                                    : dia.classificacao === "DEVEDOR" || dia.classificacao.includes("FALTA")
+                                    ? "badge badge-danger"
+                                    : "badge"
+                                }
+                              >
+                                {dia.classificacao}
+                              </span>
+                            </td>
+                            <td style={{ color: dia.impactoBancoMin > 0 ? "#059669" : dia.impactoBancoMin < 0 ? "#dc2626" : "inherit" }}>
+                              {minutosParaHora(dia.impactoBancoMin)}
+                            </td>
+                            <td>{dia.observacao ?? "-"}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                </>
-              )}
+                </section>
 
-              <div className="form-section-header" style={{ marginTop: "32px" }}>
-                <h2>Incluir Ajuste Manual</h2>
-              </div>
+                <section className="panel" style={{ background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }}>
+                  <header className="form-section-header">
+                    <h2>Card 06 - MOVIMENTOS DO BANCO DE HORAS</h2>
+                    <p>Histórico de movimentações e inclusão de ajustes.</p>
+                  </header>
 
-              <div className="form-grid three-columns">
-                <div className="form-group">
-                  <label htmlFor="ajusteData">Data</label>
-                  <input
-                    id="ajusteData"
-                    type="date"
-                    value={ajusteData}
-                    onChange={(e) => setAjusteData(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
+                  {resumo.movimentos.length > 0 && (
+                    <div className="departamento-tabela-wrapper" style={{ marginTop: "12px" }}>
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Data</th>
+                            <th>Tipo</th>
+                            <th>Minutos</th>
+                            <th>Observação</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {resumo.movimentos.map((mov) => (
+                            <tr key={mov.id}>
+                              <td>{mov.data}</td>
+                              <td>{mov.tipo}</td>
+                              <td style={{ color: mov.minutos > 0 ? "#059669" : mov.minutos < 0 ? "#dc2626" : "inherit" }}>
+                                {minutosParaHora(mov.minutos)}
+                              </td>
+                              <td>{mov.observacao ?? "-"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
 
-                <div className="form-group">
-                  <label htmlFor="ajusteTipo">Tipo</label>
-                  <select
-                    id="ajusteTipo"
-                    value={ajusteTipo}
-                    onChange={(e) => setAjusteTipo(e.target.value as "CREDITO" | "DEBITO")}
-                    className="form-input"
-                  >
-                    <option value="CREDITO">Crédito</option>
-                    <option value="DEBITO">Débito</option>
-                  </select>
-                </div>
+                  <div className="form-section-header" style={{ marginTop: "24px" }}>
+                    <h3>INCLUIR AJUSTE MANUAL</h3>
+                  </div>
 
-                <div className="form-group">
-                  <label htmlFor="ajusteHoras">Horas (HH:MM)</label>
-                  <input
-                    id="ajusteHoras"
-                    type="text"
-                    value={ajusteHoras}
-                    onChange={(e) => setAjusteHoras(e.target.value)}
-                    className="form-input"
-                    placeholder="Ex: 02:30"
-                  />
-                </div>
-              </div>
+                  <div className="form-grid three-columns">
+                    <div className="form-group">
+                      <label htmlFor="ajusteData">DATA</label>
+                      <input
+                        id="ajusteData"
+                        type="date"
+                        value={ajusteData}
+                        onChange={(e) => setAjusteData(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
 
-              <div className="form-group">
-                <label htmlFor="ajusteObs">Observação</label>
-                <input
-                  id="ajusteObs"
-                  type="text"
-                  value={ajusteObs}
-                  onChange={(e) => setAjusteObs(e.target.value)}
-                  className="form-input"
-                  placeholder="Motivo do ajuste"
-                />
-              </div>
+                    <div className="form-group">
+                      <label htmlFor="ajusteTipo">TIPO</label>
+                      <select
+                        id="ajusteTipo"
+                        value={ajusteTipo}
+                        onChange={(e) => setAjusteTipo(e.target.value as "CREDITO" | "DEBITO")}
+                        className="form-input"
+                      >
+                        <option value="CREDITO">CREDITO</option>
+                        <option value="DEBITO">DEBITO</option>
+                      </select>
+                    </div>
 
-              <div className="form-actions">
-                <div className="button-row">
-                  <button
-                    onClick={incluirAjuste}
-                    className="button button-primary"
-                    disabled={loading}
-                  >
-                    Incluir Ajuste Manual
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
+                    <div className="form-group">
+                      <label htmlFor="ajusteHoras">HORAS (HH:MM)</label>
+                      <input
+                        id="ajusteHoras"
+                        type="text"
+                        value={ajusteHoras}
+                        onChange={(e) => setAjusteHoras(e.target.value)}
+                        className="form-input"
+                        placeholder="Ex: 02:30"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="ajusteObs">OBSERVACAO</label>
+                    <input
+                      id="ajusteObs"
+                      type="text"
+                      value={ajusteObs}
+                      onChange={(e) => setAjusteObs(e.target.value)}
+                      className="form-input"
+                      placeholder="Motivo do ajuste"
+                    />
+                  </div>
+
+                  <div className="form-actions">
+                    <div className="button-row">
+                      <button
+                        onClick={incluirAjuste}
+                        className="button button-primary"
+                        disabled={loading}
+                        style={{ backgroundColor: "#f97316", borderColor: "#ea580c" }}
+                      >
+                        Incluir Ajuste Manual
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              </>
+            )}
           </div>
         </main>
       </div>
