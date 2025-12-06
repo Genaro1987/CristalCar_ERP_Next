@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         inserts.push({ minutos: minutosFechamentoPagar, tipo: "FECHAMENTO_PAGAR" });
       }
 
-      const minutosFechamentoDescontar = minutosDescontar > 0 ? -Math.abs(minutosDescontar) : 0;
+      const minutosFechamentoDescontar = minutosDescontar > 0 ? Math.abs(minutosDescontar) : 0;
       if (minutosFechamentoDescontar !== 0) {
         inserts.push({ minutos: minutosFechamentoDescontar, tipo: "FECHAMENTO_DESCONTAR" });
       }
