@@ -7,7 +7,7 @@ import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSeleci
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
-import { minutosParaHora } from "@/lib/rhPontoCalculo";
+import { minutosParaHora, parseHoraParaMinutos } from "@/lib/rhPontoCalculo";
 import type { ResumoBancoHorasMes } from "@/db/rhBancoHoras";
 
 interface FuncionarioOption {
@@ -49,20 +49,16 @@ function formatarMoeda(valor: number): string {
   });
 }
 
-function horaParaMinutos(horaStr: string): number {
-  const partes = horaStr.split(":");
-  if (partes.length !== 2) return 0;
-  const horas = parseInt(partes[0]) || 0;
-  const minutos = parseInt(partes[1]) || 0;
-  return horas * 60 + minutos;
-}
-
 function mesParaTexto(mesNumero: number): string {
   return nomesMeses[mesNumero] ?? mesNumero.toString();
 }
 
 function mesParaValor(mesNumero: number): string {
   return mesNumero.toString().padStart(2, "0");
+}
+
+function CardDivider() {
+  return <div className="banco-horas-divider" aria-hidden />;
 }
 
 export default function BancoHorasPage() {
@@ -77,9 +73,6 @@ export default function BancoHorasPage() {
   const [idFuncionario, setIdFuncionario] = useState("");
   const [ano, setAno] = useState(compAtual.ano);
   const [mes, setMes] = useState("");
-  const [politica, setPolitica] = useState<"COMPENSAR_COM_HORAS_EXTRAS" | "DESCONTAR_EM_FOLHA">(
-    "COMPENSAR_COM_HORAS_EXTRAS"
-  );
   const [periodosDisponiveis, setPeriodosDisponiveis] = useState<PeriodoOption[]>([]);
   const [zerarBanco, setZerarBanco] = useState(false);
   const [tipoOperacaoBanco, setTipoOperacaoBanco] = useState<
@@ -163,7 +156,7 @@ export default function BancoHorasPage() {
     (extras100Horas / 60) * valorHora * 2 -
     (horasDevidas / 60) * valorHora;
 
-  const horasMovimentacao = horaParaMinutos(horasBancoQuantidade);
+  const horasMovimentacao = parseHoraParaMinutos(horasBancoQuantidade) ?? 0;
 
   const { saldoFinalParaPagarHoras, saldoBancoFinalHoras } = useMemo(() => {
     let saldoFinal = saldoMesHoras;
@@ -204,7 +197,7 @@ export default function BancoHorasPage() {
     setNotification(null);
     try {
       const resp = await fetch(
-        `/api/rh/banco-horas/resumo?idFuncionario=${idFuncionario}&ano=${ano}&mes=${mes}&politicaFaltas=${politica}&zerarBancoNoMes=${zerarBanco}`,
+        `/api/rh/banco-horas/resumo?idFuncionario=${idFuncionario}&ano=${ano}&mes=${mes}&zerarBancoNoMes=${zerarBanco}`,
         { headers: headersPadrao }
       );
       const json = await resp.json();
@@ -227,7 +220,7 @@ export default function BancoHorasPage() {
       return;
     }
 
-    const minutosCalc = horaParaMinutos(ajusteHoras);
+    const minutosCalc = parseHoraParaMinutos(ajusteHoras) ?? 0;
     if (minutosCalc === 0) {
       setNotification({ type: "info", message: "Informe as horas no formato HH:MM (ex: 02:30)" });
       return;
@@ -276,19 +269,19 @@ export default function BancoHorasPage() {
           modulo="RH"
         />
 
-        <main className="page-content-card">
+        <main className="page-content-card banco-horas-page">
           {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            <section className="panel" style={{ maxWidth: "none", background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }}>
+          <div className="banco-horas-cards">
+            <section className="panel banco-horas-panel">
               <header className="form-section-header">
-                <h2>Card 01 - FILTROS E CALCULAR</h2>
+                <h2>FILTROS E CALCULAR</h2>
                 <p>Selecione EMPRESA/FUNCIONARIO/ANO/MES e acione CALCULAR PERIODO.</p>
               </header>
 
-              <div className="form" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
-                <div style={{ display: "flex", gap: "16px", alignItems: "flex-end", flexWrap: "wrap" }}>
-                  <div className="form-group" style={{ flex: "2", minWidth: "250px" }}>
+              <div className="form" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
+                <div className="banco-horas-card-grid" style={{ alignItems: "flex-end" }}>
+                  <div className="form-group">
                     <label htmlFor="funcionario">FUNCIONARIO</label>
                     <select
                       id="funcionario"
@@ -305,7 +298,7 @@ export default function BancoHorasPage() {
                     </select>
                   </div>
 
-                  <div className="form-group" style={{ flex: "0 0 120px" }}>
+                  <div className="form-group">
                     <label htmlFor="ano">ANO</label>
                     <input
                       id="ano"
@@ -316,7 +309,7 @@ export default function BancoHorasPage() {
                     />
                   </div>
 
-                  <div className="form-group" style={{ flex: "1", minWidth: "150px" }}>
+                  <div className="form-group">
                     <label htmlFor="mes">MES</label>
                     <select
                       id="mes"
@@ -333,7 +326,8 @@ export default function BancoHorasPage() {
                     </select>
                   </div>
 
-                  <div style={{ flex: "0 0 auto" }}>
+                  <div className="form-group" style={{ justifySelf: "flex-start" }}>
+                    <label className="sr-only">CALCULAR</label>
                     <button
                       onClick={carregarResumo}
                       disabled={
@@ -344,7 +338,7 @@ export default function BancoHorasPage() {
                         !periodosDisponiveis.some((p) => p.valor === mes)
                       }
                       className="button button-primary"
-                      style={{ backgroundColor: "#f97316", borderColor: "#ea580c" }}
+                      style={{ backgroundColor: "#f97316", borderColor: "#ea580c", width: "100%" }}
                     >
                       {loading ? "Calculando..." : "Calcular período"}
                     </button>
@@ -355,12 +349,14 @@ export default function BancoHorasPage() {
 
             {resumo && (
               <>
-                <section className="panel" style={{ background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }}>
+                <CardDivider />
+
+                <section className="panel banco-horas-panel">
                   <header className="form-section-header">
-                    <h2>Card 02 - DADOS DO FUNCIONARIO</h2>
+                    <h2>DADOS DO FUNCIONARIO</h2>
                     <p>Informações principais do colaborador.</p>
                   </header>
-                  <div className="form-grid three-columns" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
+                  <div className="banco-horas-card-grid" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
                     <div className="form-group">
                       <label>MATRICULA</label>
                       <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
@@ -391,14 +387,16 @@ export default function BancoHorasPage() {
                   </div>
                 </section>
 
-                <section className="panel" style={{ background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }}>
+                <CardDivider />
+
+                <section className="panel banco-horas-panel">
                   <header className="form-section-header">
-                    <h2>Card 03 - RESUMO DO MES</h2>
+                    <h2>RESUMO DO MES</h2>
                     <p>Sequência em horas e valores para acompanhamento mensal.</p>
                   </header>
 
-                  <div style={{ display: "grid", gap: "12px", borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "12px" }}>
+                  <div style={{ display: "grid", gap: "12px", borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
                       <div className="form-group">
                         <label>SALDO ANTERIOR</label>
                         <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>
@@ -431,7 +429,7 @@ export default function BancoHorasPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "12px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
                       <div className="form-group">
                         <label>SALDO ANTERIOR (VALOR)</label>
                         <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>
@@ -466,14 +464,16 @@ export default function BancoHorasPage() {
                   </div>
                 </section>
 
-                <section className="panel" style={{ background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }}>
+                <CardDivider />
+
+                <section className="panel banco-horas-panel">
                   <header className="form-section-header">
-                    <h2>Card 04 - ACOES FINAIS</h2>
+                    <h2>ACOES FINAIS</h2>
                     <p>HORAS PARA BANCO DE HORAS e fechamento técnico.</p>
                   </header>
 
-                  <div className="form" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
-                    <div className="form-grid three-columns">
+                  <div className="form" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
+                    <div className="banco-horas-card-grid">
                       <div className="form-group">
                         <label>SALDO MES HORAS</label>
                         <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
@@ -504,16 +504,19 @@ export default function BancoHorasPage() {
                       </div>
                     </div>
 
-                    <div className="form-grid three-columns">
+                    <div className="banco-horas-card-grid">
                       <div className="form-group">
                         <label>HORAS BANCO (HH:MM)</label>
                         <input
-                          type="text"
+                          type="time"
                           value={horasBancoQuantidade}
                           onChange={(e) => setHorasBancoQuantidade(e.target.value)}
                           className="form-input"
                           placeholder="Informe horas para movimento"
                           required={Boolean(tipoOperacaoBanco)}
+                          min="00:01"
+                          max="23:59"
+                          step={60}
                         />
                         {tipoOperacaoBanco && horasMovimentacao <= 0 && (
                           <p className="error-text">Informe um valor de horas maior que zero.</p>
@@ -533,28 +536,7 @@ export default function BancoHorasPage() {
                       </div>
                     </div>
 
-                    <div className="form-grid three-columns">
-                      <div className="form-group">
-                        <label>POLITICA DE FALTAS</label>
-                        <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-                          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                            <input
-                              type="radio"
-                              checked={politica === "COMPENSAR_COM_HORAS_EXTRAS"}
-                              onChange={() => setPolitica("COMPENSAR_COM_HORAS_EXTRAS")}
-                            />
-                            <span>COMPENSAR COM HORAS EXTRAS</span>
-                          </label>
-                          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                            <input
-                              type="radio"
-                              checked={politica === "DESCONTAR_EM_FOLHA"}
-                              onChange={() => setPolitica("DESCONTAR_EM_FOLHA")}
-                            />
-                            <span>DESCONTAR EM FOLHA</span>
-                          </label>
-                        </div>
-                      </div>
+                    <div className="banco-horas-card-grid">
                       <div className="form-group">
                         <label>ZERAR BANCO AO FINAL DO MES</label>
                         <button
@@ -579,13 +561,15 @@ export default function BancoHorasPage() {
                   </div>
                 </section>
 
-                <section className="panel" style={{ background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }}>
+                <CardDivider />
+
+                <section className="panel banco-horas-panel">
                   <header className="form-section-header">
-                    <h2>Card 05 - DETALHAMENTO DIARIO</h2>
+                    <h2>DETALHAMENTO DIARIO</h2>
                     <p>Grade diária com impactos em horas e valores.</p>
                   </header>
 
-                  <div className="departamento-tabela-wrapper" style={{ marginTop: "12px" }}>
+                  <div className="departamento-tabela-wrapper" style={{ marginTop: "8px" }}>
                     <table className="data-table">
                       <thead>
                         <tr>
@@ -633,14 +617,16 @@ export default function BancoHorasPage() {
                   </div>
                 </section>
 
-                <section className="panel" style={{ background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }}>
+                <CardDivider />
+
+                <section className="panel banco-horas-panel">
                   <header className="form-section-header">
-                    <h2>Card 06 - MOVIMENTOS DO BANCO DE HORAS</h2>
+                    <h2>MOVIMENTOS DE BANCO DE HORAS</h2>
                     <p>Histórico de movimentações e inclusão de ajustes.</p>
                   </header>
 
                   {resumo.movimentos.length > 0 && (
-                    <div className="departamento-tabela-wrapper" style={{ marginTop: "12px" }}>
+                    <div className="departamento-tabela-wrapper" style={{ marginTop: "8px" }}>
                       <table className="data-table">
                         <thead>
                           <tr>
@@ -666,11 +652,11 @@ export default function BancoHorasPage() {
                     </div>
                   )}
 
-                  <div className="form-section-header" style={{ marginTop: "24px" }}>
+                  <div className="form-section-header" style={{ marginTop: "16px" }}>
                     <h3>INCLUIR AJUSTE MANUAL</h3>
                   </div>
 
-                  <div className="form-grid three-columns">
+                  <div className="banco-horas-card-grid">
                     <div className="form-group">
                       <label htmlFor="ajusteData">DATA</label>
                       <input
@@ -699,11 +685,12 @@ export default function BancoHorasPage() {
                       <label htmlFor="ajusteHoras">HORAS (HH:MM)</label>
                       <input
                         id="ajusteHoras"
-                        type="text"
+                        type="time"
                         value={ajusteHoras}
                         onChange={(e) => setAjusteHoras(e.target.value)}
                         className="form-input"
                         placeholder="Ex: 02:30"
+                        step={60}
                       />
                     </div>
                   </div>
