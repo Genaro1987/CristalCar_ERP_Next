@@ -7,7 +7,9 @@ import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSeleci
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
+import { ModalExportacao, type OpcoesExportacao } from "@/components/ModalExportacao";
 import { minutosParaHora } from "@/lib/rhPontoCalculo";
+import { exportarPDF, exportarExcel } from "@/lib/exportarBancoHoras";
 import type { ResumoBancoHorasMes } from "@/db/rhBancoHoras";
 
 interface FuncionarioOption {
@@ -15,11 +17,32 @@ interface FuncionarioOption {
   NOME_COMPLETO: string;
 }
 
-const meses = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+const meses = [
+  { valor: "01", nome: "Janeiro" },
+  { valor: "02", nome: "Fevereiro" },
+  { valor: "03", nome: "Março" },
+  { valor: "04", nome: "Abril" },
+  { valor: "05", nome: "Maio" },
+  { valor: "06", nome: "Junho" },
+  { valor: "07", nome: "Julho" },
+  { valor: "08", nome: "Agosto" },
+  { valor: "09", nome: "Setembro" },
+  { valor: "10", nome: "Outubro" },
+  { valor: "11", nome: "Novembro" },
+  { valor: "12", nome: "Dezembro" },
+];
 
 function competenciaAtual() {
   const hoje = new Date();
   return { ano: hoje.getFullYear(), mes: hoje.getMonth() + 1 };
+}
+
+function formatarMoeda(valor: number): string {
+  return valor.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+  });
 }
 
 export default function BancoHorasConsultaPage() {
@@ -27,12 +50,13 @@ export default function BancoHorasConsultaPage() {
   const { empresa } = useEmpresaSelecionada();
   const [funcionarios, setFuncionarios] = useState<FuncionarioOption[]>([]);
   const [resumo, setResumo] = useState<ResumoBancoHorasMes | null>(null);
-  const [notification, setNotification] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
   const compAtual = useMemo(() => competenciaAtual(), []);
   const [idFuncionario, setIdFuncionario] = useState("");
   const [ano, setAno] = useState(compAtual.ano);
   const [mes, setMes] = useState(compAtual.mes.toString().padStart(2, "0"));
   const [loading, setLoading] = useState(false);
+  const [modalExportacaoAberto, setModalExportacaoAberto] = useState(false);
 
   const empresaId = empresa?.id ?? null;
 
@@ -54,7 +78,7 @@ export default function BancoHorasConsultaPage() {
 
   const pesquisar = async () => {
     if (!idFuncionario) {
-      setNotification("Selecione um funcionário");
+      setNotification({ type: "info", message: "Selecione um funcionário" });
       return;
     }
     setNotification(null);
@@ -68,127 +92,308 @@ export default function BancoHorasConsultaPage() {
       if (json?.success) {
         setResumo(json.data);
       } else {
-        setNotification("Não foi possível carregar o resumo");
+        setNotification({ type: "error", message: "Não foi possível carregar o resumo" });
       }
     } catch (error) {
       console.error(error);
-      setNotification("Erro ao consultar banco de horas");
+      setNotification({ type: "error", message: "Erro ao consultar banco de horas" });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleExportar = async (opcoes: OpcoesExportacao) => {
+    const dadosParaExportar = [];
+
+    // Busca dados completos da empresa
+    let dadosEmpresa = {
+      nome: empresa?.nomeFantasia || "Empresa",
+      cnpj: empresa?.cnpj,
+      razaoSocial: "",
+    };
+
+    if (empresaId) {
+      try {
+        const respEmp = await fetch(`/api/empresas/${empresaId}`, { headers: headersPadrao });
+        const jsonEmp = await respEmp.json();
+        if (jsonEmp?.success && jsonEmp?.empresa) {
+          dadosEmpresa = {
+            nome: jsonEmp.empresa.NOME_FANTASIA || "Empresa",
+            cnpj: jsonEmp.empresa.CNPJ,
+            razaoSocial: jsonEmp.empresa.RAZAO_SOCIAL || "",
+          };
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados da empresa:", error);
+      }
+    }
+
+    for (const funcId of opcoes.funcionariosSelecionados) {
+      try {
+        const resp = await fetch(
+          `/api/rh/banco-horas/resumo?idFuncionario=${funcId}&ano=${ano}&mes=${mes}&politicaFaltas=COMPENSAR_COM_HORAS_EXTRAS&zerarBancoNoMes=false`,
+          { headers: headersPadrao }
+        );
+        const json = await resp.json();
+        if (json?.success) {
+          dadosParaExportar.push({
+            resumo: json.data,
+            empresa: dadosEmpresa,
+            politica: "COMPENSAR_COM_HORAS_EXTRAS" as const,
+            zerarBanco: false,
+          });
+        }
+      } catch (error) {
+        console.error(`Erro ao buscar dados do funcionário ${funcId}:`, error);
+      }
+    }
+
+    if (dadosParaExportar.length === 0) {
+      setNotification({ type: "error", message: "Nenhum dado disponível para exportação" });
+      return;
+    }
+
+    if (opcoes.exportarPDF) {
+      // Exporta PDF
+      dadosParaExportar.forEach((dados) => exportarPDF(dados));
+
+      // Finaliza/fecha os meses após exportar PDF
+      for (const dados of dadosParaExportar) {
+        const r = dados.resumo;
+        try {
+          const valorHora = r.funcionario.valorHora;
+          const valorPagar =
+            (r.horasPagar50Min / 60) * valorHora * 1.5 +
+            (r.horasPagar100Min / 60) * valorHora * 2;
+          const valorDescontar = (r.horasDescontarMin / 60) * valorHora;
+
+          await fetch("/api/rh/banco-horas/finalizar", {
+            method: "POST",
+            headers: headersPadrao,
+            body: JSON.stringify({
+              idFuncionario: r.funcionario.id,
+              ano: r.competencia.ano,
+              mes: r.competencia.mes,
+              saldoAnteriorMinutos: r.saldoAnteriorMin,
+              horasExtras50Minutos: r.extrasUteisMin,
+              horasExtras100Minutos: r.extras100Min,
+              horasDevidasMinutos: r.devidasMin,
+              ajustesMinutos: r.ajustesManuaisMin,
+              saldoFinalMinutos: r.saldoFinalBancoMin,
+              politicaFaltas: dados.politica,
+              zerouBanco: dados.zerarBanco,
+              valorPagar,
+              valorDescontar,
+            }),
+          });
+        } catch (error) {
+          console.error("Erro ao finalizar mês:", error);
+        }
+      }
+    }
+
+    if (opcoes.exportarExcel) {
+      exportarExcel(dadosParaExportar);
+    }
+
+    setNotification({
+      type: "success",
+      message: `Exportação concluída com sucesso! ${dadosParaExportar.length} registro(s) exportado(s).${opcoes.exportarPDF ? " Períodos finalizados." : ""}`,
+    });
+  };
+
   return (
     <LayoutShell>
-      <HeaderBar
-        codigoTela="CONS001_RH_BANCO_HORAS"
-        nomeTela="CONSULTA BANCO DE HORAS"
-        caminhoRota="/rh/banco-horas/consulta"
-        modulo="RH"
-      />
-      <div className="p-4 space-y-4">
-        {notification && <NotificationBar type="info" message={notification} />}
-        <div className="bg-white shadow rounded p-4 grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-          <label className="flex flex-col">
-            Funcionário
-            <select
-              value={idFuncionario}
-              onChange={(e) => setIdFuncionario(e.target.value)}
-              className="border rounded px-2 py-1"
-            >
-              <option value="">Selecione</option>
-              {funcionarios.map((f) => (
-                <option key={f.ID_FUNCIONARIO} value={f.ID_FUNCIONARIO}>
-                  {f.NOME_COMPLETO}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col">
-            Ano
-            <input
-              type="number"
-              value={ano}
-              onChange={(e) => setAno(Number(e.target.value))}
-              className="border rounded px-2 py-1"
-            />
-          </label>
-          <label className="flex flex-col">
-            Mês
-            <select
-              value={mes}
-              onChange={(e) => setMes(e.target.value)}
-              className="border rounded px-2 py-1"
-            >
-              {meses.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="flex items-end">
-            <button
-              onClick={pesquisar}
-              disabled={loading}
-              className="bg-blue-600 text-white px-4 py-2 rounded"
-            >
-              {loading ? "Buscando..." : "Pesquisar"}
-            </button>
-          </div>
-        </div>
+      <div className="page-container">
+        <HeaderBar
+          codigoTela="CONS001_RH_BANCO_HORAS"
+          nomeTela="CONSULTA BANCO DE HORAS"
+          caminhoRota="/rh/banco-horas/consulta"
+          modulo="RH"
+        />
 
-        {resumo && (
-          <div className="bg-white shadow rounded p-4 text-sm space-y-2">
-            <div className="font-semibold">{resumo.funcionario.nome}</div>
-            <div className="text-gray-600">Competência: {String(resumo.competencia.mes).padStart(2, "0")}/{resumo.competencia.ano}</div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div>
-                <div>HE 50%</div>
-                <div className="font-semibold">{minutosParaHora(resumo.horasPagar50Min)}</div>
-              </div>
-              <div>
-                <div>HE 100%</div>
-                <div className="font-semibold">{minutosParaHora(resumo.horasPagar100Min)}</div>
-              </div>
-              <div>
-                <div>Horas devidas</div>
-                <div className="font-semibold">{minutosParaHora(resumo.horasDescontarMin)}</div>
-              </div>
-              <div>
-                <div>Saldo final banco</div>
-                <div className="font-semibold">{minutosParaHora(resumo.saldoFinalBancoMin)}</div>
+        <main className="page-content-card">
+          {notification && <NotificationBar type={notification.type} message={notification.message} />}
+
+          <div className="panel" style={{ maxWidth: "none" }}>
+            <div className="form-section-header">
+              <h2>Filtros</h2>
+              <p>Selecione o funcionário e competência para consultar o banco de horas</p>
+            </div>
+
+            <div className="form">
+              <div style={{ display: "flex", gap: "16px", alignItems: "flex-end", flexWrap: "wrap" }}>
+                <div className="form-group" style={{ flex: "2", minWidth: "250px" }}>
+                  <label htmlFor="funcionario">Funcionário</label>
+                  <select
+                    id="funcionario"
+                    value={idFuncionario}
+                    onChange={(e) => setIdFuncionario(e.target.value)}
+                    className="form-input"
+                  >
+                    <option value="">Selecione</option>
+                    {funcionarios.map((f) => (
+                      <option key={f.ID_FUNCIONARIO} value={f.ID_FUNCIONARIO}>
+                        {f.NOME_COMPLETO}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ flex: "0 0 120px" }}>
+                  <label htmlFor="ano">Ano</label>
+                  <input
+                    id="ano"
+                    type="number"
+                    value={ano}
+                    onChange={(e) => setAno(Number(e.target.value))}
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-group" style={{ flex: "1", minWidth: "150px" }}>
+                  <label htmlFor="mes">Mês</label>
+                  <select
+                    id="mes"
+                    value={mes}
+                    onChange={(e) => setMes(e.target.value)}
+                    className="form-input"
+                  >
+                    {meses.map((m) => (
+                      <option key={m.valor} value={m.valor}>
+                        {m.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ flex: "0 0 auto", display: "flex", gap: "8px" }}>
+                  <button
+                    onClick={pesquisar}
+                    disabled={loading}
+                    className="button button-primary"
+                  >
+                    {loading ? "Buscando..." : "Pesquisar"}
+                  </button>
+                  <button
+                    onClick={() => setModalExportacaoAberto(true)}
+                    className="button"
+                    style={{
+                      backgroundColor: "#059669",
+                      color: "white",
+                    }}
+                  >
+                    Exportar Arquivos
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-xs mt-2">
-                <thead>
-                  <tr className="bg-gray-100 text-left">
-                    <th className="p-2">Dia</th>
-                    <th className="p-2">Tipo</th>
-                    <th className="p-2">Jornada</th>
-                    <th className="p-2">Trabalhado</th>
-                    <th className="p-2">Diferença</th>
-                    <th className="p-2">Classificação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resumo.dias.map((dia) => (
-                    <tr key={dia.data} className="border-b">
-                      <td className="p-2 whitespace-nowrap">{dia.data} - {dia.diaSemana}</td>
-                      <td className="p-2">{dia.tipoDia}</td>
-                      <td className="p-2">{minutosParaHora(dia.jornadaPrevistaMin)}</td>
-                      <td className="p-2">{minutosParaHora(dia.trabalhadoMin)}</td>
-                      <td className="p-2">{minutosParaHora(dia.diferencaMin)}</td>
-                      <td className="p-2">{dia.classificacao}</td>
+          {resumo && (
+            <>
+              <div className="form-section-header" style={{ marginTop: "32px" }}>
+                <h2>{resumo.funcionario.nome}</h2>
+                <p>Competência: {String(resumo.competencia.mes).padStart(2, "0")}/{resumo.competencia.ano} |
+                   Departamento: {resumo.funcionario.nomeDepartamento ?? "-"}</p>
+              </div>
+
+              <div className="form-grid three-columns">
+                <div className="form-group">
+                  <label>Horas Extras 50%</label>
+                  <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669", fontWeight: 600 }}>
+                    {minutosParaHora(resumo.horasPagar50Min)} = {formatarMoeda((resumo.horasPagar50Min / 60) * resumo.funcionario.valorHora * 1.5)}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Horas Extras 100%</label>
+                  <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669", fontWeight: 600 }}>
+                    {minutosParaHora(resumo.horasPagar100Min)} = {formatarMoeda((resumo.horasPagar100Min / 60) * resumo.funcionario.valorHora * 2)}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Horas Devidas</label>
+                  <div className="form-input" style={{ backgroundColor: "#fef2f2", color: "#dc2626", fontWeight: 600 }}>
+                    {minutosParaHora(resumo.horasDescontarMin)} = {formatarMoeda((resumo.horasDescontarMin / 60) * resumo.funcionario.valorHora)}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Saldo Anterior</label>
+                  <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
+                    {minutosParaHora(resumo.saldoAnteriorMin)}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Ajustes e Fechamentos</label>
+                  <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
+                    {minutosParaHora(resumo.ajustesManuaisMin + resumo.fechamentosMin)}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Saldo Final</label>
+                  <div className="form-input" style={{ backgroundColor: "#fff3cd", fontWeight: 700 }}>
+                    {minutosParaHora(resumo.saldoFinalBancoMin)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-section-header" style={{ marginTop: "32px" }}>
+                <h2>Detalhamento Diário</h2>
+              </div>
+
+              <div className="departamento-tabela-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Dia</th>
+                      <th>Tipo</th>
+                      <th>Jornada</th>
+                      <th>Trabalhado</th>
+                      <th>Diferença</th>
+                      <th>Classificação</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {resumo.dias.map((dia) => (
+                      <tr key={dia.data}>
+                        <td className="whitespace-nowrap">{dia.data} - {dia.diaSemana}</td>
+                        <td>{dia.tipoDia}</td>
+                        <td>{minutosParaHora(dia.jornadaPrevistaMin)}</td>
+                        <td>{minutosParaHora(dia.trabalhadoMin)}</td>
+                        <td style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
+                          {minutosParaHora(dia.diferencaMin)}
+                        </td>
+                        <td>
+                          <span className={
+                            dia.classificacao === "EXTRA_UTIL" || dia.classificacao === "EXTRA_100"
+                              ? "badge badge-success"
+                              : dia.classificacao === "DEVEDOR" || dia.classificacao.includes("FALTA")
+                              ? "badge badge-danger"
+                              : "badge"
+                          }>
+                            {dia.classificacao}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
           </div>
-        )}
+        </main>
+
+        <ModalExportacao
+          isOpen={modalExportacaoAberto}
+          onClose={() => setModalExportacaoAberto(false)}
+          funcionarios={funcionarios}
+          onExportar={handleExportar}
+        />
       </div>
     </LayoutShell>
   );
