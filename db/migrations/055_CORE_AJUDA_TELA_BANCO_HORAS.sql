@@ -1,22 +1,67 @@
 -- Adiciona helps para telas de Banco de Horas
 
 -- Help para REL001_RH_BANCO_HORAS
-INSERT OR IGNORE INTO CORE_AJUDA_TELA (CODIGO_TELA, SECAO, TITULO, CONTEUDO, ORDEM)
-VALUES
-  ('REL001_RH_BANCO_HORAS', 'GERAL', 'Visão Geral', 'Esta tela permite calcular e gerenciar o banco de horas dos funcionários. O sistema calcula automaticamente horas extras (50% e 100%), horas devidas, ajustes manuais e saldo do banco de horas.', 1),
-  ('REL001_RH_BANCO_HORAS', 'FILTROS', 'Seleção de Funcionário e Período', 'Selecione o funcionário e a competência (mês/ano) que deseja calcular. Clique em "Calcular" para processar as informações.', 2),
-  ('REL001_RH_BANCO_HORAS', 'RESUMO', 'Resumo do Mês', 'Visualize o saldo anterior, horas extras 50% e 100%, horas devidas, ajustes manuais e saldo final do banco de horas. Os valores são calculados automaticamente com base nos registros de ponto.', 3),
-  ('REL001_RH_BANCO_HORAS', 'ACOES', 'Ações Finais', 'Defina a política de faltas (compensar com horas extras ou descontar em folha) e se deseja zerar o banco ao final do mês. Estas configurações afetam o cálculo final.', 4),
-  ('REL001_RH_BANCO_HORAS', 'VALORES', 'Valores a Pagar/Descontar', 'Valores monetários calculados com base no salário do funcionário e nas horas a pagar (50% e 100%) ou descontar.', 5),
-  ('REL001_RH_BANCO_HORAS', 'DETALHAMENTO', 'Detalhamento Diário', 'Tabela com breakdown diário mostrando jornada prevista, horas trabalhadas, diferença e classificação de cada dia (extras, devedor, falta, etc).', 6),
-  ('REL001_RH_BANCO_HORAS', 'MOVIMENTOS', 'Movimentos do Banco', 'Histórico de movimentações no banco de horas incluindo ajustes manuais e fechamentos de períodos anteriores.', 7),
-  ('REL001_RH_BANCO_HORAS', 'AJUSTES', 'Ajustes Manuais', 'Permite incluir ajustes manuais (crédito ou débito) no banco de horas. Informe a data, tipo, horas no formato HH:MM (ex: 02:30) e observação. O ajuste será considerado no próximo cálculo.', 8);
+INSERT OR REPLACE INTO CORE_AJUDA_TELA (
+  ID_AJUDA,
+  ID_TELA,
+  OBJETIVO_TELA,
+  QUANDO_UTILIZAR,
+  DESCRICAO_PROCESSO,
+  PASSO_A_PASSO,
+  CAMPOS_OBRIGATORIOS,
+  CAMPOS_OPCIONAIS,
+  REFLEXOS_PROCESSO,
+  ERROS_COMUNS,
+  ATIVA,
+  DATA_CADASTRO,
+  DATA_ATUALIZACAO
+)
+SELECT
+  (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = T.ID_TELA),
+  T.ID_TELA,
+  'CALCULAR E GERENCIAR O BANCO DE HORAS DOS FUNCIONARIOS.',
+  'UTILIZAR AO FECHAR UMA COMPETENCIA MENSAL OU QUANDO PRECISAR AJUSTAR O SALDO DE HORAS.',
+  'TELA RESPONSAVEL PELO CALCULO DO BANCO DE HORAS, CONSIDERANDO HORAS EXTRAS (50% E 100%), HORAS DEVIDAS, AJUSTES MANUAIS E POLITICA DE FALTAS.',
+  '1) INFORMAR O FUNCIONARIO E A COMPETENCIA (MES/ANO).\n2) CLICAR EM CALCULAR PARA PROCESSAR OS REGISTROS DE PONTO.\n3) AVALIAR O RESUMO DO MES (SALDO ANTERIOR, HORAS EXTRAS, HORAS DEVEDORAS E AJUSTES).\n4) DEFINIR A POLITICA DE FALTAS E SE O BANCO DEVE SER ZERADO.\n5) REGISTRAR AJUSTES MANUAIS QUANDO NECESSARIO (CREDITO OU DEBITO NO FORMATO HH:MM).\n6) SALVAR PARA ATUALIZAR O HISTORICO DE MOVIMENTACOES.',
+  'FUNCIONARIO, COMPETENCIA (MES/ANO).',
+  'POLITICA DE FALTAS, DECISAO DE ZERAR O BANCO, AJUSTES MANUAIS COM DATA E OBSERVACAO.',
+  'O CALCULO ATUALIZA O SALDO DE HORAS E OS VALORES A PAGAR OU DESCONTAR, REGISTRANDO MOVIMENTACOES PARA CONSULTAS FUTURAS.',
+  'NAO INFORMAR FUNCIONARIO OU COMPETENCIA, INFORMAR HORAS EM FORMATO INVALIDO (HH:MM) OU ESQUECER DE SALVAR APOS OS AJUSTES.',
+  1,
+  COALESCE((SELECT DATA_CADASTRO FROM CORE_AJUDA_TELA WHERE ID_TELA = T.ID_TELA), datetime('now')),
+  datetime('now')
+FROM CORE_TELA T
+WHERE T.CODIGO_TELA = 'REL001_RH_BANCO_HORAS';
 
 -- Help para CONS001_RH_BANCO_HORAS
-INSERT OR IGNORE INTO CORE_AJUDA_TELA (CODIGO_TELA, SECAO, TITULO, CONTEUDO, ORDEM)
-VALUES
-  ('CONS001_RH_BANCO_HORAS', 'GERAL', 'Visão Geral', 'Esta tela permite consultar períodos já calculados e fechados de banco de horas. Use-a para visualizar histórico e exportar relatórios.', 1),
-  ('CONS001_RH_BANCO_HORAS', 'FILTROS', 'Seleção de Funcionário e Período', 'Selecione o funcionário e a competência para consultar. Apenas períodos já calculados e fechados aparecerão nos resultados.', 2),
-  ('CONS001_RH_BANCO_HORAS', 'EXPORTACAO', 'Exportar Arquivos', 'Clique em "Exportar Arquivos" para gerar relatórios em PDF e/ou Excel. Você pode selecionar um ou mais funcionários para exportação em lote.', 3),
-  ('CONS001_RH_BANCO_HORAS', 'PDF', 'Exportação PDF', 'O PDF gerado contém layout corporativo com cabeçalho da empresa, detalhamento completo do período e campos para assinatura. Ideal para arquivo físico.', 4),
-  ('CONS001_RH_BANCO_HORAS', 'EXCEL', 'Exportação Excel', 'O arquivo Excel contém 3 planilhas: Resumo (dados consolidados), Detalhamento (breakdown diário) e Valores (cálculos monetários). Formato adequado para envio à contabilidade.', 5);
+INSERT OR REPLACE INTO CORE_AJUDA_TELA (
+  ID_AJUDA,
+  ID_TELA,
+  OBJETIVO_TELA,
+  QUANDO_UTILIZAR,
+  DESCRICAO_PROCESSO,
+  PASSO_A_PASSO,
+  CAMPOS_OBRIGATORIOS,
+  CAMPOS_OPCIONAIS,
+  REFLEXOS_PROCESSO,
+  ERROS_COMUNS,
+  ATIVA,
+  DATA_CADASTRO,
+  DATA_ATUALIZACAO
+)
+SELECT
+  (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = T.ID_TELA),
+  T.ID_TELA,
+  'CONSULTAR PERIODOS FECHADOS DE BANCO DE HORAS E GERAR RELATORIOS.',
+  'UTILIZAR QUANDO PRECISAR VISUALIZAR HISTORICO DE CALCULOS OU EXPORTAR DADOS PARA CONTABILIDADE.',
+  'TELA DE CONSULTA QUE LISTA PERIODOS JA CALCULADOS, PERMITINDO VISUALIZAR RESUMOS E GERAR PDF OU EXCEL.',
+  '1) INFORMAR O FUNCIONARIO E A COMPETENCIA PARA CONSULTA.\n2) EXECUTAR A BUSCA PARA LISTAR PERIODOS FECHADOS.\n3) UTILIZAR AS OPCOES DE EXPORTACAO PARA GERAR PDF OU EXCEL CONFORME NECESSARIO.\n4) REVISAR OS ARQUIVOS GERADOS ANTES DE ENVIAR PARA A CONTABILIDADE.',
+  'FUNCIONARIO, COMPETENCIA (MES/ANO).',
+  'SELECAO MULTIPLA DE FUNCIONARIOS PARA EXPORTACAO EM LOTE.',
+  'OS RELATORIOS GERADOS SERVEM PARA ARQUIVO E PARA ENVIO A CONTABILIDADE, GARANTINDO HISTORICO DE PERIODOS FECHADOS.',
+  'PESQUISAR SEM INFORMAR COMPETENCIA, NAO FILTRAR O FUNCIONARIO CORRETO OU ESQUECER DE ATUALIZAR OS ARQUIVOS EXPORTADOS.',
+  1,
+  COALESCE((SELECT DATA_CADASTRO FROM CORE_AJUDA_TELA WHERE ID_TELA = T.ID_TELA), datetime('now')),
+  datetime('now')
+FROM CORE_TELA T
+WHERE T.CODIGO_TELA = 'CONS001_RH_BANCO_HORAS';
