@@ -1,6 +1,21 @@
 export type FlagSimNao = 'S' | 'N';
 
-export type TipoDia = 'DIA_UTIL' | 'FIM_DE_SEMANA' | 'FERIADO';
+export type TipoDia = 'NORMAL' | 'SABADO' | 'DOMINGO' | 'FERIADO';
+
+export function criarDataLocal(dataReferencia: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataReferencia)) return new Date(dataReferencia);
+
+  const [anoStr, mesStr, diaStr] = dataReferencia.split('-');
+  const ano = Number(anoStr);
+  const mes = Number(mesStr) - 1;
+  const dia = Number(diaStr);
+
+  if (!Number.isFinite(ano) || !Number.isFinite(mes) || !Number.isFinite(dia)) {
+    return new Date(dataReferencia);
+  }
+
+  return new Date(ano, mes, dia);
+}
 
 export function parseHoraParaMinutos(hora?: string | null): number | null {
   if (!hora || !hora.includes(':')) return null;
@@ -61,14 +76,13 @@ export function determinarTipoDia(dataReferencia: string, eFeriado?: FlagSimNao)
     return 'FERIADO';
   }
 
-  const data = new Date(dataReferencia);
-  const diaSemana = data.getDay();
+  const data = criarDataLocal(dataReferencia);
+  const diaSemana = data?.getDay();
 
-  if (diaSemana === 0 || diaSemana === 6) {
-    return 'FIM_DE_SEMANA';
-  }
+  if (diaSemana === 6) return 'SABADO';
+  if (diaSemana === 0) return 'DOMINGO';
 
-  return 'DIA_UTIL';
+  return 'NORMAL';
 }
 
 export function calcularMinutosJornadaDiaria(jornada?: {
@@ -101,12 +115,29 @@ export function calcularSaldoDia(
   minutosPagosFeriadoFds: number;
   minutosExtrasExibicao: number;
 } {
-  if (tipoDia !== 'DIA_UTIL') {
-    const horasPagas = Math.max(0, minutosTrabalhados);
+  const horasTrabalhadas = Math.max(0, minutosTrabalhados);
+
+  if (tipoDia === 'FERIADO') {
+    if (horasTrabalhadas === 0) {
+      return {
+        saldoBancoMinutos: 0,
+        minutosPagosFeriadoFds: 0,
+        minutosExtrasExibicao: 0,
+      };
+    }
+
     return {
-      saldoBancoMinutos: 0,
-      minutosPagosFeriadoFds: horasPagas,
-      minutosExtrasExibicao: horasPagas,
+      saldoBancoMinutos: horasTrabalhadas,
+      minutosPagosFeriadoFds: horasTrabalhadas,
+      minutosExtrasExibicao: horasTrabalhadas,
+    };
+  }
+
+  if (tipoDia === 'SABADO' || tipoDia === 'DOMINGO') {
+    return {
+      saldoBancoMinutos: horasTrabalhadas,
+      minutosPagosFeriadoFds: horasTrabalhadas,
+      minutosExtrasExibicao: horasTrabalhadas,
     };
   }
 

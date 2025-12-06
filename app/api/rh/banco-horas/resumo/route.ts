@@ -27,9 +27,11 @@ export async function GET(request: NextRequest) {
   const politica = (search.get("politicaFaltas") as PoliticaFaltas | null) ?? "COMPENSAR_COM_HORAS_EXTRAS";
   const zerar = parseBoolean(search.get("zerarBancoNoMes"));
 
-  if (!idFuncionario || !Number.isFinite(ano) || !Number.isFinite(mes)) {
+  const mesValido = Number.isFinite(mes) && mes >= 1 && mes <= 12;
+
+  if (!idFuncionario || !Number.isFinite(ano) || !mesValido) {
     return NextResponse.json(
-      { success: false, error: "PARAMETROS_INVALIDOS" },
+      { success: false, error: "PARAMETROS_INVALIDOS", message: "Mês é obrigatório para cálculo do banco de horas" },
       { status: 400 }
     );
   }
