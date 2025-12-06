@@ -15,20 +15,26 @@ interface FuncionarioOption {
   NOME_COMPLETO: string;
 }
 
-const meses = [
-  { valor: "01", nome: "Janeiro" },
-  { valor: "02", nome: "Fevereiro" },
-  { valor: "03", nome: "Março" },
-  { valor: "04", nome: "Abril" },
-  { valor: "05", nome: "Maio" },
-  { valor: "06", nome: "Junho" },
-  { valor: "07", nome: "Julho" },
-  { valor: "08", nome: "Agosto" },
-  { valor: "09", nome: "Setembro" },
-  { valor: "10", nome: "Outubro" },
-  { valor: "11", nome: "Novembro" },
-  { valor: "12", nome: "Dezembro" },
-];
+interface PeriodoOption {
+  valor: string;
+  nome: string;
+  situacao: string;
+}
+
+const nomesMeses: Record<number, string> = {
+  1: "Janeiro",
+  2: "Fevereiro",
+  3: "Março",
+  4: "Abril",
+  5: "Maio",
+  6: "Junho",
+  7: "Julho",
+  8: "Agosto",
+  9: "Setembro",
+  10: "Outubro",
+  11: "Novembro",
+  12: "Dezembro",
+};
 
 function competenciaAtual() {
   const hoje = new Date();
@@ -51,6 +57,14 @@ function horaParaMinutos(horaStr: string): number {
   return horas * 60 + minutos;
 }
 
+function mesParaTexto(mesNumero: number): string {
+  return nomesMeses[mesNumero] ?? mesNumero.toString();
+}
+
+function mesParaValor(mesNumero: number): string {
+  return mesNumero.toString().padStart(2, "0");
+}
+
 export default function BancoHorasPage() {
   useRequerEmpresaSelecionada({ ativo: true });
   const { empresa } = useEmpresaSelecionada();
@@ -66,6 +80,7 @@ export default function BancoHorasPage() {
   const [politica, setPolitica] = useState<"COMPENSAR_COM_HORAS_EXTRAS" | "DESCONTAR_EM_FOLHA">(
     "COMPENSAR_COM_HORAS_EXTRAS"
   );
+  const [periodosDisponiveis, setPeriodosDisponiveis] = useState<PeriodoOption[]>([]);
   const [zerarBanco, setZerarBanco] = useState(false);
   const [ajusteHoras, setAjusteHoras] = useState("");
   const [ajusteData, setAjusteData] = useState("");
@@ -89,6 +104,40 @@ export default function BancoHorasPage() {
       .then((json) => setFuncionarios(json?.data ?? []))
       .catch(() => setFuncionarios([]));
   }, [empresaId, headersPadrao]);
+
+  useEffect(() => {
+    if (!empresaId || !idFuncionario) {
+      setPeriodosDisponiveis([]);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    fetch(
+      `/api/rh/banco-horas/periodos?funcionarioId=${idFuncionario}&ano=${ano}`,
+      { headers: headersPadrao, signal: controller.signal }
+    )
+      .then((r) => r.json())
+      .then((json) => {
+        const periodos = (json?.data ?? []).map((p: { MES_REFERENCIA: number; SITUACAO_PERIODO: string }) => ({
+          valor: mesParaValor(p.MES_REFERENCIA),
+          nome: mesParaTexto(p.MES_REFERENCIA),
+          situacao: p.SITUACAO_PERIODO,
+        }));
+        setPeriodosDisponiveis(periodos);
+      })
+      .catch(() => setPeriodosDisponiveis([]));
+
+    return () => controller.abort();
+  }, [empresaId, headersPadrao, idFuncionario, ano]);
+
+  useEffect(() => {
+    if (periodosDisponiveis.length === 0) return;
+    const mesAtualDisponivel = periodosDisponiveis.some((p) => p.valor === mes);
+    if (!mesAtualDisponivel) {
+      setMes(periodosDisponiveis[0].valor);
+    }
+  }, [mes, periodosDisponiveis]);
 
   const carregarResumo = async () => {
     if (!idFuncionario) {
@@ -219,9 +268,10 @@ export default function BancoHorasPage() {
                   onChange={(e) => setMes(e.target.value)}
                   className="form-input"
                 >
-                  {meses.map((m) => (
-                    <option key={m.valor} value={m.valor}>
-                      {m.nome}
+                  <option value="">Selecione</option>
+                  {periodosDisponiveis.map((m) => (
+                    <option key={`${m.valor}-${m.situacao}`} value={m.valor}>
+                      {m.nome} ({m.situacao})
                     </option>
                   ))}
                 </select>
