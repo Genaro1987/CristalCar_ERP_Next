@@ -105,20 +105,42 @@ export default function BancoHorasConsultaPage() {
   const handleExportar = async (opcoes: OpcoesExportacao) => {
     const dadosParaExportar = [];
 
+    // Busca dados completos da empresa
+    let dadosEmpresa = {
+      nome: empresa?.nomeFantasia || "Empresa",
+      cnpj: empresa?.cnpj,
+      razaoSocial: "",
+    };
+
+    if (empresaId) {
+      try {
+        const respEmp = await fetch(`/api/empresas/${empresaId}`, { headers: headersPadrao });
+        const jsonEmp = await respEmp.json();
+        if (jsonEmp?.success && jsonEmp?.empresa) {
+          dadosEmpresa = {
+            nome: jsonEmp.empresa.NOME_FANTASIA || "Empresa",
+            cnpj: jsonEmp.empresa.CNPJ,
+            razaoSocial: jsonEmp.empresa.RAZAO_SOCIAL || "",
+          };
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados da empresa:", error);
+      }
+    }
+
     for (const funcId of opcoes.funcionariosSelecionados) {
       try {
         const resp = await fetch(
-          `/api/rh/banco-horas/resumo?idFuncionario=${funcId}&ano=${ano}&mes=${mes}&politicaFaltas=COMPENSAR_COM_HORAS_EXTRAS&zerarBancoNoMes=true`,
+          `/api/rh/banco-horas/resumo?idFuncionario=${funcId}&ano=${ano}&mes=${mes}&politicaFaltas=COMPENSAR_COM_HORAS_EXTRAS&zerarBancoNoMes=false`,
           { headers: headersPadrao }
         );
         const json = await resp.json();
         if (json?.success) {
           dadosParaExportar.push({
             resumo: json.data,
-            empresa: {
-              nome: empresa?.nomeFantasia || "Empresa",
-              cnpj: empresa?.cnpj,
-            },
+            empresa: dadosEmpresa,
+            politica: "COMPENSAR_COM_HORAS_EXTRAS" as const,
+            zerarBanco: false,
           });
         }
       } catch (error) {
@@ -132,7 +154,42 @@ export default function BancoHorasConsultaPage() {
     }
 
     if (opcoes.exportarPDF) {
+      // Exporta PDF
       dadosParaExportar.forEach((dados) => exportarPDF(dados));
+
+      // Finaliza/fecha os meses após exportar PDF
+      for (const dados of dadosParaExportar) {
+        const r = dados.resumo;
+        try {
+          const valorHora = r.funcionario.valorHora;
+          const valorPagar =
+            (r.horasPagar50Min / 60) * valorHora * 1.5 +
+            (r.horasPagar100Min / 60) * valorHora * 2;
+          const valorDescontar = (r.horasDescontarMin / 60) * valorHora;
+
+          await fetch("/api/rh/banco-horas/finalizar", {
+            method: "POST",
+            headers: headersPadrao,
+            body: JSON.stringify({
+              idFuncionario: r.funcionario.id,
+              ano: r.competencia.ano,
+              mes: r.competencia.mes,
+              saldoAnteriorMinutos: r.saldoAnteriorMin,
+              horasExtras50Minutos: r.extrasUteisMin,
+              horasExtras100Minutos: r.extras100Min,
+              horasDevidasMinutos: r.devidasMin,
+              ajustesMinutos: r.ajustesManuaisMin,
+              saldoFinalMinutos: r.saldoFinalBancoMin,
+              politicaFaltas: dados.politica,
+              zerouBanco: dados.zerarBanco,
+              valorPagar,
+              valorDescontar,
+            }),
+          });
+        } catch (error) {
+          console.error("Erro ao finalizar mês:", error);
+        }
+      }
     }
 
     if (opcoes.exportarExcel) {
@@ -141,7 +198,7 @@ export default function BancoHorasConsultaPage() {
 
     setNotification({
       type: "success",
-      message: `Exportação concluída com sucesso! ${dadosParaExportar.length} registro(s) exportado(s).`,
+      message: `Exportação concluída com sucesso! ${dadosParaExportar.length} registro(s) exportado(s).${opcoes.exportarPDF ? " Períodos finalizados." : ""}`,
     });
   };
 
