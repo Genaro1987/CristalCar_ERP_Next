@@ -1,446 +1,373 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
-import { HeaderBar } from "@/components/HeaderBar";
 import LayoutShell from "@/components/LayoutShell";
+import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
-import {
-  competenciaAtual,
-  minutosParaHora,
-  parseHoraParaMinutos,
-} from "@/lib/rhPontoCalculo";
-import type { ResumoBancoHorasFuncionario } from "@/db/rhBancoHoras";
+import { minutosParaHora } from "@/lib/rhPontoCalculo";
+import type { ResumoBancoHorasMes } from "@/db/rhBancoHoras";
 
 interface FuncionarioOption {
   ID_FUNCIONARIO: string;
   NOME_COMPLETO: string;
 }
 
-interface DepartamentoOption {
-  ID_DEPARTAMENTO: number;
-  NOME_DEPARTAMENTO: string;
-}
+const meses = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
 
-function converterHorarioParaMinutos(texto?: string | null): number | null {
-  if (!texto) return 0;
-
-  const valor = texto.toString().trim();
-  if (!valor) return 0;
-
-  const sinal = valor.startsWith("-") ? -1 : 1;
-  const limpo = valor.replace(/^-/, "");
-  const minutos = parseHoraParaMinutos(limpo);
-
-  if (minutos == null) return null;
-
-  return minutos * sinal;
+function competenciaAtual() {
+  const hoje = new Date();
+  return { ano: hoje.getFullYear(), mes: hoje.getMonth() + 1 };
 }
 
 export default function BancoHorasPage() {
   useRequerEmpresaSelecionada({ ativo: true });
-
-  const { empresa, carregando } = useEmpresaSelecionada();
-  const empresaId = empresa?.id ?? null;
-
-  const [competencia, setCompetencia] = useState(competenciaAtual());
-  const [funcionarioFiltro, setFuncionarioFiltro] = useState("");
-  const [departamentoFiltro, setDepartamentoFiltro] = useState("");
-  const [resumo, setResumo] = useState<ResumoBancoHorasFuncionario[]>([]);
-  const [ajustesTela, setAjustesTela] = useState<Record<string, { pagar: string; descontar: string }>>({});
-  const [notification, setNotification] = useState<{
-    type: "success" | "error" | "info";
-    message: string;
-  } | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
-  const [carregandoResumo, setCarregandoResumo] = useState(false);
-  const [gerando, setGerando] = useState(false);
   const [funcionarios, setFuncionarios] = useState<FuncionarioOption[]>([]);
-  const [departamentos, setDepartamentos] = useState<DepartamentoOption[]>([]);
+  const [resumo, setResumo] = useState<ResumoBancoHorasMes | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
 
-  const headersPadrao = useMemo<HeadersInit>(() => {
-    const headers: Record<string, string> = {};
+  const compAtual = useMemo(() => competenciaAtual(), []);
+  const [idFuncionario, setIdFuncionario] = useState("");
+  const [ano, setAno] = useState(compAtual.ano);
+  const [mes, setMes] = useState(compAtual.mes.toString().padStart(2, "0"));
+  const [politica, setPolitica] = useState<"COMPENSAR_COM_HORAS_EXTRAS" | "DESCONTAR_EM_FOLHA">(
+    "COMPENSAR_COM_HORAS_EXTRAS"
+  );
+  const [zerarBanco, setZerarBanco] = useState(true);
+  const [ajusteMinutos, setAjusteMinutos] = useState(0);
+  const [ajusteData, setAjusteData] = useState("");
+  const [ajusteTipo, setAjusteTipo] = useState<"CREDITO" | "DEBITO">("CREDITO");
+  const [ajusteObs, setAjusteObs] = useState("");
 
-    if (empresaId) {
-      headers["x-empresa-id"] = String(empresaId);
-    }
-
-    return headers;
-  }, [empresaId]);
-
-  const carregarFuncionarios = useCallback(async () => {
-    if (!empresaId) return;
-
-    try {
-      const resposta = await fetch(`/api/rh/funcionarios?apenasAtivos=true`, {
-        headers: headersPadrao,
-      });
-      const json = await resposta.json();
-
-      if (json?.success) {
-        setFuncionarios(json.data ?? []);
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  }, [empresaId, headersPadrao]);
-
-  const carregarDepartamentos = useCallback(async () => {
-    if (!empresaId) return;
-
-    try {
-      const resposta = await fetch(`/api/departamentos`, { headers: headersPadrao });
-      const json = await resposta.json();
-
-      if (json?.success) {
-        setDepartamentos(json.data ?? []);
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  }, [empresaId, headersPadrao]);
-
-  const prepararAjustesPadrao = (dados: ResumoBancoHorasFuncionario[]) => {
-    const ajustes: Record<string, { pagar: string; descontar: string }> = {};
-
-    dados.forEach((item) => {
-      const saldo = item.SALDO_ATUAL_MIN;
-      const pagar = saldo > 0 ? minutosParaHora(saldo) : "00:00";
-      const descontar = saldo < 0 ? minutosParaHora(Math.abs(saldo)) : "00:00";
-
-      ajustes[item.ID_FUNCIONARIO] = { pagar, descontar };
-    });
-
-    setAjustesTela(ajustes);
-  };
+  useEffect(() => {
+    fetch("/api/rh/funcionarios")
+      .then((r) => r.json())
+      .then((json) => setFuncionarios(json?.data ?? []))
+      .catch(() => setFuncionarios([]));
+  }, []);
 
   const carregarResumo = async () => {
-    setErro(null);
+    if (!idFuncionario) {
+      setNotification("Selecione um funcionário");
+      return;
+    }
+    setLoading(true);
     setNotification(null);
-
-    if (!empresaId) {
-      setErro("Selecione uma empresa para continuar.");
-      return;
-    }
-
-    if (!competencia) {
-      setErro("Informe a competência.");
-      return;
-    }
-
-    setCarregandoResumo(true);
-
     try {
-      const params = new URLSearchParams({ competencia });
-
-      if (funcionarioFiltro) params.set("funcionario", funcionarioFiltro);
-      if (departamentoFiltro) params.set("departamento", departamentoFiltro);
-
-      const resposta = await fetch(`/api/rh/banco-horas?${params.toString()}`, {
-        headers: headersPadrao,
-      });
-      const json = await resposta.json();
-
-      if (resposta.ok && json?.success) {
-        setResumo(json.data ?? []);
-        prepararAjustesPadrao(json.data ?? []);
+      const resp = await fetch(
+        `/api/rh/banco-horas/resumo?idFuncionario=${idFuncionario}&ano=${ano}&mes=${mes}&politicaFaltas=${politica}&zerarBancoNoMes=${zerarBanco}`
+      );
+      const json = await resp.json();
+      if (json?.success) {
+        setResumo(json.data);
       } else {
-        setErro("Não foi possível carregar o banco de horas.");
+        setNotification("Não foi possível calcular o banco de horas.");
       }
     } catch (error) {
       console.error(error);
-      setErro("Erro ao carregar o banco de horas.");
+      setNotification("Erro ao consultar banco de horas");
     } finally {
-      setCarregandoResumo(false);
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (carregando) return;
-    carregarFuncionarios();
-    carregarDepartamentos();
-  }, [carregando, carregarFuncionarios, carregarDepartamentos]);
-
-  useEffect(() => {
-    if (empresaId) {
-      carregarResumo();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresaId]);
-
-  const atualizarAjuste = (idFuncionario: string, campo: "pagar" | "descontar", valor: string) => {
-    setAjustesTela((atual) => ({
-      ...atual,
-      [idFuncionario]: {
-        pagar: campo === "pagar" ? valor : atual[idFuncionario]?.pagar ?? "00:00",
-        descontar:
-          campo === "descontar" ? valor : atual[idFuncionario]?.descontar ?? "00:00",
-      },
-    }));
-  };
-
-  const gerarAjustes = async () => {
-    setNotification(null);
-    setErro(null);
-    let ajustesPayload: {
-      idFuncionario: string;
-      HORAS_A_PAGAR_MIN: number;
-      HORAS_A_DESCONTAR_MIN: number;
-      HORAS_A_CARREGAR_MIN: number;
-    }[] = [];
-
-    try {
-      ajustesPayload = resumo.map((item) => {
-        const pagarTexto = ajustesTela[item.ID_FUNCIONARIO]?.pagar ?? "00:00";
-        const descontarTexto = ajustesTela[item.ID_FUNCIONARIO]?.descontar ?? "00:00";
-
-        const minutosPagar = converterHorarioParaMinutos(pagarTexto);
-        const minutosDescontar = converterHorarioParaMinutos(descontarTexto);
-
-        if (minutosPagar == null || minutosDescontar == null) {
-          throw new Error("HORARIO_INVALIDO");
-        }
-
-        const saldoCarregar =
-          item.SALDO_ATUAL_MIN - Math.max(0, minutosPagar) - Math.max(0, minutosDescontar);
-
-        return {
-          idFuncionario: item.ID_FUNCIONARIO,
-          HORAS_A_PAGAR_MIN: Math.max(0, minutosPagar),
-          HORAS_A_DESCONTAR_MIN: Math.max(0, minutosDescontar),
-          HORAS_A_CARREGAR_MIN: saldoCarregar,
-        };
-      });
-    } catch (error) {
-      setErro("Informe horários válidos no formato HH:MM.");
+  const incluirAjuste = async () => {
+    if (!idFuncionario || !ajusteData) {
+      setNotification("Informe funcionário e data para o ajuste");
       return;
     }
 
-    const ajustesValidos = ajustesPayload.filter(
-      (ajuste) =>
-        ajuste.HORAS_A_PAGAR_MIN > 0 ||
-        ajuste.HORAS_A_DESCONTAR_MIN > 0 ||
-        ajuste.HORAS_A_CARREGAR_MIN !== 0
-    );
-
-    if (!ajustesValidos.length) {
-      setErro("Nenhum ajuste informado para gerar.");
-      return;
-    }
-
-    setGerando(true);
+    const minutos = ajusteTipo === "CREDITO" ? Math.abs(ajusteMinutos) : -Math.abs(ajusteMinutos);
 
     try {
-      const resposta = await fetch(`/api/rh/banco-horas/fechamento`, {
+      setLoading(true);
+      const resp = await fetch("/api/rh/banco-horas/ajustes", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...headersPadrao,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          competencia,
-          ajustes: ajustesValidos,
+          idFuncionario,
+          data: ajusteData,
+          tipo: "AJUSTE_MANUAL",
+          minutos,
+          observacao: ajusteObs,
         }),
       });
-
-      const json = await resposta.json();
-
-      if (resposta.ok && json?.success) {
-        setNotification({ type: "success", message: "Ajustes gerados com sucesso." });
-        carregarResumo();
-      } else if (json?.error === "HORARIO_INVALIDO") {
-        setErro("Informe horários válidos no formato HH:MM.");
-      } else if (json?.error === "SEM_AJUSTES") {
-        setErro("Nenhum ajuste foi informado.");
-      } else {
-        setErro("Não foi possível gerar os ajustes.");
+      const json = await resp.json();
+      if (!json?.success) {
+        setNotification("Não foi possível incluir o ajuste.");
       }
+      await carregarResumo();
     } catch (error) {
       console.error(error);
-      setErro("Erro ao gerar ajustes.");
+      setNotification("Erro ao incluir ajuste");
     } finally {
-      setGerando(false);
+      setLoading(false);
     }
   };
 
   return (
     <LayoutShell>
-      <div className="page-container">
-        <HeaderBar
-          codigoTela="BAN001_RH_BANCO_HORAS"
-          nomeTela="BANCO DE HORAS"
-          caminhoRota="/rh/banco-horas"
-          modulo="RH"
-        />
-
-        <main className="page-content-card">
-          {notification && <NotificationBar type={notification.type} message={notification.message} />}
-
-          <section className="panel">
-            <header className="form-section-header">
-              <h2>BANCO DE HORAS</h2>
-              <p>Consolide os saldos mensais e gere os ajustes de fechamento.</p>
-            </header>
-
-            {erro && <p className="error-text">{erro}</p>}
-
-            <div className="form-grid three-columns">
-              <div className="form-group">
-                <label htmlFor="competencia">COMPETENCIA</label>
-                <input
-                  id="competencia"
-                  type="month"
-                  className="form-input"
-                  value={competencia}
-                  onChange={(e) => setCompetencia(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="funcionarioFiltro">FUNCIONARIO</label>
-                <select
-                  id="funcionarioFiltro"
-                  className="form-input"
-                  value={funcionarioFiltro}
-                  onChange={(e) => setFuncionarioFiltro(e.target.value)}
-                >
-                  <option value="">Todos</option>
-                  {funcionarios.map((f) => (
-                    <option key={f.ID_FUNCIONARIO} value={f.ID_FUNCIONARIO}>
-                      {f.ID_FUNCIONARIO} - {f.NOME_COMPLETO}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="departamentoFiltro">DEPARTAMENTO</label>
-                <select
-                  id="departamentoFiltro"
-                  className="form-input"
-                  value={departamentoFiltro}
-                  onChange={(e) => setDepartamentoFiltro(e.target.value)}
-                >
-                  <option value="">Todos</option>
-                  {departamentos.map((d) => (
-                    <option key={d.ID_DEPARTAMENTO} value={d.ID_DEPARTAMENTO}>
-                      {d.NOME_DEPARTAMENTO}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="button-row" style={{ marginBottom: "1rem" }}>
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={carregarResumo}
-                disabled={carregandoResumo}
+      <HeaderBar title="REL001_RH_BANCO_HORAS" />
+      <div className="p-4 space-y-4">
+        {notification && <NotificationBar type="warning" message={notification} />}
+        <div className="bg-white shadow rounded p-4 space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <label className="flex flex-col text-sm">
+              Funcionário
+              <select
+                value={idFuncionario}
+                onChange={(e) => setIdFuncionario(e.target.value)}
+                className="border rounded px-2 py-1"
               >
-                {carregandoResumo ? "Carregando..." : "Atualizar"}
-              </button>
+                <option value="">Selecione</option>
+                {funcionarios.map((f) => (
+                  <option key={f.ID_FUNCIONARIO} value={f.ID_FUNCIONARIO}>
+                    {f.NOME_COMPLETO}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col text-sm">
+              Ano
+              <input
+                type="number"
+                value={ano}
+                onChange={(e) => setAno(Number(e.target.value))}
+                className="border rounded px-2 py-1"
+              />
+            </label>
+            <label className="flex flex-col text-sm">
+              Mês
+              <select
+                value={mes}
+                onChange={(e) => setMes(e.target.value)}
+                className="border rounded px-2 py-1"
+              >
+                {meses.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex flex-col text-sm">
+              Política de faltas
+              <div className="flex gap-2">
+                <label className="flex items-center gap-1">
+                  <input
+                    type="radio"
+                    checked={politica === "COMPENSAR_COM_HORAS_EXTRAS"}
+                    onChange={() => setPolitica("COMPENSAR_COM_HORAS_EXTRAS")}
+                  />
+                  Compensar
+                </label>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="radio"
+                    checked={politica === "DESCONTAR_EM_FOLHA"}
+                    onChange={() => setPolitica("DESCONTAR_EM_FOLHA")}
+                  />
+                  Descontar
+                </label>
+              </div>
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={zerarBanco}
+                onChange={(e) => setZerarBanco(e.target.checked)}
+              />
+              Zerar banco ao final do mês
+            </label>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={carregarResumo}
+              disabled={loading}
+              className="bg-blue-600 text-white px-4 py-2 rounded"
+            >
+              {loading ? "Calculando..." : "Calcular"}
+            </button>
+          </div>
+        </div>
 
-            <div className="overflow-x-auto">
-              <table className="tabela-padrao w-full">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-2 text-left">FUNCIONARIO</th>
-                    <th className="px-4 py-2 text-center">SALDO ANTERIOR</th>
-                    <th className="px-4 py-2 text-center">CREDITOS MES</th>
-                    <th className="px-4 py-2 text-center">DEBITOS MES</th>
-                    <th className="px-4 py-2 text-center">AJUSTES MANUAIS</th>
-                    <th className="px-4 py-2 text-center">AJUSTES FECHAMENTO</th>
-                    <th className="px-4 py-2 text-center">HORAS FDS/FERIADO</th>
-                    <th className="px-4 py-2 text-center">SALDO ATUAL</th>
-                    <th className="px-4 py-2 text-center">H. A PAGAR</th>
-                    <th className="px-4 py-2 text-center">H. A DESCONTAR</th>
-                    <th className="px-4 py-2 text-center">SALDO A CARREGAR</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resumo.length === 0 && (
-                    <tr>
-                      <td colSpan={11} className="px-4 py-3 text-center text-sm text-gray-500">
-                        Nenhum registro encontrado para a competência selecionada.
-                      </td>
-                    </tr>
-                  )}
-
-                  {resumo.map((item) => {
-                    const pagarTexto = ajustesTela[item.ID_FUNCIONARIO]?.pagar ?? "00:00";
-                    const descontarTexto = ajustesTela[item.ID_FUNCIONARIO]?.descontar ?? "00:00";
-                    const pagarMin = converterHorarioParaMinutos(pagarTexto) ?? 0;
-                    const descontarMin = converterHorarioParaMinutos(descontarTexto) ?? 0;
-                    const saldoCarregar =
-                      item.SALDO_ATUAL_MIN - Math.max(0, pagarMin) - Math.max(0, descontarMin);
-
-                    return (
-                      <tr key={item.ID_FUNCIONARIO}>
-                        <td className="px-4 py-2 text-left">
-                          <div className="font-semibold">{item.ID_FUNCIONARIO}</div>
-                          <div className="text-sm text-gray-700">{item.NOME_FUNCIONARIO}</div>
-                        </td>
-                        <td className="px-4 py-2 text-center">{minutosParaHora(item.SALDO_ANTERIOR_MIN)}</td>
-                        <td className="px-4 py-2 text-center">{minutosParaHora(item.CREDITOS_MES_MIN)}</td>
-                        <td className="px-4 py-2 text-center">{minutosParaHora(item.DEBITOS_MES_MIN)}</td>
-                        <td className="px-4 py-2 text-center">{minutosParaHora(item.AJUSTES_MANUAIS_MIN)}</td>
-                        <td className="px-4 py-2 text-center">{minutosParaHora(item.AJUSTES_FECHAMENTO_MIN)}</td>
-                        <td className="px-4 py-2 text-center">{minutosParaHora(item.HORAS_PAGAS_FDS_FERIADO_MIN)}</td>
-                        <td className="px-4 py-2 text-center font-semibold">{minutosParaHora(item.SALDO_ATUAL_MIN)}</td>
-                        <td className="px-4 py-2 text-center">
-                          <input
-                            type="text"
-                            className="form-input text-center"
-                            value={pagarTexto}
-                            onChange={(e) => atualizarAjuste(item.ID_FUNCIONARIO, "pagar", e.target.value)}
-                          />
-                        </td>
-                        <td className="px-4 py-2 text-center">
-                          <input
-                            type="text"
-                            className="form-input text-center"
-                            value={descontarTexto}
-                            onChange={(e) =>
-                              atualizarAjuste(item.ID_FUNCIONARIO, "descontar", e.target.value)
-                            }
-                          />
-                        </td>
-                        <td className="px-4 py-2 text-center font-semibold">
-                          {minutosParaHora(saldoCarregar)}
-                        </td>
-                      </tr>
-                    );
+        {resumo && (
+          <div className="space-y-4">
+            <div className="bg-white shadow rounded p-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+              <div>
+                <div className="font-semibold">Dados do funcionário</div>
+                <div>{resumo.funcionario.nome}</div>
+                <div className="text-gray-600">{resumo.funcionario.nomeDepartamento ?? "-"}</div>
+              </div>
+              <div>
+                <div>Salário base</div>
+                <div className="font-semibold">
+                  {resumo.funcionario.salarioBase.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
                   })}
-                </tbody>
-              </table>
+                </div>
+                <div>Carga mensal: {resumo.funcionario.cargaHorariaMensalHoras}h</div>
+              </div>
+              <div>
+                <div>Valor hora</div>
+                <div className="font-semibold">
+                  {resumo.funcionario.valorHora.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                    minimumFractionDigits: 2,
+                  })}
+                </div>
+              </div>
             </div>
 
-            <div className="form-actions" style={{ marginTop: "1rem" }}>
-              <div className="button-row">
+            <div className="bg-white shadow rounded p-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <div>
+                <div className="text-gray-600">Saldo anterior</div>
+                <div className="font-semibold">{minutosParaHora(resumo.saldoAnteriorMin)}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Extras úteis</div>
+                <div className="font-semibold">{minutosParaHora(resumo.extrasUteisMin)}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Extras 100%</div>
+                <div className="font-semibold">{minutosParaHora(resumo.extras100Min)}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Horas devidas</div>
+                <div className="font-semibold text-red-600">{minutosParaHora(resumo.devidasMin)}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Ajustes manuais</div>
+                <div className="font-semibold">{minutosParaHora(resumo.ajustesManuaisMin)}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Fechamentos</div>
+                <div className="font-semibold">{minutosParaHora(resumo.fechamentosMin)}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Saldo técnico</div>
+                <div className="font-semibold">{minutosParaHora(resumo.saldoTecnicoMin)}</div>
+              </div>
+              <div>
+                <div className="text-gray-600">Saldo final</div>
+                <div className="font-semibold">{minutosParaHora(resumo.saldoFinalBancoMin)}</div>
+              </div>
+            </div>
+
+            <div className="bg-white shadow rounded p-4 text-sm">
+              <div className="font-semibold mb-2">Dias da competência</div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-100 text-left">
+                      <th className="p-2">Dia</th>
+                      <th className="p-2">Tipo</th>
+                      <th className="p-2">Jornada</th>
+                      <th className="p-2">Trabalhado</th>
+                      <th className="p-2">Diferença</th>
+                      <th className="p-2">Classificação</th>
+                      <th className="p-2">Impacto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resumo.dias.map((dia) => (
+                      <tr key={dia.data} className="border-b">
+                        <td className="p-2 whitespace-nowrap">{dia.data} - {dia.diaSemana}</td>
+                        <td className="p-2">{dia.tipoDia}</td>
+                        <td className="p-2">{minutosParaHora(dia.jornadaPrevistaMin)}</td>
+                        <td className="p-2">{minutosParaHora(dia.trabalhadoMin)}</td>
+                        <td className="p-2">{minutosParaHora(dia.diferencaMin)}</td>
+                        <td className="p-2">{dia.classificacao}</td>
+                        <td className="p-2">{minutosParaHora(dia.impactoBancoMin)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-white shadow rounded p-4 text-sm">
+              <div className="font-semibold mb-2">Movimentos</div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-100 text-left">
+                      <th className="p-2">Data</th>
+                      <th className="p-2">Tipo</th>
+                      <th className="p-2">Minutos</th>
+                      <th className="p-2">Observação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resumo.movimentos.map((mov) => (
+                      <tr key={mov.id} className="border-b">
+                        <td className="p-2">{mov.data}</td>
+                        <td className="p-2">{mov.tipo}</td>
+                        <td className="p-2">{minutosParaHora(mov.minutos)}</td>
+                        <td className="p-2">{mov.observacao ?? "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-white shadow rounded p-4 text-sm space-y-3">
+              <div className="font-semibold">Ajuste manual</div>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                <label className="flex flex-col">
+                  Data
+                  <input
+                    type="date"
+                    value={ajusteData}
+                    onChange={(e) => setAjusteData(e.target.value)}
+                    className="border rounded px-2 py-1"
+                  />
+                </label>
+                <label className="flex flex-col">
+                  Tipo
+                  <select
+                    value={ajusteTipo}
+                    onChange={(e) => setAjusteTipo(e.target.value as "CREDITO" | "DEBITO")}
+                    className="border rounded px-2 py-1"
+                  >
+                    <option value="CREDITO">Crédito</option>
+                    <option value="DEBITO">Débito</option>
+                  </select>
+                </label>
+                <label className="flex flex-col">
+                  Minutos
+                  <input
+                    type="number"
+                    value={ajusteMinutos}
+                    onChange={(e) => setAjusteMinutos(Number(e.target.value))}
+                    className="border rounded px-2 py-1"
+                  />
+                </label>
+                <label className="flex flex-col col-span-2">
+                  Observação
+                  <input
+                    type="text"
+                    value={ajusteObs}
+                    onChange={(e) => setAjusteObs(e.target.value)}
+                    className="border rounded px-2 py-1"
+                  />
+                </label>
                 <button
-                  type="button"
-                  className="button button-primary"
-                  onClick={gerarAjustes}
-                  disabled={gerando || !resumo.length}
+                  onClick={incluirAjuste}
+                  className="bg-green-600 text-white px-4 py-2 rounded"
+                  disabled={loading}
                 >
-                  {gerando ? "Gerando..." : "Gerar ajustes"}
-                </button>
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={carregarResumo}
-                  disabled={carregandoResumo}
-                >
-                  Atualizar
+                  Incluir ajuste manual
                 </button>
               </div>
             </div>
-          </section>
-        </main>
+          </div>
+        )}
       </div>
     </LayoutShell>
   );
