@@ -7,7 +7,9 @@ import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSeleci
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
+import { ModalExportacao, type OpcoesExportacao } from "@/components/ModalExportacao";
 import { minutosParaHora } from "@/lib/rhPontoCalculo";
+import { exportarPDF, exportarExcel } from "@/lib/exportarBancoHoras";
 import type { ResumoBancoHorasMes } from "@/db/rhBancoHoras";
 
 interface FuncionarioOption {
@@ -54,6 +56,7 @@ export default function BancoHorasConsultaPage() {
   const [ano, setAno] = useState(compAtual.ano);
   const [mes, setMes] = useState(compAtual.mes.toString().padStart(2, "0"));
   const [loading, setLoading] = useState(false);
+  const [modalExportacaoAberto, setModalExportacaoAberto] = useState(false);
 
   const empresaId = empresa?.id ?? null;
 
@@ -97,6 +100,49 @@ export default function BancoHorasConsultaPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExportar = async (opcoes: OpcoesExportacao) => {
+    const dadosParaExportar = [];
+
+    for (const funcId of opcoes.funcionariosSelecionados) {
+      try {
+        const resp = await fetch(
+          `/api/rh/banco-horas/resumo?idFuncionario=${funcId}&ano=${ano}&mes=${mes}&politicaFaltas=COMPENSAR_COM_HORAS_EXTRAS&zerarBancoNoMes=true`,
+          { headers: headersPadrao }
+        );
+        const json = await resp.json();
+        if (json?.success) {
+          dadosParaExportar.push({
+            resumo: json.data,
+            empresa: {
+              nome: empresa?.nomeFantasia || "Empresa",
+              cnpj: empresa?.cnpj,
+            },
+          });
+        }
+      } catch (error) {
+        console.error(`Erro ao buscar dados do funcionário ${funcId}:`, error);
+      }
+    }
+
+    if (dadosParaExportar.length === 0) {
+      setNotification({ type: "error", message: "Nenhum dado disponível para exportação" });
+      return;
+    }
+
+    if (opcoes.exportarPDF) {
+      dadosParaExportar.forEach((dados) => exportarPDF(dados));
+    }
+
+    if (opcoes.exportarExcel) {
+      exportarExcel(dadosParaExportar);
+    }
+
+    setNotification({
+      type: "success",
+      message: `Exportação concluída com sucesso! ${dadosParaExportar.length} registro(s) exportado(s).`,
+    });
   };
 
   return (
@@ -164,13 +210,23 @@ export default function BancoHorasConsultaPage() {
                   </select>
                 </div>
 
-                <div style={{ flex: "0 0 auto" }}>
+                <div style={{ flex: "0 0 auto", display: "flex", gap: "8px" }}>
                   <button
                     onClick={pesquisar}
                     disabled={loading}
                     className="button button-primary"
                   >
                     {loading ? "Buscando..." : "Pesquisar"}
+                  </button>
+                  <button
+                    onClick={() => setModalExportacaoAberto(true)}
+                    className="button"
+                    style={{
+                      backgroundColor: "#059669",
+                      color: "white",
+                    }}
+                  >
+                    Exportar Arquivos
                   </button>
                 </div>
               </div>
@@ -274,6 +330,13 @@ export default function BancoHorasConsultaPage() {
           )}
           </div>
         </main>
+
+        <ModalExportacao
+          isOpen={modalExportacaoAberto}
+          onClose={() => setModalExportacaoAberto(false)}
+          funcionarios={funcionarios}
+          onExportar={handleExportar}
+        />
       </div>
     </LayoutShell>
   );
