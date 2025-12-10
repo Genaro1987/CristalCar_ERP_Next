@@ -149,11 +149,12 @@ export default function BancoHorasPage() {
   const horasDevidas = resumo?.devidasMin ?? 0;
   const valorHora = resumo?.funcionario.valorHora ?? 0;
 
-  const saldoMesHoras = saldoAnteriorHoras + extras50Horas + extras100Horas - horasDevidas;
+  // horasDevidas já vem como valor negativo, então somamos ao invés de subtrair
+  const saldoMesHoras = saldoAnteriorHoras + extras50Horas + extras100Horas + horasDevidas;
   const saldoMesValor =
     saldoAnteriorHoras * (valorHora / 60) +
     (extras50Horas / 60) * valorHora * 1.5 +
-    (extras100Horas / 60) * valorHora * 2 -
+    (extras100Horas / 60) * valorHora * 2 +
     (horasDevidas / 60) * valorHora;
 
   const horasMovimentacao = parseHoraParaMinutos(horasBancoQuantidade) ?? 0;
