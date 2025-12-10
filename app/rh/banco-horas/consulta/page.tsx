@@ -423,11 +423,11 @@ export default function BancoHorasConsultaPage() {
                   </thead>
                   <tbody>
                     {resumo.dias.map((dia) => {
-                      let classificacao = dia.classificacao;
-                      if (classificacao === "EXTRA_UTIL") classificacao = "HORA CRÉDITO";
-                      else if (classificacao === "EXTRA_100") classificacao = "HORA CRÉDITO";
-                      else if (classificacao === "DEVEDOR") classificacao = "HORA DÉBITO";
-                      else if (classificacao.includes("FALTA")) classificacao = "FALTA";
+                      let classificacaoExibicao = dia.classificacao;
+                      if (dia.classificacao === "EXTRA_UTIL") classificacaoExibicao = "HORA CRÉDITO";
+                      else if (dia.classificacao === "EXTRA_100") classificacaoExibicao = "HORA CRÉDITO";
+                      else if (dia.classificacao === "DEVEDOR") classificacaoExibicao = "HORA DÉBITO";
+                      else if (dia.classificacao.includes("FALTA")) classificacaoExibicao = "FALTA";
 
                       return (
                         <tr key={dia.data}>
@@ -438,13 +438,13 @@ export default function BancoHorasConsultaPage() {
                           </td>
                           <td>
                             <span className={
-                              classificacao === "HORA CRÉDITO"
+                              classificacaoExibicao === "HORA CRÉDITO"
                                 ? "badge badge-success"
-                                : classificacao === "HORA DÉBITO" || classificacao === "FALTA"
+                                : classificacaoExibicao === "HORA DÉBITO" || classificacaoExibicao === "FALTA"
                                 ? "badge badge-danger"
                                 : "badge"
                             }>
-                              {classificacao}
+                              {classificacaoExibicao}
                             </span>
                           </td>
                         </tr>
