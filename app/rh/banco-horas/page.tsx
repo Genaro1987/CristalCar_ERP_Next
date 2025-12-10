@@ -84,6 +84,8 @@ export default function BancoHorasPage() {
   const [ajusteData, setAjusteData] = useState("");
   const [ajusteTipo, setAjusteTipo] = useState<"CREDITO" | "DEBITO">("CREDITO");
   const [ajusteObs, setAjusteObs] = useState("");
+  const [situacaoPeriodo, setSituacaoPeriodo] = useState<string | null>(null);
+  const [atualizandoPeriodo, setAtualizandoPeriodo] = useState(false);
 
   const empresaId = empresa?.id ?? null;
 
@@ -142,6 +144,11 @@ export default function BancoHorasPage() {
       setMes(periodosDisponiveis[0].valor);
     }
   }, [mes, periodosDisponiveis]);
+
+  useEffect(() => {
+    buscarSituacaoPeriodo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idFuncionario, mes, ano]);
 
   const saldoAnteriorHoras = resumo?.saldoAnteriorMin ?? 0;
   const extras50Horas = resumo?.extrasUteisMin ?? 0;
@@ -257,6 +264,73 @@ export default function BancoHorasPage() {
       setNotification({ type: "error", message: "Erro ao incluir ajuste" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const buscarSituacaoPeriodo = async () => {
+    if (!idFuncionario || !mes) {
+      setSituacaoPeriodo(null);
+      return;
+    }
+
+    try {
+      const resp = await fetch(
+        `/api/rh/banco-horas/periodo?funcionarioId=${idFuncionario}&ano=${ano}&mes=${mes}`,
+        { headers: headersPadrao }
+      );
+      const json = await resp.json();
+      if (json?.success) {
+        setSituacaoPeriodo(json.situacao);
+      }
+    } catch (error) {
+      console.error(error);
+      setSituacaoPeriodo(null);
+    }
+  };
+
+  const alternarSituacaoPeriodo = async (acao: "fechar" | "reabrir") => {
+    if (!idFuncionario || !mes) {
+      setNotification({ type: "info", message: "Selecione um funcionário e mês" });
+      return;
+    }
+
+    setAtualizandoPeriodo(true);
+    setNotification(null);
+
+    try {
+      const resp = await fetch("/api/rh/banco-horas/periodo", {
+        method: "POST",
+        headers: headersPadrao,
+        body: JSON.stringify({
+          funcionarioId: idFuncionario,
+          ano,
+          mes: Number(mes),
+          acao,
+        }),
+      });
+
+      const json = await resp.json();
+
+      if (json?.success) {
+        setNotification({
+          type: "success",
+          message: acao === "fechar" ? "Período fechado com sucesso" : "Período reaberto com sucesso",
+        });
+        await buscarSituacaoPeriodo();
+      } else {
+        setNotification({
+          type: "error",
+          message: `Não foi possível ${acao === "fechar" ? "fechar" : "reabrir"} o período.`,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      setNotification({
+        type: "error",
+        message: `Erro ao ${acao === "fechar" ? "fechar" : "reabrir"} o período`,
+      });
+    } finally {
+      setAtualizandoPeriodo(false);
     }
   };
 
@@ -383,6 +457,61 @@ export default function BancoHorasPage() {
                       <label>VALOR HORA</label>
                       <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
                         {formatarMoeda(resumo.funcionario.valorHora)}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <CardDivider />
+
+                <section className="panel banco-horas-panel">
+                  <header className="form-section-header">
+                    <h2>STATUS DO PERÍODO</h2>
+                    <p>Controle de situação e fechamento do período.</p>
+                  </header>
+                  <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
+                    <div className="banco-horas-card-grid">
+                      <div className="form-group">
+                        <label>SITUAÇÃO ATUAL</label>
+                        <div
+                          className="form-input"
+                          style={{
+                            backgroundColor: situacaoPeriodo === "FECHADO" ? "#f0fdf4" : "#fef9e7",
+                            color: situacaoPeriodo === "FECHADO" ? "#059669" : "#f59e0b",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {situacaoPeriodo === "FECHADO" ? "FECHADO" : situacaoPeriodo === "DIGITADO" ? "DIGITADO (EM ABERTO)" : "NÃO INICIADO"}
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label>AÇÕES</label>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          {situacaoPeriodo !== "FECHADO" ? (
+                            <button
+                              onClick={() => alternarSituacaoPeriodo("fechar")}
+                              disabled={atualizandoPeriodo || situacaoPeriodo !== "DIGITADO"}
+                              className="button button-primary"
+                              style={{
+                                backgroundColor: "#10b981",
+                                borderColor: "#059669",
+                                flex: 1,
+                              }}
+                            >
+                              {atualizandoPeriodo ? "Processando..." : "Fechar Período"}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => alternarSituacaoPeriodo("reabrir")}
+                              disabled={atualizandoPeriodo}
+                              className="button button-secondary"
+                              style={{ flex: 1 }}
+                            >
+                              {atualizandoPeriodo ? "Processando..." : "Reabrir Período"}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -549,14 +678,8 @@ export default function BancoHorasPage() {
                             setZerarBanco((prev) => !prev);
                           }}
                         >
-                          {zerarBancoAoFinal ? "Desfazer zerar banco" : "Zerar banco ao final do mes"}
+                          {zerarBancoAoFinal ? "Cancelar zeragem de banco" : "Zerar banco ao final do mes"}
                         </button>
-                      </div>
-                      <div className="form-group">
-                        <label>HORAS A PAGAR 100% (REFERENCIA)</label>
-                        <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>
-                          {minutosParaHora(resumo.horasPagar100Min)}
-                        </div>
                       </div>
                     </div>
                   </div>

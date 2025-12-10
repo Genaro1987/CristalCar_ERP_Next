@@ -111,3 +111,75 @@ export async function registrarPeriodoDigitado(params: RegistrarPeriodoParams) {
     args: [idEmpresa, idFuncionario, anoReferencia, mesReferencia, idUsuario],
   });
 }
+
+export async function fecharPeriodo(params: RegistrarPeriodoParams) {
+  const { idEmpresa, idFuncionario, anoReferencia, mesReferencia } = params;
+  const idUsuario = params.idUsuarioUltimaAtualizacao ?? null;
+
+  await db.execute({
+    sql: `
+      INSERT INTO RH_BANCO_HORAS_PERIODO (
+        ID_EMPRESA,
+        ID_FUNCIONARIO,
+        ANO_REFERENCIA,
+        MES_REFERENCIA,
+        SITUACAO_PERIODO,
+        DATA_ULTIMA_ATUALIZACAO,
+        ID_USUARIO_ULTIMA_ATUALIZACAO
+      ) VALUES (?, ?, ?, ?, 'FECHADO', datetime('now'), ?)
+      ON CONFLICT (ID_EMPRESA, ID_FUNCIONARIO, ANO_REFERENCIA, MES_REFERENCIA)
+      DO UPDATE SET
+        SITUACAO_PERIODO = 'FECHADO',
+        DATA_ULTIMA_ATUALIZACAO = datetime('now'),
+        ID_USUARIO_ULTIMA_ATUALIZACAO = ?,
+        UPDATED_AT = datetime('now')
+    `,
+    args: [idEmpresa, idFuncionario, anoReferencia, mesReferencia, idUsuario, idUsuario],
+  });
+}
+
+export async function reabrirPeriodo(params: RegistrarPeriodoParams) {
+  const { idEmpresa, idFuncionario, anoReferencia, mesReferencia } = params;
+  const idUsuario = params.idUsuarioUltimaAtualizacao ?? null;
+
+  await db.execute({
+    sql: `
+      UPDATE RH_BANCO_HORAS_PERIODO
+         SET SITUACAO_PERIODO = 'DIGITADO',
+             DATA_ULTIMA_ATUALIZACAO = datetime('now'),
+             ID_USUARIO_ULTIMA_ATUALIZACAO = ?,
+             UPDATED_AT = datetime('now')
+       WHERE ID_EMPRESA = ?
+         AND ID_FUNCIONARIO = ?
+         AND ANO_REFERENCIA = ?
+         AND MES_REFERENCIA = ?
+         AND SITUACAO_PERIODO = 'FECHADO'
+    `,
+    args: [idUsuario, idEmpresa, idFuncionario, anoReferencia, mesReferencia],
+  });
+}
+
+export async function obterSituacaoPeriodo(
+  idEmpresa: number,
+  idFuncionario: string,
+  anoReferencia: number,
+  mesReferencia: number
+): Promise<string | null> {
+  const resultado = await db.execute({
+    sql: `
+      SELECT SITUACAO_PERIODO
+        FROM RH_BANCO_HORAS_PERIODO
+       WHERE ID_EMPRESA = ?
+         AND ID_FUNCIONARIO = ?
+         AND ANO_REFERENCIA = ?
+         AND MES_REFERENCIA = ?
+    `,
+    args: [idEmpresa, idFuncionario, anoReferencia, mesReferencia],
+  });
+
+  if (!resultado.rows?.length) {
+    return null;
+  }
+
+  return String(resultado.rows[0].SITUACAO_PERIODO);
+}
