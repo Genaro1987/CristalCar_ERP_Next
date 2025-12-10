@@ -65,10 +65,10 @@ export function calcularMinutosTrabalhados(dia: {
   const sm = parseHoraParaMinutos(dia.saidaManha);
   const et = parseHoraParaMinutos(dia.entradaTarde);
   const st = parseHoraParaMinutos(dia.saidaTarde);
-  const ei = parseHoraParaMinutos(dia.entradaExtra);
-  const si = parseHoraParaMinutos(dia.saidaExtra);
 
-  return diff(em, sm) + diff(et, st) - diff(ei, si);
+  // O intervalo (entradaExtra/saidaExtra) não é subtraído do tempo trabalhado
+  // É apenas um registro para controle, não afeta o cálculo
+  return diff(em, sm) + diff(et, st);
 }
 
 export function determinarTipoDia(dataReferencia: string, eFeriado?: FlagSimNao): TipoDia {
@@ -99,10 +99,10 @@ export function calcularMinutosJornadaDiaria(jornada?: {
   const sm = parseHoraParaMinutos(jornada.HORA_SAIDA_MANHA);
   const et = parseHoraParaMinutos(jornada.HORA_ENTRADA_TARDE);
   const st = parseHoraParaMinutos(jornada.HORA_SAIDA_TARDE);
-  const ei = parseHoraParaMinutos(jornada.HORA_ENTRADA_INTERVALO);
-  const si = parseHoraParaMinutos(jornada.HORA_SAIDA_INTERVALO);
 
-  return diff(em, sm) + diff(et, st) - diff(ei, si);
+  // O intervalo não é subtraído da jornada diária
+  // É apenas um registro para controle, não afeta o cálculo
+  return diff(em, sm) + diff(et, st);
 }
 
 export function calcularSaldoDia(

@@ -213,10 +213,20 @@ export default function PontoPage() {
       saidaManha: jornada.HORA_SAIDA_MANHA ?? diaAtual.saidaManha,
       entradaTarde: jornada.HORA_ENTRADA_TARDE ?? diaAtual.entradaTarde,
       saidaTarde: jornada.HORA_SAIDA_TARDE ?? diaAtual.saidaTarde,
-      entradaExtra:
-        jornada.HORA_ENTRADA_INTERVALO ?? jornada.HORA_ENTRADA_EXTRA ?? diaAtual.entradaExtra,
-      saidaExtra:
-        jornada.HORA_SAIDA_INTERVALO ?? jornada.HORA_SAIDA_EXTRA ?? diaAtual.saidaExtra,
+      // Intervalo não é aplicado automaticamente com a jornada
+    };
+  };
+
+  const montarHorariosIntervaloParaDia = (
+    diaAtual: LancamentoDia,
+    jornada?: Jornada | null
+  ): LancamentoDia => {
+    if (!jornada) return diaAtual;
+
+    return {
+      ...diaAtual,
+      entradaExtra: jornada.HORA_ENTRADA_INTERVALO ?? diaAtual.entradaExtra,
+      saidaExtra: jornada.HORA_SAIDA_INTERVALO ?? diaAtual.saidaExtra,
     };
   };
 
@@ -234,6 +244,27 @@ export default function PontoPage() {
       const comJornada = montarHorariosJornadaParaDia(diaAtual, jornadaFuncionario);
       copia[indexDia] = recalcularTotaisDia(
         comJornada,
+        minutosJornadaDia,
+        toleranciaMinutosJornada
+      );
+      return copia;
+    });
+  };
+
+  const aplicarIntervaloNoDia = (indexDia: number) => {
+    if (!jornadaFuncionario) return;
+
+    setDiasPonto((diasAnteriores) => {
+      const copia = [...diasAnteriores];
+      const diaAtual = copia[indexDia];
+
+      if (diaAtual.tipoOcorrencia && diaAtual.tipoOcorrencia !== "NORMAL") {
+        return copia;
+      }
+
+      const comIntervalo = montarHorariosIntervaloParaDia(diaAtual, jornadaFuncionario);
+      copia[indexDia] = recalcularTotaisDia(
+        comIntervalo,
         minutosJornadaDia,
         toleranciaMinutosJornada
       );
@@ -709,7 +740,7 @@ export default function PontoPage() {
               <section className="panel">
                 <header className="form-section-header">
                   <h2>Lançamento de ponto</h2>
-                  <p>Carregue os dias do mês, ajuste os horários e salve o ponto do funcionário.</p>
+                  <p>Carregue os dias do mês, ajuste os horários de trabalho e salve o ponto do funcionário. O intervalo é apenas registro e não afeta o cálculo de horas trabalhadas.</p>
                 </header>
 
                 {erroFormulario && <p className="error-text">{erroFormulario}</p>}
@@ -787,8 +818,8 @@ export default function PontoPage() {
                     <thead>
                       <tr>
                         <th className="w-32 px-4 py-2 text-left">Dia</th>
-                        <th className="px-4 py-2 text-center">Horários</th>
-                        <th className="w-40 px-4 py-2 text-center">Intervalo</th>
+                        <th className="px-4 py-2 text-center">Horários de Trabalho</th>
+                        <th className="w-40 px-4 py-2 text-center">Intervalo (Registro)</th>
                         <th className="w-32 px-4 py-2 text-center">Tempo trabalhado</th>
                         <th className="w-32 px-4 py-2 text-center">Horas extras</th>
                         <th className="w-40 px-4 py-2 text-center">Ações</th>
@@ -920,6 +951,14 @@ export default function PontoPage() {
                                   disabled={!jornadaFuncionario || isFalta}
                                 >
                                   Jornada
+                                </button>
+                                <button
+                                  type="button"
+                                  className="button button-secondary button-compact"
+                                  onClick={() => aplicarIntervaloNoDia(index)}
+                                  disabled={!jornadaFuncionario || isFalta}
+                                >
+                                  Intervalo
                                 </button>
                                 <button
                                   type="button"
