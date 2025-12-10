@@ -662,13 +662,14 @@ export async function calcularBancoHorasMes(
     let extraUtilDisponivel = horasPagar50Min;
     let extra100Disponivel = horasPagar100Min;
 
-    const consumoUtil = Math.min(extraUtilDisponivel, debito);
-    extraUtilDisponivel -= consumoUtil;
-    debito -= consumoUtil;
-
+    // Primeiro consome extras 100%, depois extras 50%
     const consumo100 = Math.min(extra100Disponivel, debito);
     extra100Disponivel -= consumo100;
     debito -= consumo100;
+
+    const consumoUtil = Math.min(extraUtilDisponivel, debito);
+    extraUtilDisponivel -= consumoUtil;
+    debito -= consumoUtil;
 
     horasPagar50Min = extraUtilDisponivel;
     horasPagar100Min = extra100Disponivel;

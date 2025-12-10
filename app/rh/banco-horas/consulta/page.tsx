@@ -408,6 +408,7 @@ export default function BancoHorasConsultaPage() {
 
               <div className="form-section-header" style={{ marginTop: "32px" }}>
                 <h2>Detalhamento Diário</h2>
+                <p>Jornada de Trabalho: {minutosParaHora(resumo.dias[0]?.jornadaPrevistaMin || 0)}</p>
               </div>
 
               <div className="departamento-tabela-wrapper">
@@ -415,36 +416,40 @@ export default function BancoHorasConsultaPage() {
                   <thead>
                     <tr>
                       <th>Dia</th>
-                      <th>Tipo</th>
-                      <th>Jornada</th>
                       <th>Trabalhado</th>
                       <th>Diferença</th>
                       <th>Classificação</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {resumo.dias.map((dia) => (
-                      <tr key={dia.data}>
-                        <td className="whitespace-nowrap">{dia.data} - {dia.diaSemana}</td>
-                        <td>{dia.tipoDia}</td>
-                        <td>{minutosParaHora(dia.jornadaPrevistaMin)}</td>
-                        <td>{minutosParaHora(dia.trabalhadoMin)}</td>
-                        <td style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
-                          {minutosParaHora(dia.diferencaMin)}
-                        </td>
-                        <td>
-                          <span className={
-                            dia.classificacao === "EXTRA_UTIL" || dia.classificacao === "EXTRA_100"
-                              ? "badge badge-success"
-                              : dia.classificacao === "DEVEDOR" || dia.classificacao.includes("FALTA")
-                              ? "badge badge-danger"
-                              : "badge"
-                          }>
-                            {dia.classificacao}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {resumo.dias.map((dia) => {
+                      let classificacao = dia.classificacao;
+                      if (classificacao === "EXTRA_UTIL") classificacao = "HORA CRÉDITO";
+                      else if (classificacao === "EXTRA_100") classificacao = "HORA CRÉDITO";
+                      else if (classificacao === "DEVEDOR") classificacao = "HORA DÉBITO";
+                      else if (classificacao.includes("FALTA")) classificacao = "FALTA";
+
+                      return (
+                        <tr key={dia.data}>
+                          <td className="whitespace-nowrap">{dia.data} - {dia.diaSemana}</td>
+                          <td>{minutosParaHora(dia.trabalhadoMin)}</td>
+                          <td style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
+                            {minutosParaHora(dia.diferencaMin)}
+                          </td>
+                          <td>
+                            <span className={
+                              classificacao === "HORA CRÉDITO"
+                                ? "badge badge-success"
+                                : classificacao === "HORA DÉBITO" || classificacao === "FALTA"
+                                ? "badge badge-danger"
+                                : "badge"
+                            }>
+                              {classificacao}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
