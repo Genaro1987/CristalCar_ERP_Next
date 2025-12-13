@@ -93,7 +93,7 @@ export function exportarPDF(dados: DadosExportacao) {
   doc.setFont("helvetica", "normal");
   yPos += 10;
 
-  // VALORES - Em uma linha
+  // VALORES - Em duas linhas para evitar sobreposição
   doc.setFont("helvetica", "bold");
   doc.text("Saldo por hora extra ou falta:", margin, yPos);
   doc.setFont("helvetica", "normal");
@@ -108,7 +108,13 @@ export function exportarPDF(dados: DadosExportacao) {
   const vp100 = formatarMoeda(vp100Num);
   const vd = formatarMoeda(vdNum);
   const subtotal = formatarMoeda(subtotalNum);
-  doc.text(`Pagar 50%: ${vp50} | Pagar 100%: ${vp100} | Descontar: ${vd} | Subtotal: ${subtotal}`, margin + 2, yPos);
+  yPos += 5;
+  doc.text(
+    `Pagar 50%: ${vp50} | Pagar 100%: ${vp100} | Descontar: ${vd} | Subtotal: ${subtotal}`,
+    margin + 2,
+    yPos,
+    { maxWidth: pageWidth - margin * 2 - 4 }
+  );
   yPos += 12;
 
   // DETALHAMENTO DIÁRIO - Tabela compacta

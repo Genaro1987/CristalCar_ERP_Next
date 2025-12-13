@@ -438,6 +438,9 @@ a {
   border-radius: 10px;
   background-color: #ffffff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .banco-horas-card-full {
@@ -445,7 +448,7 @@ a {
 }
 
 .card-label {
-  margin: 0 0 6px;
+  margin: 0;
   color: #6b7280;
   font-weight: 600;
   font-size: 0.9rem;
@@ -461,6 +464,7 @@ a {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  line-height: 1.35;
 }
 
 .card-inline {
@@ -492,6 +496,32 @@ a {
 .card-neutral {
   background-color: #f9fafb;
   border-color: #e5e7eb;
+}
+
+.saldo-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.saldo-titulo {
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.saldo-valores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.saldo-valores span {
+  display: inline-block;
 }
 
 .jornada-info-line {
@@ -599,6 +629,16 @@ a {
 
   .banco-horas-card .card-value {
     font-size: 1.05rem;
+  }
+
+  .saldo-bloco {
+    gap: 8px;
+    line-height: 1.4;
+  }
+
+  .saldo-valores {
+    gap: 12px 14px;
+    line-height: 1.4;
   }
 
   .data-table th,
