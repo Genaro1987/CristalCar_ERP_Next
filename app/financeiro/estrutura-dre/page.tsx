@@ -1,8 +1,10 @@
 "use client";
 
-import LayoutShell from "@/components/LayoutShell";
+import LayoutShell, { useHelpContext } from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
+import { NotificationBar } from "@/components/NotificationBar";
 import { SplitViewShell } from "@/components/financeiro/SplitViewShell";
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
@@ -126,6 +128,8 @@ function flatten(nodes: LinhaDre[]): LinhaDre[] {
 }
 
 export default function EstruturaDrePage() {
+  const { abrirAjuda } = useHelpContext();
+  const { empresa } = useEmpresaSelecionada();
   const dados = useMemo<LinhaDre[]>(
     () => [
       {
@@ -210,127 +214,155 @@ export default function EstruturaDrePage() {
         modulo="FINANCEIRO"
       />
 
-      <SplitViewShell
-        title="ESTRUTURA DRE"
-        subtitle="Visualize linhas, detalhes e vinculos de contas alinhados ao ID_EMPRESA"
-        onNew={() => setModalAberto(true)}
-        helpLink="/ajuda"
-        filters={
-          <>
-            <label className="text-sm font-semibold text-gray-700">
-              Busca
-              <input
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Buscar por ordem ou nome"
-                className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
-              />
-            </label>
-            <label className="text-sm font-semibold text-gray-700">
-              Status
-              <select
-                value={statusFiltro}
-                onChange={(e) => setStatusFiltro(e.target.value as typeof statusFiltro)}
-                className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
-              >
-                <option value="TODOS">Todos</option>
-                <option value="ATIVO">Ativos</option>
-                <option value="INATIVO">Inativos</option>
-              </select>
-            </label>
-            <div className="rounded border border-dashed border-gray-200 bg-white p-3 text-xs text-gray-600">
-              Confirme vinculo apenas com contas da mesma ID_EMPRESA.
-            </div>
-          </>
-        }
-      >
-        <div className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr]">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-extrabold uppercase text-gray-800">Arvore do DRE</h3>
-              <span className="text-xs font-semibold uppercase text-gray-500">Performance otimizada</span>
-            </div>
-            <ul className="space-y-3">
-              {dadosFiltrados.map((node) => (
-                <LinhaTree
-                  key={node.id}
-                  node={node}
-                  onSelect={setSelecionado}
-                  selectedId={selecionado}
-                  onEdit={() => setModalAberto(true)}
-                />
-              ))}
-            </ul>
-          </div>
+      <div className="page-container space-y-4">
+        <NotificationBar
+          type="info"
+          message="Estruture o DRE respeitando ID_EMPRESA no mesmo padrao do RH e vincule contas somente da mesma empresa."
+        />
 
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 shadow-inner">
-            <h3 className="text-sm font-extrabold uppercase text-gray-800">Detalhe da Linha</h3>
-            {selecionadoNode ? (
-              <div className="mt-3 space-y-2 text-sm text-gray-700">
-                <p className="font-semibold text-gray-900">
-                  ({selecionadoNode.ordem}) {selecionadoNode.nome}
-                </p>
-                <p>Natureza: {selecionadoNode.natureza}</p>
-                <p>Status: {selecionadoNode.status}</p>
-                <p>
-                  Contas vinculadas: <span className="font-semibold">{selecionadoNode.contasVinculadas.join(", ")}</span>
-                </p>
-                <p className="text-xs text-gray-500">
-                  Respeitar hierarquia por ID_EMPRESA e validar consistencia antes de publicar o DRE.
-                </p>
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    className="rounded-md bg-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-800 hover:bg-gray-300"
-                    onClick={() => setModalAberto(true)}
-                  >
-                    Editar Linha
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-md bg-orange-500 px-3 py-1 text-xs font-semibold uppercase text-white hover:bg-orange-600"
-                    onClick={() => setModalVinculoAberto(true)}
-                  >
-                    Vincular Conta
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p className="mt-3 text-sm text-gray-600">Selecione uma linha para ver detalhes.</p>
-            )}
-          </div>
-
-          <div className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-extrabold uppercase text-gray-800">Contas vinculadas</h3>
-              <button
-                type="button"
-                className="rounded-md bg-orange-500 px-3 py-1 text-xs font-semibold uppercase text-white hover:bg-orange-600"
-                onClick={() => setModalVinculoAberto(true)}
-              >
-                Vincular Conta
-              </button>
+        <div className="rounded border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-800">Empresa ativa</p>
+              <p className="text-sm text-gray-600">
+                {empresa?.nomeFantasia
+                  ? `${empresa.nomeFantasia} (ID ${empresa.id})`
+                  : "Nenhuma empresa selecionada - siga o fluxo de RH para definir ID_EMPRESA"}
+              </p>
             </div>
-            <div className="mt-3 space-y-2">
-              {selecionadoNode?.contasVinculadas.length ? (
-                selecionadoNode.contasVinculadas.map((conta) => (
-                  <div
-                    key={conta}
-                    className="flex items-center justify-between rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700"
-                  >
-                    <span>{conta}</span>
-                    <button className="text-xs font-semibold uppercase text-orange-600 hover:text-orange-700">
-                      Remover
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-600">Nenhuma conta vinculada.</p>
-              )}
-            </div>
+            <button
+              type="button"
+              className="text-xs font-semibold uppercase text-orange-600 underline hover:text-orange-700"
+              onClick={() => abrirAjuda("FIN_ESTRUTURA_DRE", "ESTRUTURA DRE - CHATGPT")}
+            >
+              Ver ajuda da tela
+            </button>
           </div>
         </div>
-      </SplitViewShell>
+
+        <SplitViewShell
+          title="ESTRUTURA DRE"
+          subtitle="Visualize linhas, detalhes e vinculos de contas alinhados ao ID_EMPRESA"
+          onNew={() => setModalAberto(true)}
+          onHelp={() => abrirAjuda("FIN_ESTRUTURA_DRE", "ESTRUTURA DRE - CHATGPT")}
+          helpLink="/ajuda"
+          filters={
+            <>
+              <label className="text-sm font-semibold text-gray-700">
+                Busca
+                <input
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Buscar por ordem ou nome"
+                  className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
+                />
+              </label>
+              <label className="text-sm font-semibold text-gray-700">
+                Status
+                <select
+                  value={statusFiltro}
+                  onChange={(e) => setStatusFiltro(e.target.value as typeof statusFiltro)}
+                  className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
+                >
+                  <option value="TODOS">Todos</option>
+                  <option value="ATIVO">Ativos</option>
+                  <option value="INATIVO">Inativos</option>
+                </select>
+              </label>
+              <div className="rounded border border-dashed border-gray-200 bg-white p-3 text-xs text-gray-600">
+                Confirme vinculo apenas com contas da mesma ID_EMPRESA.
+              </div>
+            </>
+          }
+        >
+          <div className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr]">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-extrabold uppercase text-gray-800">Arvore do DRE</h3>
+                <span className="text-xs font-semibold uppercase text-gray-500">Performance otimizada</span>
+              </div>
+              <ul className="space-y-3">
+                {dadosFiltrados.map((node) => (
+                  <LinhaTree
+                    key={node.id}
+                    node={node}
+                    onSelect={setSelecionado}
+                    selectedId={selecionado}
+                    onEdit={() => setModalAberto(true)}
+                  />
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 shadow-inner">
+              <h3 className="text-sm font-extrabold uppercase text-gray-800">Detalhe da Linha</h3>
+              {selecionadoNode ? (
+                <div className="mt-3 space-y-2 text-sm text-gray-700">
+                  <p className="font-semibold text-gray-900">
+                    ({selecionadoNode.ordem}) {selecionadoNode.nome}
+                  </p>
+                  <p>Natureza: {selecionadoNode.natureza}</p>
+                  <p>Status: {selecionadoNode.status}</p>
+                  <p>
+                    Contas vinculadas: <span className="font-semibold">{selecionadoNode.contasVinculadas.join(", ")}</span>
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Respeitar hierarquia por ID_EMPRESA e validar consistencia antes de publicar o DRE.
+                  </p>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      className="rounded-md bg-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-800 hover:bg-gray-300"
+                      onClick={() => setModalAberto(true)}
+                    >
+                      Editar Linha
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-md bg-orange-500 px-3 py-1 text-xs font-semibold uppercase text-white hover:bg-orange-600"
+                      onClick={() => setModalVinculoAberto(true)}
+                    >
+                      Vincular Conta
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-gray-600">Selecione uma linha para ver detalhes.</p>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-extrabold uppercase text-gray-800">Contas vinculadas</h3>
+                <button
+                  type="button"
+                  className="rounded-md bg-orange-500 px-3 py-1 text-xs font-semibold uppercase text-white hover:bg-orange-600"
+                  onClick={() => setModalVinculoAberto(true)}
+                >
+                  Vincular Conta
+                </button>
+              </div>
+              <div className="mt-3 space-y-2">
+                {selecionadoNode?.contasVinculadas.length ? (
+                  selecionadoNode.contasVinculadas.map((conta) => (
+                    <div
+                      key={conta}
+                      className="flex items-center justify-between rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+                    >
+                      <span>{conta}</span>
+                      <button className="text-xs font-semibold uppercase text-orange-600 hover:text-orange-700">
+                        Remover
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-600">Nenhuma conta vinculada.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </SplitViewShell>
+      </div>
 
       <Modal open={modalAberto} title="Nova linha do DRE" onClose={() => setModalAberto(false)}>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

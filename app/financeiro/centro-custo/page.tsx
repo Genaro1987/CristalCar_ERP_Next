@@ -1,8 +1,10 @@
 "use client";
 
-import LayoutShell from "@/components/LayoutShell";
+import LayoutShell, { useHelpContext } from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
+import { NotificationBar } from "@/components/NotificationBar";
 import { SplitViewShell } from "@/components/financeiro/SplitViewShell";
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useMemo, useState } from "react";
 
 type CentroCustoNode = {
@@ -147,6 +149,8 @@ function flatten(nodes: CentroCustoNode[]): CentroCustoNode[] {
 }
 
 export default function CentroCustoPage() {
+  const { abrirAjuda } = useHelpContext();
+  const { empresa } = useEmpresaSelecionada();
   const dados = useMemo<CentroCustoNode[]>(
     () => [
       {
@@ -209,92 +213,120 @@ export default function CentroCustoPage() {
         modulo="FINANCEIRO"
       />
 
-      <SplitViewShell
-        title="CENTRO DE CUSTO"
-        subtitle="Organize centros vinculados por ID_EMPRESA para filtros e lancamentos"
-        onNew={() => abrirModal("NOVO")}
-        helpLink="/ajuda"
-        filters={
-          <>
-            <label className="text-sm font-semibold text-gray-700">
-              Busca
-              <input
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Buscar por codigo ou nome"
-                className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
-              />
-            </label>
-            <label className="text-sm font-semibold text-gray-700">
-              Status
-              <select
-                value={statusFiltro}
-                onChange={(e) => setStatusFiltro(e.target.value as typeof statusFiltro)}
-                className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
-              >
-                <option value="TODOS">Todos</option>
-                <option value="ATIVO">Ativos</option>
-                <option value="INATIVO">Inativos</option>
-              </select>
-            </label>
-            <div className="rounded border border-dashed border-gray-200 bg-white p-3 text-xs text-gray-600">
-              Vincule sempre ao ID_EMPRESA para manter consistencia em relatorios.
-            </div>
-          </>
-        }
-      >
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-extrabold uppercase text-gray-800">Arvore de Centros</h3>
-              <span className="text-xs font-semibold uppercase text-gray-500">Priorize performance nos filtros</span>
-            </div>
-            <ul className="space-y-3">
-              {dadosFiltrados.map((node) => (
-                <TreeItem
-                  key={node.id}
-                  node={node}
-                  onSelect={setSelecionado}
-                  selectedId={selecionado}
-                  onNewChild={() => abrirModal("NOVO")}
-                  onEdit={() => abrirModal("EDITAR")}
-                />
-              ))}
-            </ul>
-          </div>
+      <div className="page-container space-y-4">
+        <NotificationBar
+          type="info"
+          message="Atualize colunas EMPRESA_ID para ID_EMPRESA e siga o mesmo relacionamento com EMP_EMPRESA utilizado pelas tabelas de RH."
+        />
 
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 shadow-inner">
-            <h3 className="text-sm font-extrabold uppercase text-gray-800">Detalhes do Centro</h3>
-            {selecionadoNode ? (
-              <div className="mt-3 space-y-2 text-sm text-gray-700">
-                <p className="font-semibold text-gray-900">
-                  {selecionadoNode.codigo} - {selecionadoNode.nome}
-                </p>
-                <p>Responsavel: {selecionadoNode.responsavel}</p>
-                <p>Status: {selecionadoNode.status}</p>
-                <p className="text-xs text-gray-500">Aplique controle de acesso por ID_EMPRESA.</p>
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    className="rounded-md bg-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-800 hover:bg-gray-300"
-                    onClick={() => abrirModal("EDITAR")}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-md bg-orange-500 px-3 py-1 text-xs font-semibold uppercase text-white hover:bg-orange-600"
-                  >
-                    Compartilhar
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p className="mt-3 text-sm text-gray-600">Selecione um centro para visualizar detalhes.</p>
-            )}
+        <div className="rounded border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-800">Empresa ativa</p>
+              <p className="text-sm text-gray-600">
+                {empresa?.nomeFantasia
+                  ? `${empresa.nomeFantasia} (ID ${empresa.id})`
+                  : "Nenhuma empresa selecionada - siga o fluxo de RH para definir ID_EMPRESA"}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="text-xs font-semibold uppercase text-orange-600 underline hover:text-orange-700"
+              onClick={() => abrirAjuda("FIN_CENTRO_CUSTO", "CENTRO DE CUSTO - CHATGPT")}
+            >
+              Ver ajuda da tela
+            </button>
           </div>
         </div>
-      </SplitViewShell>
+
+        <SplitViewShell
+          title="CENTRO DE CUSTO"
+          subtitle="Organize centros vinculados por ID_EMPRESA para filtros e lancamentos"
+          onNew={() => abrirModal("NOVO")}
+          onHelp={() => abrirAjuda("FIN_CENTRO_CUSTO", "CENTRO DE CUSTO - CHATGPT")}
+          helpLink="/ajuda"
+          filters={
+            <>
+              <label className="text-sm font-semibold text-gray-700">
+                Busca
+                <input
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Buscar por codigo ou nome"
+                  className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
+                />
+              </label>
+              <label className="text-sm font-semibold text-gray-700">
+                Status
+                <select
+                  value={statusFiltro}
+                  onChange={(e) => setStatusFiltro(e.target.value as typeof statusFiltro)}
+                  className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
+                >
+                  <option value="TODOS">Todos</option>
+                  <option value="ATIVO">Ativos</option>
+                  <option value="INATIVO">Inativos</option>
+                </select>
+              </label>
+              <div className="rounded border border-dashed border-gray-200 bg-white p-3 text-xs text-gray-600">
+                Vincule sempre ao ID_EMPRESA para manter consistencia em relatorios.
+              </div>
+            </>
+          }
+        >
+          <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-extrabold uppercase text-gray-800">Arvore de Centros</h3>
+                <span className="text-xs font-semibold uppercase text-gray-500">Priorize performance nos filtros</span>
+              </div>
+              <ul className="space-y-3">
+                {dadosFiltrados.map((node) => (
+                  <TreeItem
+                    key={node.id}
+                    node={node}
+                    onSelect={setSelecionado}
+                    selectedId={selecionado}
+                    onNewChild={() => abrirModal("NOVO")}
+                    onEdit={() => abrirModal("EDITAR")}
+                  />
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 shadow-inner">
+              <h3 className="text-sm font-extrabold uppercase text-gray-800">Detalhes do Centro</h3>
+              {selecionadoNode ? (
+                <div className="mt-3 space-y-2 text-sm text-gray-700">
+                  <p className="font-semibold text-gray-900">
+                    {selecionadoNode.codigo} - {selecionadoNode.nome}
+                  </p>
+                  <p>Responsavel: {selecionadoNode.responsavel}</p>
+                  <p>Status: {selecionadoNode.status}</p>
+                  <p className="text-xs text-gray-500">Aplique controle de acesso por ID_EMPRESA.</p>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      className="rounded-md bg-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-800 hover:bg-gray-300"
+                      onClick={() => abrirModal("EDITAR")}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-md bg-orange-500 px-3 py-1 text-xs font-semibold uppercase text-white hover:bg-orange-600"
+                    >
+                      Compartilhar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-gray-600">Selecione um centro para visualizar detalhes.</p>
+              )}
+            </div>
+          </div>
+        </SplitViewShell>
+      </div>
 
       <Modal
         open={modalAberto}

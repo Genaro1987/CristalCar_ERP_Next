@@ -9,6 +9,7 @@ interface SplitViewShellProps {
   filters?: ReactNode;
   children: ReactNode;
   helpLink?: string;
+  onHelp?: () => void;
   ctaLabel?: string;
   assinatura?: string;
 }
@@ -20,6 +21,7 @@ export function SplitViewShell({
   filters,
   children,
   helpLink,
+  onHelp,
   ctaLabel = "Novo",
   assinatura = "CHATGPT",
 }: SplitViewShellProps) {
@@ -34,13 +36,26 @@ export function SplitViewShell({
             </span>
           </div>
           <p className="text-sm text-gray-600">{subtitle}</p>
-          {helpLink ? (
-            <a
-              href={helpLink}
-              className="inline-flex items-center text-xs font-semibold uppercase text-orange-600 hover:text-orange-700"
-            >
-              Ajuda
-            </a>
+          {helpLink || onHelp ? (
+            <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase text-orange-600">
+              {helpLink ? (
+                <a
+                  href={helpLink}
+                  className="inline-flex items-center hover:text-orange-700"
+                >
+                  Ajuda
+                </a>
+              ) : null}
+              {onHelp ? (
+                <button
+                  type="button"
+                  onClick={onHelp}
+                  className="inline-flex items-center text-orange-600 underline-offset-2 hover:text-orange-700"
+                >
+                  Abrir ajuda embutida
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </div>
         <button

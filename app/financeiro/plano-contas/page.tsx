@@ -1,8 +1,10 @@
 "use client";
 
-import LayoutShell from "@/components/LayoutShell";
+import LayoutShell, { useHelpContext } from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
+import { NotificationBar } from "@/components/NotificationBar";
 import { SplitViewShell } from "@/components/financeiro/SplitViewShell";
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useMemo, useState } from "react";
 
 type Natureza = "RECEITA" | "DESPESA";
@@ -186,6 +188,8 @@ function flatten(nodes: PlanoContaNode[]): PlanoContaNode[] {
 }
 
 export default function PlanoContasPage() {
+  const { abrirAjuda } = useHelpContext();
+  const { empresa } = useEmpresaSelecionada();
   const dados = useMemo<PlanoContaNode[]>(
     () => [
       {
@@ -283,111 +287,139 @@ export default function PlanoContasPage() {
     <LayoutShell>
       <HeaderBar
         nomeTela="PLANO DE CONTAS - CHATGPT"
-        codigoTela="FIN_PLANO_CONTAS"
+        codigoTela="FIN_PLANO_CONTA"
         caminhoRota="/financeiro/plano-contas"
         modulo="FINANCEIRO"
       />
 
-      <SplitViewShell
-        title="PLANO DE CONTAS"
-        subtitle="Organize hierarquia, status e natureza das contas vinculadas por ID_EMPRESA"
-        onNew={() => abrirModal("NOVO")}
-        helpLink="/ajuda"
-        filters={
-          <>
-            <label className="text-sm font-semibold text-gray-700">
-              Busca
-              <input
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Buscar por codigo ou nome"
-                className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
-              />
-            </label>
-            <label className="text-sm font-semibold text-gray-700">
-              Status
-              <select
-                value={statusFiltro}
-                onChange={(e) => setStatusFiltro(e.target.value as typeof statusFiltro)}
-                className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
-              >
-                <option value="TODOS">Todos</option>
-                <option value="ATIVO">Ativos</option>
-                <option value="INATIVO">Inativos</option>
-              </select>
-            </label>
-            <label className="text-sm font-semibold text-gray-700">
-              Natureza
-              <select
-                value={naturezaFiltro}
-                onChange={(e) => setNaturezaFiltro(e.target.value as typeof naturezaFiltro)}
-                className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
-              >
-                <option value="TODAS">Todas</option>
-                <option value="RECEITA">Receita</option>
-                <option value="DESPESA">Despesa</option>
-              </select>
-            </label>
-          </>
-        }
-      >
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-extrabold uppercase text-gray-800">Arvore de Contas</h3>
-              <span className="text-xs font-semibold uppercase text-gray-500">
-                ID_EMPRESA vinculado em todos os cadastros
-              </span>
-            </div>
-            <ul className="space-y-3">
-              {dadosFiltrados.map((node) => (
-                <TreeItem
-                  key={node.id}
-                  node={node}
-                  onSelect={setSelecionado}
-                  selectedId={selecionado}
-                  onOpenModal={abrirModal}
-                />
-              ))}
-            </ul>
-          </div>
+      <div className="page-container space-y-4">
+        <NotificationBar
+          type="info"
+          message="Padronize ID_EMPRESA seguindo a mesma base de dados adotada pelo RH (coluna ID_EMPRESA vinculada a EMP_EMPRESA)."
+        />
 
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 shadow-inner">
-            <h3 className="text-sm font-extrabold uppercase text-gray-800">Detalhes da Selecionada</h3>
-            {selecionadoNode ? (
-              <div className="mt-3 space-y-2 text-sm text-gray-700">
-                <p className="font-semibold text-gray-900">
-                  {selecionadoNode.codigo} - {selecionadoNode.nome}
-                </p>
-                <p>Natureza: {selecionadoNode.natureza}</p>
-                <p>Status: {selecionadoNode.status}</p>
-                <p>Visivel no DRE: {selecionadoNode.visivelDre ? "Sim" : "Nao"}</p>
-                <p>Exige Centro de Custo: {selecionadoNode.exigeCentroCusto ? "Sim" : "Nao"}</p>
-                <p className="text-xs text-gray-500">
-                  Validar relacionamento com EMP_EMPRESA.ID_EMPRESA antes de salvar.
-                </p>
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    className="rounded-md bg-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-800 hover:bg-gray-300"
-                    onClick={() => abrirModal("EDITAR")}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-md bg-orange-500 px-3 py-1 text-xs font-semibold uppercase text-white hover:bg-orange-600"
-                  >
-                    Duplicar
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p className="mt-3 text-sm text-gray-600">Selecione uma conta para visualizar detalhes.</p>
-            )}
+        <div className="rounded border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-800">Empresa ativa</p>
+              <p className="text-sm text-gray-600">
+                {empresa?.nomeFantasia
+                  ? `${empresa.nomeFantasia} (ID ${empresa.id})`
+                  : "Nenhuma empresa selecionada - siga o fluxo de RH para definir ID_EMPRESA"}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="text-xs font-semibold uppercase text-orange-600 underline hover:text-orange-700"
+              onClick={() => abrirAjuda("FIN_PLANO_CONTA", "PLANO DE CONTAS - CHATGPT")}
+            >
+              Ver ajuda da tela
+            </button>
           </div>
         </div>
-      </SplitViewShell>
+
+        <SplitViewShell
+          title="PLANO DE CONTAS"
+          subtitle="Organize hierarquia, status e natureza das contas com ID_EMPRESA alinhado ao cadastro de RH"
+          onNew={() => abrirModal("NOVO")}
+          onHelp={() => abrirAjuda("FIN_PLANO_CONTA", "PLANO DE CONTAS - CHATGPT")}
+          helpLink="/ajuda"
+          filters={
+            <>
+              <label className="text-sm font-semibold text-gray-700">
+                Busca
+                <input
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Buscar por codigo ou nome"
+                  className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
+                />
+              </label>
+              <label className="text-sm font-semibold text-gray-700">
+                Status
+                <select
+                  value={statusFiltro}
+                  onChange={(e) => setStatusFiltro(e.target.value as typeof statusFiltro)}
+                  className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
+                >
+                  <option value="TODOS">Todos</option>
+                  <option value="ATIVO">Ativos</option>
+                  <option value="INATIVO">Inativos</option>
+                </select>
+              </label>
+              <label className="text-sm font-semibold text-gray-700">
+                Natureza
+                <select
+                  value={naturezaFiltro}
+                  onChange={(e) => setNaturezaFiltro(e.target.value as typeof naturezaFiltro)}
+                  className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
+                >
+                  <option value="TODAS">Todas</option>
+                  <option value="RECEITA">Receita</option>
+                  <option value="DESPESA">Despesa</option>
+                </select>
+              </label>
+            </>
+          }
+        >
+          <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-extrabold uppercase text-gray-800">Arvore de Contas</h3>
+                <span className="text-xs font-semibold uppercase text-gray-500">
+                  ID_EMPRESA vinculado em todos os cadastros
+                </span>
+              </div>
+              <ul className="space-y-3">
+                {dadosFiltrados.map((node) => (
+                  <TreeItem
+                    key={node.id}
+                    node={node}
+                    onSelect={setSelecionado}
+                    selectedId={selecionado}
+                    onOpenModal={abrirModal}
+                  />
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 shadow-inner">
+              <h3 className="text-sm font-extrabold uppercase text-gray-800">Detalhes da Selecionada</h3>
+              {selecionadoNode ? (
+                <div className="mt-3 space-y-2 text-sm text-gray-700">
+                  <p className="font-semibold text-gray-900">
+                    {selecionadoNode.codigo} - {selecionadoNode.nome}
+                  </p>
+                  <p>Natureza: {selecionadoNode.natureza}</p>
+                  <p>Status: {selecionadoNode.status}</p>
+                  <p>Visivel no DRE: {selecionadoNode.visivelDre ? "Sim" : "Nao"}</p>
+                  <p>Exige Centro de Custo: {selecionadoNode.exigeCentroCusto ? "Sim" : "Nao"}</p>
+                  <p className="text-xs text-gray-500">
+                    Validar relacionamento com EMP_EMPRESA.ID_EMPRESA antes de salvar.
+                  </p>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      className="rounded-md bg-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-800 hover:bg-gray-300"
+                      onClick={() => abrirModal("EDITAR")}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-md bg-orange-500 px-3 py-1 text-xs font-semibold uppercase text-white hover:bg-orange-600"
+                    >
+                      Duplicar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-gray-600">Selecione uma conta para visualizar detalhes.</p>
+              )}
+            </div>
+          </div>
+        </SplitViewShell>
+      </div>
 
       <Modal
         open={modalAberto}
