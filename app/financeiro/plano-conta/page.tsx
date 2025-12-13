@@ -3,7 +3,6 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
-import { useHelpContext } from "@/components/LayoutShell";
 import { useMemo, useState } from "react";
 
 interface PlanoContaNode {
@@ -50,7 +49,6 @@ function TreeView({ nodes }: { nodes: PlanoContaNode[] }) {
 }
 
 export default function PlanoContaPage() {
-  const { abrirAjuda } = useHelpContext();
   const [filtroNatureza, setFiltroNatureza] = useState<string>("");
   const [filtroBusca, setFiltroBusca] = useState<string>("");
   const [mostrarSomenteAtivos, setMostrarSomenteAtivos] = useState(true);
@@ -139,7 +137,6 @@ export default function PlanoContaPage() {
       <HeaderBar
         nomeTela="Plano de Contas"
         codigoTela="FIN001_PLANO_CONTA"
-        onHelp={() => abrirAjuda("FIN001_PLANO_CONTA", "Plano de Contas")}
       />
       <NotificationBar
         type="info"

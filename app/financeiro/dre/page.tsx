@@ -3,7 +3,6 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
-import { useHelpContext } from "@/components/LayoutShell";
 import { useMemo, useState } from "react";
 
 interface DreLinha {
@@ -49,7 +48,6 @@ function TreeValores({ nodes }: { nodes: DreLinha[] }) {
 }
 
 export default function DrePage() {
-  const { abrirAjuda } = useHelpContext();
   const [periodoInicial, setPeriodoInicial] = useState<string>("");
   const [periodoFinal, setPeriodoFinal] = useState<string>("");
 
@@ -100,7 +98,6 @@ export default function DrePage() {
       <HeaderBar
         nomeTela="Relatório DRE"
         codigoTela="FIN004_DRE"
-        onHelp={() => abrirAjuda("FIN004_DRE", "Relatório DRE")}
       />
       <NotificationBar
         type="info"

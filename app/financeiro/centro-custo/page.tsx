@@ -3,7 +3,6 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
-import { useHelpContext } from "@/components/LayoutShell";
 import { useMemo, useState } from "react";
 
 interface CentroCustoNode {
@@ -46,7 +45,6 @@ function TreeView({ nodes }: { nodes: CentroCustoNode[] }) {
 }
 
 export default function CentroCustoPage() {
-  const { abrirAjuda } = useHelpContext();
   const [filtroBusca, setFiltroBusca] = useState<string>("");
   const [mostrarSomenteAtivos, setMostrarSomenteAtivos] = useState(true);
 
@@ -100,7 +98,6 @@ export default function CentroCustoPage() {
       <HeaderBar
         nomeTela="Centro de Custo"
         codigoTela="FIN002_CENTRO_CUSTO"
-        onHelp={() => abrirAjuda("FIN002_CENTRO_CUSTO", "Centro de Custo")}
       />
       <NotificationBar
         type="info"

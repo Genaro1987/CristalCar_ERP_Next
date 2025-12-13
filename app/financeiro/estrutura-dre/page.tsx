@@ -3,7 +3,6 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
-import { useHelpContext } from "@/components/LayoutShell";
 import { useMemo, useState } from "react";
 
 type Natureza = "RECEITA" | "DESPESA" | "CALCULADO";
@@ -62,7 +61,6 @@ function TreeView({ nodes }: { nodes: EstruturaDreNode[] }) {
 }
 
 export default function EstruturaDrePage() {
-  const { abrirAjuda } = useHelpContext();
   const [filtroNatureza, setFiltroNatureza] = useState<string>("");
   const [mensagemValidacao, setMensagemValidacao] = useState<string | null>(null);
 
@@ -144,7 +142,6 @@ export default function EstruturaDrePage() {
       <HeaderBar
         nomeTela="Estrutura do DRE"
         codigoTela="FIN003_ESTRUTURA_DRE"
-        onHelp={() => abrirAjuda("FIN003_ESTRUTURA_DRE", "Estrutura do DRE")}
       />
       <NotificationBar
         type="info"
