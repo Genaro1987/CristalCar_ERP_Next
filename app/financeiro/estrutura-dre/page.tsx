@@ -141,11 +141,13 @@ export default function EstruturaDrePage() {
     <LayoutShell>
       <HeaderBar
         nomeTela="Estrutura do DRE"
-        codigoTela="FIN003_ESTRUTURA_DRE"
+        codigoTela="FIN_ESTRUTURA_DRE"
+        caminhoRota="/financeiro/estrutura-dre"
+        modulo="FINANCEIRO"
       />
       <NotificationBar
         type="info"
-        message="Validações de natureza/tipo de gasto e vínculo de contas serão reforçadas quando os endpoints forem disponibilizados."
+        message="Em construção / MVP: vincule contas do plano de contas respeitando EMPRESA_ID e impeça vínculos cruzados entre empresas."
       />
 
       <div className="mb-6 grid grid-cols-1 gap-4 rounded border border-gray-200 bg-white p-4 shadow">

@@ -97,11 +97,13 @@ export default function DrePage() {
     <LayoutShell>
       <HeaderBar
         nomeTela="Relatório DRE"
-        codigoTela="FIN004_DRE"
+        codigoTela="FIN_DRE"
+        caminhoRota="/financeiro/dre"
+        modulo="FINANCEIRO"
       />
       <NotificationBar
         type="info"
-        message="Os cálculos estão demonstrando a regra de sinal (valores exibidos como positivos). A conexão com lançamentos e centros de custo será implementada na próxima etapa."
+        message="Em construção / MVP: cálculos ainda usam dados fictícios. As consultas serão filtradas por EMPRESA_ID e alinhadas aos lançamentos válidos."
       />
 
       <div className="mb-6 grid grid-cols-1 gap-4 rounded border border-gray-200 bg-white p-4 shadow">

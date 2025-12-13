@@ -147,6 +147,61 @@ export function Sidebar() {
           },
         ],
       },
+      {
+        label: "FINANCEIRO",
+        itens: [
+          {
+            label: "Dashboard",
+            rota: "/financeiro/dashboard",
+            requerEmpresa: true,
+            codigoTela: "FIN_DASHBOARD",
+            matchExact: true,
+          },
+          {
+            label: "Lançamentos (Caixa)",
+            rota: "/financeiro/lancamentos",
+            requerEmpresa: true,
+            codigoTela: "FIN_LANCAMENTOS",
+            matchExact: true,
+          },
+          {
+            label: "Plano de Contas",
+            rota: "/financeiro/plano-conta",
+            requerEmpresa: true,
+            codigoTela: "FIN_PLANO_CONTA",
+          },
+          {
+            label: "Centro de Custo",
+            rota: "/financeiro/centro-custo",
+            requerEmpresa: true,
+            codigoTela: "FIN_CENTRO_CUSTO",
+          },
+          {
+            label: "Estrutura do DRE",
+            rota: "/financeiro/estrutura-dre",
+            requerEmpresa: true,
+            codigoTela: "FIN_ESTRUTURA_DRE",
+          },
+          {
+            label: "DRE",
+            rota: "/financeiro/dre",
+            requerEmpresa: true,
+            codigoTela: "FIN_DRE",
+          },
+          {
+            label: "Objetivos",
+            rota: "/financeiro/objetivos",
+            requerEmpresa: true,
+            codigoTela: "FIN_OBJETIVOS",
+          },
+          {
+            label: "Objetivos Semanais",
+            rota: "/financeiro/objetivos-semanais",
+            requerEmpresa: true,
+            codigoTela: "FIN_OBJETIVOS_SEMANAIS",
+          },
+        ],
+      },
     ],
     []
   );
