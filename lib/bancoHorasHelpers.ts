@@ -9,15 +9,15 @@ export interface TotaisBancoHoras {
 export function resumirTotaisDias(dias: ResumoBancoHorasDia[]): TotaisBancoHoras {
   return dias.reduce<TotaisBancoHoras>(
     (totais, dia) => {
-      const diferenca = dia.diferencaMin;
+      const impacto = dia.impactoBancoMin;
       const classif = dia.classificacao;
 
-      if (diferenca > 0 && classif === "EXTRA_UTIL") {
-        totais.extras50Min += diferenca;
-      } else if (diferenca > 0 && classif === "EXTRA_100") {
-        totais.extras100Min += diferenca;
-      } else if (diferenca < 0) {
-        totais.devidasMin += diferenca;
+      if (impacto > 0 && classif === "EXTRA_UTIL") {
+        totais.extras50Min += impacto;
+      } else if (impacto > 0 && classif === "EXTRA_100") {
+        totais.extras100Min += impacto;
+      } else if (impacto < 0) {
+        totais.devidasMin += impacto;
       }
 
       return totais;

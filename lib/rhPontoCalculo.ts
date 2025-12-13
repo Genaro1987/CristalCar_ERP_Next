@@ -18,13 +18,29 @@ export function criarDataLocal(dataReferencia: string): Date {
 }
 
 export function parseHoraParaMinutos(hora?: string | null): number | null {
-  if (!hora || !hora.includes(':')) return null;
+  if (!hora || !hora.includes(":")) return null;
 
-  const [h, m] = hora.split(':').map(Number);
+  const [h, m] = hora.split(":").map(Number);
 
   if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
 
   return h * 60 + m;
+}
+
+export function timeToMinutes(valor?: string | null): number | null {
+  if (!valor) return null;
+
+  const normalizado = valor.trim();
+  const sinal = normalizado.startsWith("-") ? -1 : 1;
+  const somenteHora = normalizado.replace(/^[-+]/, "");
+
+  const [horasStr, minutosStr] = somenteHora.split(":");
+  const horas = Number(horasStr);
+  const minutos = Number(minutosStr);
+
+  if (!Number.isFinite(horas) || !Number.isFinite(minutos)) return null;
+
+  return sinal * (Math.abs(horas) * 60 + Math.abs(minutos));
 }
 
 export function minutosParaHora(minutos?: number | null): string {
@@ -37,6 +53,17 @@ export function minutosParaHora(minutos?: number | null): string {
   const min = valorAbsoluto % 60;
 
   return `${sinal}${String(horas).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+export function minutesToTime(minutos?: number | null): string {
+  return minutosParaHora(minutos);
+}
+
+export function minutesToDecimal(minutos?: number | null, precisao = 5): number {
+  if (!Number.isFinite(minutos)) return 0;
+
+  const horas = (minutos ?? 0) / 60;
+  return Number(horas.toFixed(precisao));
 }
 
 export function normalizarToleranciaMinutos(valor?: number | null): number {

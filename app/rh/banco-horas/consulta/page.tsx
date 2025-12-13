@@ -8,10 +8,10 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { ModalExportacao, type OpcoesExportacao } from "@/components/ModalExportacao";
-import { minutosParaHora } from "@/lib/rhPontoCalculo";
+import { minutesToDecimal, minutosParaHora } from "@/lib/rhPontoCalculo";
 import { exportarPDF, exportarExcel } from "@/lib/exportarBancoHoras";
 import type { ResumoBancoHorasMes } from "@/db/rhBancoHoras";
-import { mapearClassificacaoParaExibicao } from "@/lib/bancoHorasHelpers";
+import { mapearClassificacaoParaExibicao, resumirTotaisDias } from "@/lib/bancoHorasHelpers";
 
 interface FuncionarioOption {
   ID_FUNCIONARIO: string;
@@ -248,9 +248,9 @@ export default function BancoHorasConsultaPage() {
         try {
           const valorHora = r.funcionario.valorHora;
           const valorPagar =
-            (r.horasPagar50Min / 60) * valorHora * 1.5 +
-            (r.horasPagar100Min / 60) * valorHora * 2;
-          const valorDescontar = (r.horasDescontarMin / 60) * valorHora;
+            minutesToDecimal(r.horasPagar50Min) * valorHora * 1.5 +
+            minutesToDecimal(r.horasPagar100Min) * valorHora * 2;
+          const valorDescontar = minutesToDecimal(r.horasDescontarMin) * valorHora;
 
           await fetch("/api/rh/banco-horas/finalizar", {
             method: "POST",
@@ -287,17 +287,36 @@ export default function BancoHorasConsultaPage() {
     });
   };
   const resumoValores = resumo
-    ? {
-        horasExtra50: resumo.horasPagar50Min,
-        horasExtra100: resumo.horasPagar100Min,
-        horasDevidas: resumo.horasDescontarMin,
-        valorExtra50: (resumo.horasPagar50Min / 60) * resumo.funcionario.valorHora * 1.5,
-        valorExtra100: (resumo.horasPagar100Min / 60) * resumo.funcionario.valorHora * 2,
-        valorDevido: (resumo.horasDescontarMin / 60) * resumo.funcionario.valorHora,
-        saldoAjustes: resumo.ajustesManuaisMin + resumo.fechamentosMin,
-        jornadaInfo: construirLinhaJornada(resumo.jornada),
-      }
+    ? (() => {
+        const totais = resumirTotaisDias(resumo.dias);
+        const horasExtra50 = Math.max(0, totais.extras50Min);
+        const horasExtra100 = Math.max(0, totais.extras100Min);
+        const horasDevidas = Math.min(0, totais.devidasMin);
+        const valorExtra50 = minutesToDecimal(horasExtra50) * resumo.funcionario.valorHora * 1.5;
+        const valorExtra100 = minutesToDecimal(horasExtra100) * resumo.funcionario.valorHora * 2;
+        const valorDevido = minutesToDecimal(Math.abs(horasDevidas)) * resumo.funcionario.valorHora;
+
+        return {
+          horasExtra50,
+          horasExtra100,
+          horasDevidas,
+          valorExtra50,
+          valorExtra100,
+          valorDevido,
+          saldoAjustes: resumo.ajustesManuaisMin + resumo.fechamentosMin,
+          jornadaInfo: construirLinhaJornada(resumo.jornada),
+        };
+      })()
     : null;
+
+  const saldoFinalCalculado = resumo && resumoValores
+    ? resumo.saldoAnteriorMin +
+      resumoValores.horasExtra50 +
+      resumoValores.horasExtra100 +
+      resumoValores.horasDevidas +
+      resumo.ajustesManuaisMin +
+      resumo.fechamentosMin
+    : 0;
 
   return (
     <LayoutShell>
@@ -393,7 +412,7 @@ export default function BancoHorasConsultaPage() {
               <div className="form-section-header" style={{ marginTop: "32px" }}>
                 <h2>{resumo.funcionario.nome}</h2>
                 <p>
-                  Competência: {String(resumo.competencia.mes).padStart(2, "0")}/{resumo.competencia.ano} | Departamento: {resumo.funcionario.nomeDepartamento ?? "-"}
+                  Competência: {String(resumo.competencia.mes).padStart(2, "0")}/{resumo.competencia.ano}
                 </p>
               </div>
 
@@ -424,7 +443,7 @@ export default function BancoHorasConsultaPage() {
 
                 <div className="banco-horas-card card-highlight">
                   <p className="card-label">Saldo Final</p>
-                  <p className="card-value">{minutosParaHora(resumo.saldoFinalBancoMin)}</p>
+                  <p className="card-value">{minutosParaHora(saldoFinalCalculado)}</p>
                 </div>
 
                 <div className="banco-horas-card card-neutral">
@@ -445,7 +464,7 @@ export default function BancoHorasConsultaPage() {
                 </p>
               </div>
 
-              <div className="form-section-header" style={{ marginTop: "32px" }}>
+              <div className="form-section-header" style={{ marginTop: "40px" }}>
                 <h2>Detalhamento Diário</h2>
               </div>
 
