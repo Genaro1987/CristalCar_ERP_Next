@@ -55,8 +55,11 @@ async function runMigrations() {
       .map((line) => (line.trimStart().startsWith("--") ? "" : line))
       .join("\n");
 
+    // Quebra respeitando blocos BEGIN/END (ex.: triggers) ao procurar um novo
+    // comando apenas quando um ; eh seguido de uma proxima keyword SQL conhecida
+    // ou do fim do arquivo. Isso evita split dentro do corpo de triggers.
     const statements = sanitizedSql
-      .split(";")
+      .split(/;\s*(?=\b(?:CREATE|INSERT|UPDATE|DELETE|ALTER|DROP|WITH|PRAGMA)\b|$)/gi)
       .map((s) => s.trim())
       .filter(Boolean);
 
