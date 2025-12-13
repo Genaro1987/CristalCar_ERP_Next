@@ -11,7 +11,11 @@ import { ModalExportacao, type OpcoesExportacao } from "@/components/ModalExport
 import { minutesToDecimal, minutosParaHora } from "@/lib/rhPontoCalculo";
 import { exportarPDF, exportarExcel } from "@/lib/exportarBancoHoras";
 import type { ResumoBancoHorasMes } from "@/db/rhBancoHoras";
-import { mapearClassificacaoParaExibicao, resumirTotaisDias } from "@/lib/bancoHorasHelpers";
+import {
+  formatarTipoDiaParaExibicao,
+  mapearClassificacaoParaExibicao,
+  resumirTotaisDias,
+} from "@/lib/bancoHorasHelpers";
 
 interface FuncionarioOption {
   ID_FUNCIONARIO: string;
@@ -511,7 +515,7 @@ export default function BancoHorasConsultaPage() {
                             <span className="dia-semana">{dia.diaSemana}</span>
                           </div>
                         </td>
-                        <td>{dia.tipoDia}</td>
+                        <td>{formatarTipoDiaParaExibicao(dia.tipoDia)}</td>
                         <td>{minutosParaHora(dia.trabalhadoMin)}</td>
                         <td style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
                           {minutosParaHora(dia.diferencaMin)}

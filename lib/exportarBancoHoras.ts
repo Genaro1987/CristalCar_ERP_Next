@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import type { ResumoBancoHorasMes } from "@/db/rhBancoHoras";
 import { minutesToDecimal, minutosParaHora } from "@/lib/rhPontoCalculo";
 import {
+  formatarTipoDiaParaExibicao,
   mapearClassificacaoParaExibicao,
   resumirTotaisDias,
 } from "@/lib/bancoHorasHelpers";
@@ -153,7 +154,8 @@ export function exportarPDF(dados: DadosExportacao) {
 
     const dataFormatada = dia.data.substring(8, 10) + "/" + dia.data.substring(5, 7);
     doc.text(dataFormatada, colDia, yPos);
-    doc.text(dia.tipoDia.substring(0, 6), colTipo, yPos);
+    const tipoDiaFormatado = formatarTipoDiaParaExibicao(dia.tipoDia);
+    doc.text(tipoDiaFormatado, colTipo, yPos);
     doc.text(minutosParaHora(dia.trabalhadoMin), colTrab, yPos);
 
     if (dia.diferencaMin !== 0) {

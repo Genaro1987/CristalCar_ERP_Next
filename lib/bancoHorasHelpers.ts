@@ -35,3 +35,21 @@ export function mapearClassificacaoParaExibicao(classificacao: ResumoBancoHorasD
   }
   return "Normal";
 }
+
+export function formatarTipoDiaParaExibicao(tipoDia?: string | null): string {
+  const tipoNormalizado = (tipoDia ?? "").trim().toUpperCase();
+
+  if (tipoNormalizado === "DOMING" || tipoNormalizado === "DOMINGO") {
+    return "DOMINGO";
+  }
+
+  if (tipoNormalizado === "SABADO") {
+    return "SÁBADO";
+  }
+
+  if (tipoNormalizado === "UTIL") {
+    return "ÚTIL";
+  }
+
+  return tipoDia ?? "";
+}
