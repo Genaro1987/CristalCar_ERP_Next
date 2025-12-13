@@ -39,7 +39,7 @@ export default function ObjetivosPage() {
           <div key={objetivo.titulo} className="rounded border border-gray-200 bg-white p-4 shadow">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-orange-600">{objetivo.titulo}</h2>
-              <span className="rounded bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">EMPRESA_ID</span>
+              <span className="rounded bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">ID_EMPRESA</span>
             </div>
             <p className="mt-2 text-sm text-gray-700">{objetivo.descricao}</p>
             <div className="mt-3 rounded border border-dashed border-gray-200 bg-orange-50/40 p-3 text-xs text-gray-700">

@@ -103,7 +103,7 @@ export default function CentroCustoPage() {
       />
       <NotificationBar
         type="info"
-        message="Em construção / MVP: cadastros serão ligados ao backend, sempre vinculando EMPRESA_ID e mantendo pai/filho na mesma empresa."
+        message="Em construção / MVP: cadastros serão ligados ao backend, sempre vinculando ID_EMPRESA e mantendo pai/filho na mesma empresa."
       />
 
       <div className="mb-6 grid grid-cols-1 gap-4 rounded border border-gray-200 bg-white p-4 shadow">

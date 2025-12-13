@@ -5,11 +5,11 @@ Apresenta o desempenho financeiro consolidado por empresa, usando a estrutura co
 
 ## Funcionamento (MVP) e processo esperado
 1. Selecionar período e empresa antes de calcular o relatório.
-2. Somar lançamentos vinculados às linhas de FIN_ESTRUTURA_DRE_CONTA filtrando por **EMPRESA_ID**.
+2. Somar lançamentos vinculados às linhas de FIN_ESTRUTURA_DRE_CONTA filtrando por **ID_EMPRESA**.
 3. Exibir valores absolutos, mantendo a regra de que receitas somam e despesas reduzem o resultado.
 
 ## Campos obrigatórios e opcionais
-- **Obrigatórios:** EMPRESA_ID, período inicial e final.
+- **Obrigatórios:** ID_EMPRESA, período inicial e final.
 - **Opcionais:** Filtros por centro de custo, natureza de conta ou agrupamentos adicionais.
 
 ## Observações de evolução (roadmap curto)

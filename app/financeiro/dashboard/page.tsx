@@ -18,7 +18,7 @@ const cards = [
   {
     title: "Indicadores",
     description:
-      "Widgets para margem, burn rate e atingimento de objetivos financeiros. Filtrar sempre por EMPRESA_ID.",
+      "Widgets para margem, burn rate e atingimento de objetivos financeiros. Filtrar sempre por ID_EMPRESA.",
   },
 ];
 
@@ -46,7 +46,7 @@ export default function FinanceiroDashboardPage() {
             <h2 className="text-lg font-bold text-orange-600">{card.title}</h2>
             <p className="mt-2 text-sm text-gray-700">{card.description}</p>
             <div className="mt-4 rounded border border-dashed border-orange-200 bg-white p-3 text-xs text-gray-600">
-              Espaço reservado para gráficos e resumos. Garantir que cada consulta aplique EMPRESA_ID do usuário.
+              Espaço reservado para gráficos e resumos. Garantir que cada consulta aplique ID_EMPRESA do usuário.
             </div>
           </div>
         ))}

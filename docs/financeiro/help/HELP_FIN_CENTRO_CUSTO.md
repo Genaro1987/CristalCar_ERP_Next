@@ -4,12 +4,12 @@
 Organiza despesas e receitas por áreas, permitindo análises de performance por empresa e garantindo rastreabilidade dos lançamentos.
 
 ## Funcionamento (MVP) e processo esperado
-1. Criar centros com hierarquia (pai/filho) sempre compartilhando o mesmo **EMPRESA_ID**.
-2. Aplicar índice único (EMPRESA_ID, FIN_CENTRO_CUSTO_CODIGO) para evitar conflitos entre empresas.
+1. Criar centros com hierarquia (pai/filho) sempre compartilhando o mesmo **ID_EMPRESA**.
+2. Aplicar índice único (ID_EMPRESA, FIN_CENTRO_CUSTO_CODIGO) para evitar conflitos entre empresas.
 3. Exibir filtros por status (ativo) e busca textual para facilitar seleção nos lançamentos.
 
 ## Campos obrigatórios e opcionais
-- **Obrigatórios:** EMPRESA_ID, código, nome, indicador de ativo.
+- **Obrigatórios:** ID_EMPRESA, código, nome, indicador de ativo.
 - **Opcionais:** Ordem de exibição, vínculo com centro de custo pai.
 
 ## Observações de evolução (roadmap curto)

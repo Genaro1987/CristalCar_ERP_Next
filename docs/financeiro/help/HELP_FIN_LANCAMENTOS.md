@@ -5,11 +5,11 @@ Controla o caixa diário e garante que cada movimentação financeira esteja vin
 
 ## Funcionamento (MVP) e processo esperado
 1. Selecionar a empresa antes de inserir ou listar lançamentos.
-2. Aplicar filtro automático por **EMPRESA_ID** em todas as consultas e inserções.
+2. Aplicar filtro automático por **ID_EMPRESA** em todas as consultas e inserções.
 3. Validar vínculos com FIN_PLANO_CONTA e FIN_CENTRO_CUSTO, impedindo misturar empresas diferentes.
 
 ## Campos obrigatórios e opcionais
-- **Obrigatórios:** EMPRESA_ID, FIN_PLANO_CONTA_ID, data do lançamento, valor, histórico.
+- **Obrigatórios:** ID_EMPRESA, FIN_PLANO_CONTA_ID, data do lançamento, valor, histórico.
 - **Opcionais:** FIN_CENTRO_CUSTO_ID (exceto quando o plano de contas exigir), número de documento, forma de pagamento.
 
 ## Observações de evolução (roadmap curto)

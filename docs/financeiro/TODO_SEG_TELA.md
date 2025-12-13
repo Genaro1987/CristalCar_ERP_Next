@@ -17,4 +17,4 @@ A infraestrutura de **SEG_TELA** ainda não está disponível neste projeto. Ass
 - Reutilizar os caminhos/descrições do `HeaderBar` de cada página em `app/financeiro/*/page.tsx`.
 
 ## Observação sobre filtros
-Enquanto as APIs financeiras não forem implementadas, manter o lembrete de que toda consulta deve receber o **EMPRESA_ID** da sessão atual (ver hook `useEmpresaSelecionada`) para evitar mistura de dados entre empresas.
+Enquanto as APIs financeiras não forem implementadas, manter o lembrete de que toda consulta deve receber o **ID_EMPRESA** da sessão atual (ver hook `useEmpresaSelecionada`) para evitar mistura de dados entre empresas.

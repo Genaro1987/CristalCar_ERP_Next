@@ -31,7 +31,7 @@ export default function LancamentosPage() {
 
       <NotificationBar
         type="info"
-        message="Em construção / MVP: os lançamentos serão exibidos filtrando por EMPRESA_ID e respeitando permissões da tela."
+        message="Em construção / MVP: os lançamentos serão exibidos filtrando por ID_EMPRESA e respeitando permissões da tela."
       />
 
       <div className="rounded border border-gray-200 bg-white p-4 shadow">
@@ -55,7 +55,7 @@ export default function LancamentosPage() {
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-bold text-gray-800">Tabela de lançamentos</h3>
           <span className="rounded bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
-            EMPRESA_ID obrigatório
+            ID_EMPRESA obrigatório
           </span>
         </div>
         <div className="overflow-x-auto rounded border border-dashed border-gray-200 bg-white p-3 text-xs text-gray-700">
@@ -67,7 +67,7 @@ export default function LancamentosPage() {
             ))}
           </div>
           <p className="text-gray-500">
-            Linhas fictícias serão substituídas por dados reais após integrar as APIs financeiras com filtro por EMPRESA_ID e
+            Linhas fictícias serão substituídas por dados reais após integrar as APIs financeiras com filtro por ID_EMPRESA e
             validação de permissão.
           </p>
         </div>

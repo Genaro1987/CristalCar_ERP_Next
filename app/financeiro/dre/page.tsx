@@ -103,7 +103,7 @@ export default function DrePage() {
       />
       <NotificationBar
         type="info"
-        message="Em construção / MVP: cálculos ainda usam dados fictícios. As consultas serão filtradas por EMPRESA_ID e alinhadas aos lançamentos válidos."
+        message="Em construção / MVP: cálculos ainda usam dados fictícios. As consultas serão filtradas por ID_EMPRESA e alinhadas aos lançamentos válidos."
       />
 
       <div className="mb-6 grid grid-cols-1 gap-4 rounded border border-gray-200 bg-white p-4 shadow">

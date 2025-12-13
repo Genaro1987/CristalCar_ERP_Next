@@ -5,11 +5,11 @@ Define a hierarquia do Demonstrativo de Resultados, vinculando linhas do DRE às
 
 ## Funcionamento (MVP) e processo esperado
 1. Criar linhas com natureza (RECEITA, DESPESA ou CALCULADO) e tipo de gasto quando aplicável.
-2. Garantir que pais e filhos compartilhem o mesmo **EMPRESA_ID** para evitar consolidação incorreta.
-3. Associar contas via FIN_ESTRUTURA_DRE_CONTA respeitando o mesmo EMPRESA_ID.
+2. Garantir que pais e filhos compartilhem o mesmo **ID_EMPRESA** para evitar consolidação incorreta.
+3. Associar contas via FIN_ESTRUTURA_DRE_CONTA respeitando o mesmo ID_EMPRESA.
 
 ## Campos obrigatórios e opcionais
-- **Obrigatórios:** EMPRESA_ID, nome da linha, natureza, ordem, indicador de ativo.
+- **Obrigatórios:** ID_EMPRESA, nome da linha, natureza, ordem, indicador de ativo.
 - **Opcionais:** Tipo de gasto (fixo/variável), vínculo com linha pai.
 
 ## Observações de evolução (roadmap curto)

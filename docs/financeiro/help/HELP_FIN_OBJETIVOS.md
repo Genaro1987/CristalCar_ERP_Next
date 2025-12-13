@@ -5,11 +5,11 @@ Concentra metas estratégicas por empresa (receita, margem, investimentos), cone
 
 ## Funcionamento (MVP) e processo esperado
 1. Registrar objetivos vinculados à empresa ativa antes de distribuí-los por centro de custo ou conta.
-2. Aplicar filtro automático por **EMPRESA_ID** em consultas e cálculos de progresso.
+2. Aplicar filtro automático por **ID_EMPRESA** em consultas e cálculos de progresso.
 3. Relacionar cada objetivo a contas e centros de custo para acompanhamento granular.
 
 ## Campos obrigatórios e opcionais
-- **Obrigatórios:** EMPRESA_ID, título/meta, período de validade, indicador de responsável ou área.
+- **Obrigatórios:** ID_EMPRESA, título/meta, período de validade, indicador de responsável ou área.
 - **Opcionais:** Vínculo com plano de contas, centro de custo, metas parciais, tolerâncias.
 
 ## Observações de evolução (roadmap curto)

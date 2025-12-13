@@ -142,7 +142,7 @@ export default function PlanoContaPage() {
       />
       <NotificationBar
         type="info"
-        message="Em construção / MVP: vincular cadastros ao backend garantindo EMPRESA_ID obrigatório e hierarquia dentro da mesma empresa."
+        message="Em construção / MVP: vincular cadastros ao backend garantindo ID_EMPRESA obrigatório e hierarquia dentro da mesma empresa."
       />
 
       <div className="mb-6 grid grid-cols-1 gap-4 rounded border border-gray-200 bg-white p-4 shadow">

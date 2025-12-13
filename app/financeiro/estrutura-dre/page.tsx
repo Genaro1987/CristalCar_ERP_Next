@@ -147,7 +147,7 @@ export default function EstruturaDrePage() {
       />
       <NotificationBar
         type="info"
-        message="Em construção / MVP: vincule contas do plano de contas respeitando EMPRESA_ID e impeça vínculos cruzados entre empresas."
+        message="Em construção / MVP: vincule contas do plano de contas respeitando ID_EMPRESA e impeça vínculos cruzados entre empresas."
       />
 
       <div className="mb-6 grid grid-cols-1 gap-4 rounded border border-gray-200 bg-white p-4 shadow">

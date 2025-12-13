@@ -22,7 +22,7 @@ export default function ObjetivosSemanaisPage() {
 
       <NotificationBar
         type="info"
-        message="Em construção / MVP: acompanhamento semanal será filtrado por EMPRESA_ID e integrado às metas gerais."
+        message="Em construção / MVP: acompanhamento semanal será filtrado por ID_EMPRESA e integrado às metas gerais."
       />
 
       <div className="rounded border border-gray-200 bg-white p-4 shadow">

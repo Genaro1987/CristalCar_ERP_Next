@@ -5,11 +5,11 @@ Quebra metas financeiras em entregas semanais, facilitando ajustes rápidos por 
 
 ## Funcionamento (MVP) e processo esperado
 1. Derivar objetivos semanais a partir das metas principais da empresa ativa.
-2. Filtrar visualizações por **EMPRESA_ID** e, quando necessário, por centro de custo.
+2. Filtrar visualizações por **ID_EMPRESA** e, quando necessário, por centro de custo.
 3. Monitorar status semanal e evidenciar riscos/alertas no dashboard.
 
 ## Campos obrigatórios e opcionais
-- **Obrigatórios:** EMPRESA_ID, referência da meta principal, semana/período, responsável.
+- **Obrigatórios:** ID_EMPRESA, referência da meta principal, semana/período, responsável.
 - **Opcionais:** Lista de tarefas, vínculo com plano de contas ou centros de custo, comentários.
 
 ## Observações de evolução (roadmap curto)
