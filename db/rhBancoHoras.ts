@@ -11,6 +11,7 @@ import {
   gerarIntervaloCompetencia,
   normalizarToleranciaMinutos,
 } from "@/lib/rhPontoCalculo";
+import { resumirTotaisDias } from "@/lib/bancoHorasHelpers";
 
 export type PoliticaFaltas =
   | "COMPENSAR_COM_HORAS_EXTRAS"
@@ -570,7 +571,7 @@ export async function calcularBancoHorasMes(
     funcionarioBase.salarioBase
   );
 
-  const minutosJornadaDia = calcularMinutosJornadaDiaria(funcionarioBase.jornada) ?? 0;
+  const minutosJornadaDia = calcularMinutosJornadaDiaria(funcionarioBase.jornada);
   const toleranciaMinutos = normalizarToleranciaMinutos(
     funcionarioBase.jornada?.TOLERANCIA_MINUTOS ?? 0
   );
@@ -578,10 +579,6 @@ export async function calcularBancoHorasMes(
   const dias = gerarDiasDaCompetencia(competencia);
   const lancamentos = await buscarLancamentos(params.idFuncionario, intervalo);
   const movimentosInfo = await buscarMovimentos(params.idFuncionario, competencia);
-
-  let extrasUteisMin = 0;
-  let extras100Min = 0;
-  let devidasMin = 0;
 
   const diasResumo: ResumoBancoHorasDia[] = dias.map((data) => {
     const registro = lancamentos.get(data);
@@ -603,7 +600,7 @@ export async function calcularBancoHorasMes(
             saidaExtra: registro?.saidaExtra,
           });
 
-    const jornadaPrevistaMin = minutosJornadaDia;
+    const jornadaPrevistaMin = tipoDia === "UTIL" ? minutosJornadaDia ?? 0 : 0;
     const diferencaBruta = minutosTrabalhados - jornadaPrevistaMin;
     const diferencaMin = Math.abs(diferencaBruta) <= toleranciaMinutos ? 0 : diferencaBruta;
 
@@ -616,19 +613,15 @@ export async function calcularBancoHorasMes(
     if (faltaJustificada || faltaNaoJustificada) {
       classificacao = faltaJustificada ? "FALTA_JUSTIFICADA" : "FALTA_NAO_JUSTIFICADA";
       impactoBancoMin = diferencaMin < 0 ? diferencaMin : -Math.abs(jornadaPrevistaMin);
-      devidasMin += impactoBancoMin;
     } else if (tipoDia === "FERIADO" || tipoDia === "DOMINGO" || tipoDia === "SABADO") {
       classificacao = minutosTrabalhados > 0 ? "EXTRA_100" : "NORMAL";
       impactoBancoMin = minutosTrabalhados;
-      extras100Min += impactoBancoMin;
     } else if (diferencaMin > 0) {
       classificacao = "EXTRA_UTIL";
       impactoBancoMin = diferencaMin;
-      extrasUteisMin += impactoBancoMin;
     } else if (diferencaMin < 0) {
       classificacao = "DEVEDOR";
       impactoBancoMin = diferencaMin;
-      devidasMin += impactoBancoMin;
     }
 
     return {
@@ -649,6 +642,8 @@ export async function calcularBancoHorasMes(
     : 0;
 
   const { saldoAnterior, ajustesMes, fechamentosMes, movimentos } = movimentosInfo;
+
+  const { extras50Min: extrasUteisMin, extras100Min, devidasMin } = resumirTotaisDias(diasResumo);
 
   const saldoTecnicoMin =
     saldoAnterior + extrasUteisMin + extras100Min + devidasMin + ajustesMes + fechamentosMes;

@@ -11,6 +11,7 @@ import { ModalExportacao, type OpcoesExportacao } from "@/components/ModalExport
 import { minutosParaHora } from "@/lib/rhPontoCalculo";
 import { exportarPDF, exportarExcel } from "@/lib/exportarBancoHoras";
 import type { ResumoBancoHorasMes } from "@/db/rhBancoHoras";
+import { mapearClassificacaoParaExibicao } from "@/lib/bancoHorasHelpers";
 
 interface FuncionarioOption {
   ID_FUNCIONARIO: string;
@@ -366,21 +367,21 @@ export default function BancoHorasConsultaPage() {
                 <div className="form-group">
                   <label>Horas Extras 50%</label>
                   <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669", fontWeight: 600 }}>
-                    {minutosParaHora(resumo.horasPagar50Min)} = {formatarMoeda((resumo.horasPagar50Min / 60) * resumo.funcionario.valorHora * 1.5)}
+                    {minutosParaHora(resumo.extrasUteisMin)} = {formatarMoeda((resumo.extrasUteisMin / 60) * resumo.funcionario.valorHora * 1.5)}
                   </div>
                 </div>
 
                 <div className="form-group">
                   <label>Horas Extras 100%</label>
                   <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669", fontWeight: 600 }}>
-                    {minutosParaHora(resumo.horasPagar100Min)} = {formatarMoeda((resumo.horasPagar100Min / 60) * resumo.funcionario.valorHora * 2)}
+                    {minutosParaHora(resumo.extras100Min)} = {formatarMoeda((resumo.extras100Min / 60) * resumo.funcionario.valorHora * 2)}
                   </div>
                 </div>
 
                 <div className="form-group">
                   <label>Horas Devidas</label>
                   <div className="form-input" style={{ backgroundColor: "#fef2f2", color: "#dc2626", fontWeight: 600 }}>
-                    {minutosParaHora(resumo.horasDescontarMin)} = {formatarMoeda((resumo.horasDescontarMin / 60) * resumo.funcionario.valorHora)}
+                    {minutosParaHora(resumo.devidasMin)} = {formatarMoeda((Math.abs(resumo.devidasMin) / 60) * resumo.funcionario.valorHora)}
                   </div>
                 </div>
 
@@ -404,6 +405,13 @@ export default function BancoHorasConsultaPage() {
                     {minutosParaHora(resumo.saldoFinalBancoMin)}
                   </div>
                 </div>
+
+                <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                  <label>Saldo por hora extra ou falta</label>
+                  <div className="form-input" style={{ backgroundColor: "#f9fafb", fontWeight: 600 }}>
+                    {`Pagar 50%: ${formatarMoeda((resumo.horasPagar50Min / 60) * resumo.funcionario.valorHora * 1.5)} | Pagar 100%: ${formatarMoeda((resumo.horasPagar100Min / 60) * resumo.funcionario.valorHora * 2)} | Descontar: ${formatarMoeda((resumo.horasDescontarMin / 60) * resumo.funcionario.valorHora)} | Subtotal: ${formatarMoeda((resumo.horasPagar50Min / 60) * resumo.funcionario.valorHora * 1.5 + (resumo.horasPagar100Min / 60) * resumo.funcionario.valorHora * 2 - (resumo.horasDescontarMin / 60) * resumo.funcionario.valorHora)}`}
+                  </div>
+                </div>
               </div>
 
               <div className="form-section-header" style={{ marginTop: "32px" }}>
@@ -416,7 +424,6 @@ export default function BancoHorasConsultaPage() {
                     <tr>
                       <th>Dia</th>
                       <th>Tipo</th>
-                      <th>Jornada</th>
                       <th>Trabalhado</th>
                       <th>Diferença</th>
                       <th>Classificação</th>
@@ -427,20 +434,19 @@ export default function BancoHorasConsultaPage() {
                       <tr key={dia.data}>
                         <td className="whitespace-nowrap">{dia.data} - {dia.diaSemana}</td>
                         <td>{dia.tipoDia}</td>
-                        <td>{minutosParaHora(dia.jornadaPrevistaMin)}</td>
                         <td>{minutosParaHora(dia.trabalhadoMin)}</td>
                         <td style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
                           {minutosParaHora(dia.diferencaMin)}
                         </td>
                         <td>
                           <span className={
-                            dia.classificacao === "EXTRA_UTIL" || dia.classificacao === "EXTRA_100"
+                            mapearClassificacaoParaExibicao(dia.classificacao) === "Hora Extra"
                               ? "badge badge-success"
-                              : dia.classificacao === "DEVEDOR" || dia.classificacao.includes("FALTA")
+                              : mapearClassificacaoParaExibicao(dia.classificacao) === "Devedor"
                               ? "badge badge-danger"
                               : "badge"
                           }>
-                            {dia.classificacao}
+                            {mapearClassificacaoParaExibicao(dia.classificacao)}
                           </span>
                         </td>
                       </tr>
