@@ -65,7 +65,30 @@ async function runMigrations() {
 
     console.log(`Aplicando migracao: ${nome}`);
     for (const statement of statements) {
-      await db.execute(statement);
+      try {
+        await db.execute(statement);
+      } catch (err) {
+        const normalizedStmt = statement.trim().toUpperCase();
+        const isAddColumn =
+          normalizedStmt.startsWith("ALTER TABLE") &&
+          normalizedStmt.includes("ADD COLUMN");
+        const message = err?.message || "";
+        const isDuplicateColumn = /duplicate column name|already exists/i.test(
+          message
+        );
+
+        if (isAddColumn && isDuplicateColumn) {
+          const match = statement.match(
+            /ALTER TABLE\s+(\S+)\s+.*ADD COLUMN\s+([\w\"]+)/i
+          );
+          const table = match?.[1] || "(tabela desconhecida)";
+          const column = match?.[2]?.replace(/\"/g, "") || "(coluna desconhecida)";
+          console.warn(`Coluna já existe, ignorando: ${table}.${column}`);
+          continue;
+        }
+
+        throw err;
+      }
     }
 
     await db.execute(
