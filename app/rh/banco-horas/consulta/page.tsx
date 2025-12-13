@@ -457,11 +457,18 @@ export default function BancoHorasConsultaPage() {
                 </div>
               </div>
 
-              <div className="banco-horas-card banco-horas-card-full">
-                <p className="card-label">Saldo por hora extra ou falta</p>
-                <p className="card-value card-inline">
-                  {`Pagar 50%: ${formatarMoeda(resumoValores.valorExtra50)} | Pagar 100%: ${formatarMoeda(resumoValores.valorExtra100)} | Descontar: ${formatarMoeda(resumoValores.valorDevido)} | Subtotal: ${formatarMoeda(resumoValores.valorExtra50 + resumoValores.valorExtra100 - resumoValores.valorDevido)}`}
-                </p>
+              <div className="banco-horas-card banco-horas-card-full saldo-bloco">
+                <p className="card-label saldo-titulo">Saldo por hora extra ou falta</p>
+                <div className="saldo-valores">
+                  <span>{`Pagar 50%: ${formatarMoeda(resumoValores.valorExtra50)}`}</span>
+                  <span>{`Pagar 100%: ${formatarMoeda(resumoValores.valorExtra100)}`}</span>
+                  <span>{`Descontar: ${formatarMoeda(resumoValores.valorDevido)}`}</span>
+                  <span>
+                    {`Subtotal: ${formatarMoeda(
+                      resumoValores.valorExtra50 + resumoValores.valorExtra100 - resumoValores.valorDevido
+                    )}`}
+                  </span>
+                </div>
               </div>
 
               <div className="form-section-header" style={{ marginTop: "40px" }}>
