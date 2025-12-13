@@ -72,10 +72,13 @@ async function runMigrations() {
         const isAddColumn =
           normalizedStmt.startsWith("ALTER TABLE") &&
           normalizedStmt.includes("ADD COLUMN");
+        const isRenameEmpresaId =
+          normalizedStmt.includes("RENAME COLUMN EMPRESA_ID TO ID_EMPRESA");
         const message = err?.message || "";
         const isDuplicateColumn = /duplicate column name|already exists/i.test(
           message
         );
+        const isMissingColumn = /no such column/i.test(message);
 
         if (isAddColumn && isDuplicateColumn) {
           const match = statement.match(
@@ -84,6 +87,13 @@ async function runMigrations() {
           const table = match?.[1] || "(tabela desconhecida)";
           const column = match?.[2]?.replace(/\"/g, "") || "(coluna desconhecida)";
           console.warn(`Coluna já existe, ignorando: ${table}.${column}`);
+          continue;
+        }
+
+        if (isRenameEmpresaId && isMissingColumn) {
+          console.warn(
+            "Coluna EMPRESA_ID não encontrada para renomear, seguindo adiante (provavelmente já está normalizada)."
+          );
           continue;
         }
 
