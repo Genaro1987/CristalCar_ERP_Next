@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import type { ResumoBancoHorasMes } from "@/db/rhBancoHoras";
 import { minutosParaHora } from "@/lib/rhPontoCalculo";
+import { mapearClassificacaoParaExibicao } from "@/lib/bancoHorasHelpers";
 
 interface DadosExportacao {
   resumo: ResumoBancoHorasMes;
@@ -30,39 +31,38 @@ export function exportarPDF(dados: DadosExportacao) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = 210;
   const pageHeight = 297;
-  const margin = 10;
-  let yPos = 15;
+  const margin = 12;
+  let yPos = 18;
 
   // CABEÇALHO (Logo e título) - Reduzido
-  doc.setFontSize(14);
+  doc.setFontSize(15);
   doc.setFont("helvetica", "bold");
   doc.text("BANCO DE HORAS", pageWidth / 2, yPos, { align: "center" });
-  yPos += 7;
+  yPos += 10;
 
   // DADOS DO FUNCIONÁRIO - Em uma linha
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.text("Funcionário:", margin, yPos);
   doc.setFont("helvetica", "normal");
   const nomeFuncionario = resumo.funcionario.nome.substring(0, 40);
-  const dept = (resumo.funcionario.nomeDepartamento || "-").substring(0, 20);
   const comp = `${String(resumo.competencia.mes).padStart(2, "0")}/${resumo.competencia.ano}`;
-  doc.text(`${nomeFuncionario} | Depto: ${dept} | Competência: ${comp}`, margin + 22, yPos);
-  yPos += 6;
+  doc.text(`${nomeFuncionario} | Competência: ${comp}`, margin + 24, yPos);
+  yPos += 8;
 
   // RESUMO DO MÊS - Layout compacto
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.text("RESUMO DO MÊS", margin, yPos);
-  yPos += 4;
+  yPos += 5;
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
+  doc.setFontSize(9);
 
   const col1 = margin;
-  const col2 = margin + 50;
-  const col3 = margin + 100;
-  const col4 = margin + 150;
+  const col2 = margin + 60;
+  const col3 = margin + 120;
+  const col4 = margin + 160;
 
   // Linha 1
   doc.text(`Saldo Ant: ${minutosParaHora(resumo.saldoAnteriorMin)}`, col1, yPos);
@@ -76,71 +76,74 @@ export function exportarPDF(dados: DadosExportacao) {
   doc.setFont("helvetica", "bold");
   doc.text(`Saldo Final: ${minutosParaHora(resumo.saldoFinalBancoMin)}`, col3, yPos);
   doc.setFont("helvetica", "normal");
-  yPos += 6;
+  yPos += 8;
 
   // VALORES - Em uma linha
   doc.setFont("helvetica", "bold");
-  doc.text("VALORES:", margin, yPos);
+  doc.text("Saldo por hora extra ou falta:", margin, yPos);
   doc.setFont("helvetica", "normal");
-  const vp50 = formatarMoeda((resumo.horasPagar50Min / 60) * resumo.funcionario.valorHora * 1.5);
-  const vp100 = formatarMoeda((resumo.horasPagar100Min / 60) * resumo.funcionario.valorHora * 2);
-  const vd = formatarMoeda((resumo.horasDescontarMin / 60) * resumo.funcionario.valorHora);
-  doc.text(`Pagar 50%: ${vp50} | Pagar 100%: ${vp100} | Descontar: ${vd}`, margin + 18, yPos);
-  yPos += 6;
+  const vp50Num = (resumo.horasPagar50Min / 60) * resumo.funcionario.valorHora * 1.5;
+  const vp100Num = (resumo.horasPagar100Min / 60) * resumo.funcionario.valorHora * 2;
+  const vdNum = (resumo.horasDescontarMin / 60) * resumo.funcionario.valorHora;
+  const subtotalNum = vp50Num + vp100Num - vdNum;
+  const vp50 = formatarMoeda(vp50Num);
+  const vp100 = formatarMoeda(vp100Num);
+  const vd = formatarMoeda(vdNum);
+  const subtotal = formatarMoeda(subtotalNum);
+  doc.text(`Pagar 50%: ${vp50} | Pagar 100%: ${vp100} | Descontar: ${vd} | Subtotal: ${subtotal}`, margin + 2, yPos);
+  yPos += 10;
 
   // DETALHAMENTO DIÁRIO - Tabela compacta
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.text("DETALHAMENTO DIÁRIO", margin, yPos);
-  yPos += 4;
+  yPos += 6;
 
   // Cabeçalho da tabela
-  doc.setFontSize(7);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
+  const tableWidth = pageWidth - margin * 2;
   const colDia = margin;
-  const colTipo = margin + 18;
-  const colJorn = margin + 36;
-  const colTrab = margin + 52;
-  const colDif = margin + 68;
-  const colClass = margin + 82;
+  const colTipo = colDia + 24;
+  const colTrab = colTipo + 32;
+  const colDif = colTrab + 32;
+  const colClass = margin + tableWidth - 50;
 
   doc.text("Data", colDia, yPos);
   doc.text("Tipo", colTipo, yPos);
-  doc.text("Jornada", colJorn, yPos);
   doc.text("Trab.", colTrab, yPos);
   doc.text("Dif.", colDif, yPos);
   doc.text("Classificação", colClass, yPos);
-  yPos += 3;
+  yPos += 4;
 
   // Linha da tabela
   doc.line(margin, yPos, pageWidth - margin, yPos);
-  yPos += 3;
+  yPos += 4;
 
   // Dados da tabela
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(6);
+  doc.setFontSize(8);
 
   resumo.dias.forEach((dia) => {
-    if (yPos > 250) return; // Para não ultrapassar o rodapé
+    if (yPos > 265) return; // Para não ultrapassar o rodapé
 
     const dataFormatada = dia.data.substring(8, 10) + "/" + dia.data.substring(5, 7);
     doc.text(dataFormatada, colDia, yPos);
     doc.text(dia.tipoDia.substring(0, 6), colTipo, yPos);
-    doc.text(minutosParaHora(dia.jornadaPrevistaMin), colJorn, yPos);
     doc.text(minutosParaHora(dia.trabalhadoMin), colTrab, yPos);
 
     if (dia.diferencaMin !== 0) {
-      doc.setTextColor(dia.diferencaMin > 0 ? 0 : 255, dia.diferencaMin > 0 ? 100 : 0, 0);
+      doc.setTextColor(dia.diferencaMin > 0 ? 0 : 255, dia.diferencaMin > 0 ? 120 : 0, 0);
     }
     doc.text(minutosParaHora(dia.diferencaMin), colDif, yPos);
     doc.setTextColor(0, 0, 0);
 
-    doc.text(dia.classificacao.substring(0, 18), colClass, yPos);
-    yPos += 3;
+    doc.text(mapearClassificacaoParaExibicao(dia.classificacao).substring(0, 25), colClass, yPos);
+    yPos += 4;
   });
 
   // Espaço antes da assinatura
-  yPos = Math.max(yPos + 5, 260);
+  yPos = Math.max(yPos + 6, 270);
 
   // ASSINATURAS
   doc.setFontSize(8);
