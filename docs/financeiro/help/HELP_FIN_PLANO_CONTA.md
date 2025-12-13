@@ -1,20 +1,18 @@
 # Plano de Contas (FIN_PLANO_CONTA)
 
 ## Importância da tela
-Permite organizar receitas e despesas em uma estrutura hierárquica, baseando todos os lançamentos e relatórios financeiros do ERP.
+Define a estrutura contábil utilizada em lançamentos, no DRE e nas análises de fluxo de caixa, separando dados por empresa.
 
-## Funcionamento e processo
-1. Configure os grupos pais e, em seguida, cadastre subcontas conforme a granularidade necessária.
-2. Defina a natureza (RECEITA ou DESPESA) para direcionar o comportamento no DRE.
-3. Utilize o campo "Visível no DRE" para controlar se a conta aparece no relatório.
-4. Salve e mantenha a ordem com o campo de ordenação para facilitar a visualização em árvore.
+## Funcionamento (MVP) e processo esperado
+1. Cadastrar contas com código, natureza e obrigatoriedade de centro de custo.
+2. Garantir que cada conta tenha **ID_EMPRESA** e que pais/filhos compartilhem a mesma empresa.
+3. Disponibilizar filtros por natureza, ativo e busca textual.
 
 ## Campos obrigatórios e opcionais
-- **Obrigatórios:** Nome, Código (único), Natureza, Ativo, Visível no DRE, Obriga Centro de Custo, Ordem.
-- **Opcionais:** Conta pai (para hierarquia).
+- **Obrigatórios:** ID_EMPRESA, código, nome, natureza, indicador de visibilidade no DRE, obrigatoriedade de centro de custo.
+- **Opcionais:** Ordem de exibição, marcação de ativo/inativo, indicador de exibição em dashboards.
 
-## Regras e validações
-- Código deve ser único e seguir o padrão interno da empresa.
-- Contas de natureza DESPESA podem exigir centro de custo quando "Obriga Centro de Custo" estiver marcado.
-- A hierarquia suporta múltiplos níveis; os filtros de natureza e ativo ajudam na manutenção.
-- Para o DRE, receitas somam e despesas diminuem o resultado, mas os valores são exibidos positivos.
+## Observações de evolução (roadmap curto)
+- Sincronizar com APIs de cadastro, respeitando índice único (ID_EMPRESA, FIN_PLANO_CONTA_CODIGO).
+- Validar obrigatoriedade de centro de custo no momento do lançamento financeiro.
+- Habilitar importação/exportação de plano de contas por empresa.

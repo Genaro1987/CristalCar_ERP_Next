@@ -136,11 +136,13 @@ export default function PlanoContaPage() {
     <LayoutShell>
       <HeaderBar
         nomeTela="Plano de Contas"
-        codigoTela="FIN001_PLANO_CONTA"
+        codigoTela="FIN_PLANO_CONTA"
+        caminhoRota="/financeiro/plano-conta"
+        modulo="FINANCEIRO"
       />
       <NotificationBar
         type="info"
-        message="Esta tela está em fase inicial. A API de cadastro e a visualização em árvore serão conectadas após as próximas entregas de backend."
+        message="Em construção / MVP: vincular cadastros ao backend garantindo ID_EMPRESA obrigatório e hierarquia dentro da mesma empresa."
       />
 
       <div className="mb-6 grid grid-cols-1 gap-4 rounded border border-gray-200 bg-white p-4 shadow">

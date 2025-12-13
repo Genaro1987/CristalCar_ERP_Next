@@ -55,14 +55,50 @@ async function runMigrations() {
       .map((line) => (line.trimStart().startsWith("--") ? "" : line))
       .join("\n");
 
+    // Quebra respeitando blocos BEGIN/END (ex.: triggers) ao procurar um novo
+    // comando apenas quando um ; eh seguido de uma proxima keyword SQL conhecida
+    // ou do fim do arquivo. Isso evita split dentro do corpo de triggers.
     const statements = sanitizedSql
-      .split(";")
+      .split(/;\s*(?=\b(?:CREATE|INSERT|UPDATE|DELETE|ALTER|DROP|WITH|PRAGMA)\b|$)/gi)
       .map((s) => s.trim())
       .filter(Boolean);
 
     console.log(`Aplicando migracao: ${nome}`);
     for (const statement of statements) {
-      await db.execute(statement);
+      try {
+        await db.execute(statement);
+      } catch (err) {
+        const normalizedStmt = statement.trim().toUpperCase();
+        const isAddColumn =
+          normalizedStmt.startsWith("ALTER TABLE") &&
+          normalizedStmt.includes("ADD COLUMN");
+        const isRenameEmpresaId =
+          normalizedStmt.includes("RENAME COLUMN EMPRESA_ID TO ID_EMPRESA");
+        const message = err?.message || "";
+        const isDuplicateColumn = /duplicate column name|already exists/i.test(
+          message
+        );
+        const isMissingColumn = /no such column/i.test(message);
+
+        if (isAddColumn && isDuplicateColumn) {
+          const match = statement.match(
+            /ALTER TABLE\s+(\S+)\s+.*ADD COLUMN\s+([\w\"]+)/i
+          );
+          const table = match?.[1] || "(tabela desconhecida)";
+          const column = match?.[2]?.replace(/\"/g, "") || "(coluna desconhecida)";
+          console.warn(`Coluna já existe, ignorando: ${table}.${column}`);
+          continue;
+        }
+
+        if (isRenameEmpresaId && isMissingColumn) {
+          console.warn(
+            "Coluna EMPRESA_ID não encontrada para renomear, seguindo adiante (provavelmente já está normalizada)."
+          );
+          continue;
+        }
+
+        throw err;
+      }
     }
 
     await db.execute(

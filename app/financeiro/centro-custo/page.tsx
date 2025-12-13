@@ -97,11 +97,13 @@ export default function CentroCustoPage() {
     <LayoutShell>
       <HeaderBar
         nomeTela="Centro de Custo"
-        codigoTela="FIN002_CENTRO_CUSTO"
+        codigoTela="FIN_CENTRO_CUSTO"
+        caminhoRota="/financeiro/centro-custo"
+        modulo="FINANCEIRO"
       />
       <NotificationBar
         type="info"
-        message="Cadastros e filtros serão ligados ao backend após a criação das APIs financeiras."
+        message="Em construção / MVP: cadastros serão ligados ao backend, sempre vinculando ID_EMPRESA e mantendo pai/filho na mesma empresa."
       />
 
       <div className="mb-6 grid grid-cols-1 gap-4 rounded border border-gray-200 bg-white p-4 shadow">

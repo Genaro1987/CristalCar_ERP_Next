@@ -1,19 +1,18 @@
 # Centro de Custo (FIN_CENTRO_CUSTO)
 
 ## Importância da tela
-Controla onde cada gasto é aplicado, permitindo análise gerencial por área, projeto ou unidade de negócio.
+Organiza despesas e receitas por áreas, permitindo análises de performance por empresa e garantindo rastreabilidade dos lançamentos.
 
-## Funcionamento e processo
-1. Cadastre centros raiz e adicione níveis filhos conforme a estrutura organizacional.
-2. Utilize códigos únicos para facilitar integrações e importações.
-3. Defina a ordem de exibição para uma visualização em árvore mais clara.
-4. Ative ou inative centros sem perder histórico.
+## Funcionamento (MVP) e processo esperado
+1. Criar centros com hierarquia (pai/filho) sempre compartilhando o mesmo **ID_EMPRESA**.
+2. Aplicar índice único (ID_EMPRESA, FIN_CENTRO_CUSTO_CODIGO) para evitar conflitos entre empresas.
+3. Exibir filtros por status (ativo) e busca textual para facilitar seleção nos lançamentos.
 
 ## Campos obrigatórios e opcionais
-- **Obrigatórios:** Nome, Código (único), Ativo, Ordem.
-- **Opcionais:** Centro de custo pai (para hierarquia).
+- **Obrigatórios:** ID_EMPRESA, código, nome, indicador de ativo.
+- **Opcionais:** Ordem de exibição, vínculo com centro de custo pai.
 
-## Regras e validações
-- Código deve ser único em toda a hierarquia.
-- Contas financeiras que exigem centro de custo tornam este campo obrigatório nos lançamentos.
-- Filtros por ativo e por nome/código ajudam a localizar rapidamente estruturas grandes.
+## Observações de evolução (roadmap curto)
+- Integrar APIs de cadastro/edição respeitando validações de hierarquia por empresa.
+- Disponibilizar árvore de seleção em lançamentos e relatórios.
+- Incluir bloqueio de exclusão quando existirem lançamentos associados ao centro.
