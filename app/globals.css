@@ -425,6 +425,91 @@ a {
   overflow-x: auto;
 }
 
+.banco-horas-resumo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.banco-horas-card {
+  padding: 14px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.banco-horas-card-full {
+  grid-column: 1 / -1;
+}
+
+.card-label {
+  margin: 0 0 6px;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+
+.card-value {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.card-inline {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.card-sub {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.card-success {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.card-danger {
+  background-color: #fef2f2;
+  border-color: #fecdd3;
+}
+
+.card-highlight {
+  background-color: #fff8e1;
+  border-color: #fcd34d;
+}
+
+.card-neutral {
+  background-color: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.jornada-info-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 8px 0 12px;
+}
+
+.jornada-info-line strong {
+  color: #111827;
+}
+
 .departamentos-page .panel + .panel {
   margin-top: 8px;
 }
@@ -452,6 +537,35 @@ a {
 .data-table td {
   font-size: 0.95rem;
   color: #374151;
+}
+
+.banco-horas-detalhamento-wrapper {
+  margin-top: 8px;
+}
+
+.banco-horas-detalhamento-table {
+  table-layout: fixed;
+}
+
+.banco-horas-detalhamento-table th,
+.banco-horas-detalhamento-table td {
+  word-break: break-word;
+}
+
+.dia-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dia-data {
+  font-weight: 700;
+  color: #111827;
+}
+
+.dia-semana {
+  color: #6b7280;
+  font-size: 0.9rem;
 }
 
 .col-codigo {

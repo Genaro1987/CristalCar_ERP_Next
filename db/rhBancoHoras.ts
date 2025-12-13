@@ -63,6 +63,16 @@ export interface ResumoBancoHorasMes {
     valorHora: number;
   };
   competencia: { ano: number; mes: number };
+  jornada: {
+    entradaManha: string | null;
+    saidaManha: string | null;
+    entradaTarde: string | null;
+    saidaTarde: string | null;
+    entradaIntervalo: string | null;
+    saidaIntervalo: string | null;
+    minutosPrevistos: number | null;
+    toleranciaMinutos: number;
+  } | null;
   saldoAnteriorMin: number;
   extrasUteisMin: number;
   extras100Min: number;
@@ -683,6 +693,18 @@ export async function calcularBancoHorasMes(
       valorHora,
     },
     competencia: { ano: params.ano, mes: params.mes },
+    jornada: funcionarioBase.jornada
+      ? {
+          entradaManha: funcionarioBase.jornada.HORA_ENTRADA_MANHA,
+          saidaManha: funcionarioBase.jornada.HORA_SAIDA_MANHA,
+          entradaTarde: funcionarioBase.jornada.HORA_ENTRADA_TARDE,
+          saidaTarde: funcionarioBase.jornada.HORA_SAIDA_TARDE,
+          entradaIntervalo: funcionarioBase.jornada.HORA_ENTRADA_INTERVALO,
+          saidaIntervalo: funcionarioBase.jornada.HORA_SAIDA_INTERVALO,
+          minutosPrevistos: minutosJornadaDia,
+          toleranciaMinutos,
+        }
+      : null,
     saldoAnteriorMin: saldoAnterior,
     extrasUteisMin,
     extras100Min,
