@@ -1,8 +1,11 @@
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import type { ResumoBancoHorasMes } from "@/db/rhBancoHoras";
-import { minutosParaHora } from "@/lib/rhPontoCalculo";
-import { mapearClassificacaoParaExibicao } from "@/lib/bancoHorasHelpers";
+import { minutesToDecimal, minutosParaHora } from "@/lib/rhPontoCalculo";
+import {
+  mapearClassificacaoParaExibicao,
+  resumirTotaisDias,
+} from "@/lib/bancoHorasHelpers";
 
 interface DadosExportacao {
   resumo: ResumoBancoHorasMes;
@@ -31,17 +34,30 @@ export function exportarPDF(dados: DadosExportacao) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = 210;
   const pageHeight = 297;
-  const margin = 12;
-  let yPos = 18;
+  const margin = 10;
+  let yPos = 16;
+
+  const totaisDias = resumirTotaisDias(resumo.dias);
+  const extrasUteisMin = totaisDias.extras50Min;
+  const extras100Min = totaisDias.extras100Min;
+  const devidasMin = totaisDias.devidasMin;
+  const saldoTecnicoMin =
+    resumo.saldoAnteriorMin +
+    extrasUteisMin +
+    extras100Min +
+    devidasMin +
+    resumo.ajustesManuaisMin +
+    resumo.fechamentosMin;
+  const saldoFinalBancoMin = dados.zerarBanco ? 0 : saldoTecnicoMin;
 
   // CABEÇALHO (Logo e título) - Reduzido
-  doc.setFontSize(15);
+  doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
   doc.text("BANCO DE HORAS", pageWidth / 2, yPos, { align: "center" });
   yPos += 10;
 
   // DADOS DO FUNCIONÁRIO - Em uma linha
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.text("Funcionário:", margin, yPos);
   doc.setFont("helvetica", "normal");
@@ -62,36 +78,38 @@ export function exportarPDF(dados: DadosExportacao) {
   const col1 = margin;
   const col2 = margin + 60;
   const col3 = margin + 120;
-  const col4 = margin + 160;
 
   // Linha 1
   doc.text(`Saldo Ant: ${minutosParaHora(resumo.saldoAnteriorMin)}`, col1, yPos);
-  doc.text(`Extras 50%: ${minutosParaHora(resumo.extrasUteisMin)}`, col2, yPos);
-  doc.text(`Extras 100%: ${minutosParaHora(resumo.extras100Min)}`, col3, yPos);
+  doc.text(`Extras 50%: ${minutosParaHora(extrasUteisMin)}`, col2, yPos);
+  doc.text(`Extras 100%: ${minutosParaHora(extras100Min)}`, col3, yPos);
   yPos += 4;
 
   // Linha 2
-  doc.text(`Devidas: ${minutosParaHora(resumo.devidasMin)}`, col1, yPos);
+  doc.text(`Devidas: ${minutosParaHora(devidasMin)}`, col1, yPos);
   doc.text(`Ajustes: ${minutosParaHora(resumo.ajustesManuaisMin)}`, col2, yPos);
   doc.setFont("helvetica", "bold");
-  doc.text(`Saldo Final: ${minutosParaHora(resumo.saldoFinalBancoMin)}`, col3, yPos);
+  doc.text(`Saldo Final: ${minutosParaHora(saldoFinalBancoMin)}`, col3, yPos);
   doc.setFont("helvetica", "normal");
-  yPos += 8;
+  yPos += 10;
 
   // VALORES - Em uma linha
   doc.setFont("helvetica", "bold");
   doc.text("Saldo por hora extra ou falta:", margin, yPos);
   doc.setFont("helvetica", "normal");
-  const vp50Num = (resumo.horasPagar50Min / 60) * resumo.funcionario.valorHora * 1.5;
-  const vp100Num = (resumo.horasPagar100Min / 60) * resumo.funcionario.valorHora * 2;
-  const vdNum = (resumo.horasDescontarMin / 60) * resumo.funcionario.valorHora;
+  const horasPagar50Min = Math.max(0, extrasUteisMin);
+  const horasPagar100Min = Math.max(0, extras100Min);
+  const horasDescontarMin = Math.abs(Math.min(0, devidasMin));
+  const vp50Num = minutesToDecimal(horasPagar50Min) * resumo.funcionario.valorHora * 1.5;
+  const vp100Num = minutesToDecimal(horasPagar100Min) * resumo.funcionario.valorHora * 2;
+  const vdNum = minutesToDecimal(horasDescontarMin) * resumo.funcionario.valorHora;
   const subtotalNum = vp50Num + vp100Num - vdNum;
   const vp50 = formatarMoeda(vp50Num);
   const vp100 = formatarMoeda(vp100Num);
   const vd = formatarMoeda(vdNum);
   const subtotal = formatarMoeda(subtotalNum);
   doc.text(`Pagar 50%: ${vp50} | Pagar 100%: ${vp100} | Descontar: ${vd} | Subtotal: ${subtotal}`, margin + 2, yPos);
-  yPos += 10;
+  yPos += 12;
 
   // DETALHAMENTO DIÁRIO - Tabela compacta
   doc.setFont("helvetica", "bold");
@@ -100,14 +118,14 @@ export function exportarPDF(dados: DadosExportacao) {
   yPos += 6;
 
   // Cabeçalho da tabela
-  doc.setFontSize(8);
+  doc.setFontSize(8.5);
   doc.setFont("helvetica", "bold");
   const tableWidth = pageWidth - margin * 2;
   const colDia = margin;
-  const colTipo = colDia + 24;
-  const colTrab = colTipo + 32;
-  const colDif = colTrab + 32;
-  const colClass = margin + tableWidth - 50;
+  const colTipo = colDia + 26;
+  const colTrab = colTipo + 34;
+  const colDif = colTrab + 34;
+  const colClass = margin + tableWidth - 60;
 
   doc.text("Data", colDia, yPos);
   doc.text("Tipo", colTipo, yPos);
@@ -122,10 +140,10 @@ export function exportarPDF(dados: DadosExportacao) {
 
   // Dados da tabela
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
+  doc.setFontSize(8.5);
 
   resumo.dias.forEach((dia) => {
-    if (yPos > 265) return; // Para não ultrapassar o rodapé
+    if (yPos > 280) return; // Para não ultrapassar o rodapé
 
     const dataFormatada = dia.data.substring(8, 10) + "/" + dia.data.substring(5, 7);
     doc.text(dataFormatada, colDia, yPos);
@@ -196,24 +214,34 @@ export function exportarExcel(dados: DadosExportacao[]) {
   const dadosResumo: any[][] = [
     ["Banco de Horas - Resumo Mensal"],
     [],
-    ["Funcionário", "Departamento", "Competência", "Saldo Anterior", "Extras 50%", "Extras 100%", "Devidas", "Ajustes", "Saldo Final", "Pagar 50%", "Pagar 100%", "Descontar"],
+    ["Funcionário", "Competência", "Saldo Anterior", "Extras 50%", "Extras 100%", "Devidas", "Ajustes", "Saldo Final", "Pagar 50%", "Pagar 100%", "Descontar"],
   ];
 
   dados.forEach((d) => {
     const r = d.resumo;
+    const totais = resumirTotaisDias(r.dias);
+    const extras50 = totais.extras50Min;
+    const extras100 = totais.extras100Min;
+    const devidas = totais.devidasMin;
+    const saldoTecnico =
+      r.saldoAnteriorMin + extras50 + extras100 + devidas + r.ajustesManuaisMin + r.fechamentosMin;
+    const saldoFinal = d.zerarBanco ? 0 : saldoTecnico;
+    const horasPagar50 = Math.max(0, extras50);
+    const horasPagar100 = Math.max(0, extras100);
+    const horasDescontar = Math.abs(Math.min(0, devidas));
+
     dadosResumo.push([
       r.funcionario.nome,
-      r.funcionario.nomeDepartamento ?? "-",
       `${String(r.competencia.mes).padStart(2, "0")}/${r.competencia.ano}`,
       minutosParaHora(r.saldoAnteriorMin),
-      minutosParaHora(r.extrasUteisMin),
-      minutosParaHora(r.extras100Min),
-      minutosParaHora(r.devidasMin),
+      minutosParaHora(extras50),
+      minutosParaHora(extras100),
+      minutosParaHora(devidas),
       minutosParaHora(r.ajustesManuaisMin),
-      minutosParaHora(r.saldoFinalBancoMin),
-      minutosParaHora(r.horasPagar50Min),
-      minutosParaHora(r.horasPagar100Min),
-      minutosParaHora(r.horasDescontarMin),
+      minutosParaHora(saldoFinal),
+      minutosParaHora(horasPagar50),
+      minutosParaHora(horasPagar100),
+      minutosParaHora(horasDescontar),
     ]);
   });
 
@@ -224,7 +252,7 @@ export function exportarExcel(dados: DadosExportacao[]) {
   const dadosDetalhados: any[][] = [
     ["Banco de Horas - Detalhamento Diário"],
     [],
-    ["Funcionário", "Departamento", "Data", "Dia Semana", "Tipo Dia", "Jornada", "Trabalhado", "Diferença", "Classificação", "Impacto Banco", "Observação"],
+    ["Funcionário", "Data", "Dia Semana", "Tipo Dia", "Trabalhado", "Diferença", "Classificação", "Impacto Banco", "Observação"],
   ];
 
   dados.forEach((d) => {
@@ -232,14 +260,12 @@ export function exportarExcel(dados: DadosExportacao[]) {
     r.dias.forEach((dia) => {
       dadosDetalhados.push([
         r.funcionario.nome,
-        r.funcionario.nomeDepartamento ?? "-",
         dia.data,
         dia.diaSemana,
         dia.tipoDia,
-        minutosParaHora(dia.jornadaPrevistaMin),
         minutosParaHora(dia.trabalhadoMin),
         minutosParaHora(dia.diferencaMin),
-        dia.classificacao,
+        mapearClassificacaoParaExibicao(dia.classificacao),
         minutosParaHora(dia.impactoBancoMin),
         dia.observacao ?? "",
       ]);
@@ -258,20 +284,24 @@ export function exportarExcel(dados: DadosExportacao[]) {
 
   dados.forEach((d) => {
     const r = d.resumo;
-    const valorPagar50 = (r.horasPagar50Min / 60) * r.funcionario.valorHora * 1.5;
-    const valorPagar100 = (r.horasPagar100Min / 60) * r.funcionario.valorHora * 2;
-    const valorDescontar = (r.horasDescontarMin / 60) * r.funcionario.valorHora;
+    const totais = resumirTotaisDias(r.dias);
+    const horasPagar50 = Math.max(0, totais.extras50Min);
+    const horasPagar100 = Math.max(0, totais.extras100Min);
+    const horasDescontar = Math.abs(Math.min(0, totais.devidasMin));
+    const valorPagar50 = minutesToDecimal(horasPagar50) * r.funcionario.valorHora * 1.5;
+    const valorPagar100 = minutesToDecimal(horasPagar100) * r.funcionario.valorHora * 2;
+    const valorDescontar = minutesToDecimal(horasDescontar) * r.funcionario.valorHora;
     const totalLiquido = valorPagar50 + valorPagar100 - valorDescontar;
 
     dadosValores.push([
       r.funcionario.nome,
       `${String(r.competencia.mes).padStart(2, "0")}/${r.competencia.ano}`,
       r.funcionario.valorHora,
-      minutosParaHora(r.horasPagar50Min),
+      minutosParaHora(horasPagar50),
       valorPagar50,
-      minutosParaHora(r.horasPagar100Min),
+      minutosParaHora(horasPagar100),
       valorPagar100,
-      minutosParaHora(r.horasDescontarMin),
+      minutosParaHora(horasDescontar),
       valorDescontar,
       totalLiquido,
     ]);
