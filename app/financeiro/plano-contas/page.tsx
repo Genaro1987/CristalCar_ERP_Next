@@ -5,27 +5,42 @@ import { HeaderBar } from "@/components/HeaderBar";
 import { SplitViewShell } from "@/components/financeiro/SplitViewShell";
 import { useMemo, useState } from "react";
 
-type CentroCustoNode = {
+type Natureza = "RECEITA" | "DESPESA";
+
+type PlanoContaNode = {
   id: number;
   nome: string;
   codigo: string;
+  natureza: Natureza;
   status: "ATIVO" | "INATIVO";
-  responsavel: string;
-  filhos?: CentroCustoNode[];
+  exigeCentroCusto: boolean;
+  visivelDre: boolean;
+  filhos?: PlanoContaNode[];
 };
+
+function Tag({ label, tone = "gray" }: { label: string; tone?: "gray" | "orange" | "green" }) {
+  const tones: Record<"gray" | "orange" | "green", string> = {
+    gray: "bg-gray-100 text-gray-700",
+    orange: "bg-orange-100 text-orange-700",
+    green: "bg-green-100 text-green-700",
+  } as const;
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tones[tone]}`}>
+      {label}
+    </span>
+  );
+}
 
 function TreeItem({
   node,
   onSelect,
   selectedId,
-  onNewChild,
-  onEdit,
+  onOpenModal,
 }: {
-  node: CentroCustoNode;
+  node: PlanoContaNode;
   onSelect: (id: number) => void;
   selectedId: number | null;
-  onNewChild: () => void;
-  onEdit: () => void;
+  onOpenModal: (mode: "NOVO" | "EDITAR") => void;
 }) {
   return (
     <li className="space-y-2">
@@ -35,7 +50,7 @@ function TreeItem({
         }`}
       >
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <div className="space-y-1">
             <button
               type="button"
               onClick={() => onSelect(node.id)}
@@ -43,23 +58,25 @@ function TreeItem({
             >
               {node.codigo} - {node.nome}
             </button>
-            <p className="text-xs text-gray-600">Responsavel: {node.responsavel}</p>
-            <p className="text-xs font-semibold uppercase text-gray-700">
-              {node.status === "ATIVO" ? "Ativo" : "Inativo"}
-            </p>
+            <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+              <Tag label={node.natureza} tone={node.natureza === "RECEITA" ? "green" : "orange"} />
+              <Tag label={node.status === "ATIVO" ? "Ativo" : "Inativo"} tone={node.status === "ATIVO" ? "green" : "gray"} />
+              {node.visivelDre ? <Tag label="Mostra no DRE" /> : <Tag label="Oculto no DRE" />}
+              {node.exigeCentroCusto ? <Tag label="Exige Centro de Custo" /> : null}
+            </div>
           </div>
           <div className="flex flex-col gap-2 text-xs font-semibold uppercase text-gray-700">
             <button
               type="button"
               className="rounded border border-gray-200 px-2 py-1 hover:border-orange-400 hover:text-orange-600"
-              onClick={onNewChild}
+              onClick={() => onOpenModal("NOVO")}
             >
               Novo Filho
             </button>
             <button
               type="button"
               className="rounded border border-gray-200 px-2 py-1 hover:border-orange-400 hover:text-orange-600"
-              onClick={onEdit}
+              onClick={() => onOpenModal("EDITAR")}
             >
               Editar
             </button>
@@ -80,8 +97,7 @@ function TreeItem({
               node={child}
               onSelect={onSelect}
               selectedId={selectedId}
-              onNewChild={onNewChild}
-              onEdit={onEdit}
+              onOpenModal={onOpenModal}
             />
           ))}
         </ul>
@@ -90,7 +106,15 @@ function TreeItem({
   );
 }
 
-function Modal({ open, onClose, title }: { open: boolean; onClose: () => void; title: string }) {
+function Modal({
+  open,
+  title,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+}) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -102,25 +126,40 @@ function Modal({ open, onClose, title }: { open: boolean; onClose: () => void; t
           </button>
         </div>
         <div className="mt-4 space-y-3">
-          <label className="text-sm font-semibold text-gray-700">
-            Nome
-            <input className="mt-1 w-full rounded border border-gray-300 p-2 text-sm" placeholder="Ex: Financeiro" />
-          </label>
-          <label className="text-sm font-semibold text-gray-700">
-            Código
-            <input className="mt-1 w-full rounded border border-gray-300 p-2 text-sm" placeholder="Ex: 01.02" />
-          </label>
-          <label className="text-sm font-semibold text-gray-700">
-            Responsavel
-            <input className="mt-1 w-full rounded border border-gray-300 p-2 text-sm" placeholder="Ex: Gestor" />
-          </label>
-          <label className="text-sm font-semibold text-gray-700">
-            Status
-            <select className="mt-1 w-full rounded border border-gray-300 p-2 text-sm">
-              <option>Ativo</option>
-              <option>Inativo</option>
-            </select>
-          </label>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <label className="text-sm font-semibold text-gray-700">
+              Código
+              <input className="mt-1 w-full rounded border border-gray-300 p-2 text-sm" placeholder="Ex: 4.1" />
+            </label>
+            <label className="text-sm font-semibold text-gray-700">
+              Nome
+              <input className="mt-1 w-full rounded border border-gray-300 p-2 text-sm" placeholder="Ex: Marketing" />
+            </label>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <label className="text-sm font-semibold text-gray-700">
+              Natureza
+              <select className="mt-1 w-full rounded border border-gray-300 p-2 text-sm">
+                <option>Receita</option>
+                <option>Despesa</option>
+              </select>
+            </label>
+            <label className="text-sm font-semibold text-gray-700">
+              Status
+              <select className="mt-1 w-full rounded border border-gray-300 p-2 text-sm">
+                <option>Ativo</option>
+                <option>Inativo</option>
+              </select>
+            </label>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <input type="checkbox" /> Visível no DRE
+            </label>
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <input type="checkbox" /> Exige Centro de Custo
+            </label>
+          </div>
         </div>
         <div className="mt-6 flex justify-end gap-3">
           <button
@@ -142,50 +181,90 @@ function Modal({ open, onClose, title }: { open: boolean; onClose: () => void; t
   );
 }
 
-function flatten(nodes: CentroCustoNode[]): CentroCustoNode[] {
+function flatten(nodes: PlanoContaNode[]): PlanoContaNode[] {
   return nodes.flatMap((node) => [node, ...(node.filhos ? flatten(node.filhos) : [])]);
 }
 
-export default function CentroCustoPage() {
-  const dados = useMemo<CentroCustoNode[]>(
+export default function PlanoContasPage() {
+  const dados = useMemo<PlanoContaNode[]>(
     () => [
       {
         id: 1,
-        nome: "Administrativo",
-        codigo: "01",
+        nome: "Receitas",
+        codigo: "3",
+        natureza: "RECEITA",
         status: "ATIVO",
-        responsavel: "Coordenacao",
+        exigeCentroCusto: false,
+        visivelDre: true,
         filhos: [
-          { id: 2, nome: "Financeiro", codigo: "01.01", status: "ATIVO", responsavel: "Controller" },
-          { id: 3, nome: "Pessoas", codigo: "01.02", status: "ATIVO", responsavel: "RH" },
+          {
+            id: 2,
+            nome: "Vendas de Veiculos",
+            codigo: "3.1",
+            natureza: "RECEITA",
+            status: "ATIVO",
+            exigeCentroCusto: true,
+            visivelDre: true,
+          },
+          {
+            id: 3,
+            nome: "Servicos",
+            codigo: "3.2",
+            natureza: "RECEITA",
+            status: "ATIVO",
+            exigeCentroCusto: false,
+            visivelDre: true,
+          },
         ],
       },
       {
         id: 4,
-        nome: "Operacoes",
-        codigo: "02",
+        nome: "Despesas Operacionais",
+        codigo: "4",
+        natureza: "DESPESA",
         status: "ATIVO",
-        responsavel: "Diretoria",
+        exigeCentroCusto: true,
+        visivelDre: true,
         filhos: [
-          { id: 5, nome: "Servicos", codigo: "02.01", status: "ATIVO", responsavel: "Supervisor" },
-          { id: 6, nome: "Vendas", codigo: "02.02", status: "INATIVO", responsavel: "Coordenador" },
+          {
+            id: 5,
+            nome: "Marketing",
+            codigo: "4.1",
+            natureza: "DESPESA",
+            status: "ATIVO",
+            exigeCentroCusto: true,
+            visivelDre: true,
+          },
+          {
+            id: 6,
+            nome: "Pessoal",
+            codigo: "4.2",
+            natureza: "DESPESA",
+            status: "INATIVO",
+            exigeCentroCusto: true,
+            visivelDre: false,
+          },
         ],
       },
     ],
     []
   );
 
-  const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<"TODOS" | "ATIVO" | "INATIVO">("TODOS");
+  const [naturezaFiltro, setNaturezaFiltro] = useState<"TODAS" | Natureza>("TODAS");
+  const [busca, setBusca] = useState("");
   const [selecionado, setSelecionado] = useState<number | null>(1);
   const [modalAberto, setModalAberto] = useState(false);
   const [modoModal, setModoModal] = useState<"NOVO" | "EDITAR">("NOVO");
 
-  const filtrar = (nos: CentroCustoNode[]): CentroCustoNode[] =>
+  const filtrar = (nos: PlanoContaNode[]): PlanoContaNode[] =>
     nos
       .filter((node) => (statusFiltro === "TODOS" ? true : node.status === statusFiltro))
+      .filter((node) => (naturezaFiltro === "TODAS" ? true : node.natureza === naturezaFiltro))
       .filter((node) =>
-        busca ? `${node.codigo} ${node.nome}`.toLowerCase().includes(busca.trim().toLowerCase()) : true
+        busca
+          ? `${node.codigo} ${node.nome}`.toLowerCase().includes(busca.trim().toLowerCase())
+          : true
       )
       .map((node) => ({
         ...node,
@@ -203,15 +282,15 @@ export default function CentroCustoPage() {
   return (
     <LayoutShell>
       <HeaderBar
-        nomeTela="CENTRO DE CUSTO - CHATGPT"
-        codigoTela="FIN_CENTRO_CUSTO"
-        caminhoRota="/financeiro/centro-custo"
+        nomeTela="PLANO DE CONTAS - CHATGPT"
+        codigoTela="FIN_PLANO_CONTAS"
+        caminhoRota="/financeiro/plano-contas"
         modulo="FINANCEIRO"
       />
 
       <SplitViewShell
-        title="CENTRO DE CUSTO"
-        subtitle="Organize centros vinculados por ID_EMPRESA para filtros e lancamentos"
+        title="PLANO DE CONTAS"
+        subtitle="Organize hierarquia, status e natureza das contas vinculadas por ID_EMPRESA"
         onNew={() => abrirModal("NOVO")}
         helpLink="/ajuda"
         filters={
@@ -237,17 +316,28 @@ export default function CentroCustoPage() {
                 <option value="INATIVO">Inativos</option>
               </select>
             </label>
-            <div className="rounded border border-dashed border-gray-200 bg-white p-3 text-xs text-gray-600">
-              Vincule sempre ao ID_EMPRESA para manter consistencia em relatorios.
-            </div>
+            <label className="text-sm font-semibold text-gray-700">
+              Natureza
+              <select
+                value={naturezaFiltro}
+                onChange={(e) => setNaturezaFiltro(e.target.value as typeof naturezaFiltro)}
+                className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
+              >
+                <option value="TODAS">Todas</option>
+                <option value="RECEITA">Receita</option>
+                <option value="DESPESA">Despesa</option>
+              </select>
+            </label>
           </>
         }
       >
         <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-extrabold uppercase text-gray-800">Arvore de Centros</h3>
-              <span className="text-xs font-semibold uppercase text-gray-500">Priorize performance nos filtros</span>
+              <h3 className="text-sm font-extrabold uppercase text-gray-800">Arvore de Contas</h3>
+              <span className="text-xs font-semibold uppercase text-gray-500">
+                ID_EMPRESA vinculado em todos os cadastros
+              </span>
             </div>
             <ul className="space-y-3">
               {dadosFiltrados.map((node) => (
@@ -256,23 +346,26 @@ export default function CentroCustoPage() {
                   node={node}
                   onSelect={setSelecionado}
                   selectedId={selecionado}
-                  onNewChild={() => abrirModal("NOVO")}
-                  onEdit={() => abrirModal("EDITAR")}
+                  onOpenModal={abrirModal}
                 />
               ))}
             </ul>
           </div>
 
           <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 shadow-inner">
-            <h3 className="text-sm font-extrabold uppercase text-gray-800">Detalhes do Centro</h3>
+            <h3 className="text-sm font-extrabold uppercase text-gray-800">Detalhes da Selecionada</h3>
             {selecionadoNode ? (
               <div className="mt-3 space-y-2 text-sm text-gray-700">
                 <p className="font-semibold text-gray-900">
                   {selecionadoNode.codigo} - {selecionadoNode.nome}
                 </p>
-                <p>Responsavel: {selecionadoNode.responsavel}</p>
+                <p>Natureza: {selecionadoNode.natureza}</p>
                 <p>Status: {selecionadoNode.status}</p>
-                <p className="text-xs text-gray-500">Aplique controle de acesso por ID_EMPRESA.</p>
+                <p>Visivel no DRE: {selecionadoNode.visivelDre ? "Sim" : "Nao"}</p>
+                <p>Exige Centro de Custo: {selecionadoNode.exigeCentroCusto ? "Sim" : "Nao"}</p>
+                <p className="text-xs text-gray-500">
+                  Validar relacionamento com EMP_EMPRESA.ID_EMPRESA antes de salvar.
+                </p>
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
@@ -285,12 +378,12 @@ export default function CentroCustoPage() {
                     type="button"
                     className="rounded-md bg-orange-500 px-3 py-1 text-xs font-semibold uppercase text-white hover:bg-orange-600"
                   >
-                    Compartilhar
+                    Duplicar
                   </button>
                 </div>
               </div>
             ) : (
-              <p className="mt-3 text-sm text-gray-600">Selecione um centro para visualizar detalhes.</p>
+              <p className="mt-3 text-sm text-gray-600">Selecione uma conta para visualizar detalhes.</p>
             )}
           </div>
         </div>
@@ -298,7 +391,7 @@ export default function CentroCustoPage() {
 
       <Modal
         open={modalAberto}
-        title={`${modoModal === "NOVO" ? "Novo" : "Editar"} Centro de Custo`}
+        title={`${modoModal === "NOVO" ? "Novo" : "Editar"} Plano de Contas`}
         onClose={() => setModalAberto(false)}
       />
     </LayoutShell>
