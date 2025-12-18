@@ -67,7 +67,7 @@ function filtrarCentros(dados: CentroCustoItem[], filtro: FiltroPadrao): CentroC
       }
       return null;
     })
-    .filter((item): item is CentroCustoItem => Boolean(item));
+    .filter((item): item is CentroCustoItem => item !== null);
 }
 
 export default function CentroCustoPage() {
