@@ -58,16 +58,14 @@ function filtrarCentros(dados: CentroCustoItem[], filtro: FiltroPadrao): CentroC
     return statusOk && buscaOk;
   };
 
-  return dados
-    .map((item) => {
-      const filhosFiltrados = item.filhos ? filtrarCentros(item.filhos, filtro) : [];
-      const corresponde = atendeFiltro(item);
-      if (corresponde || filhosFiltrados.length > 0) {
-        return { ...item, filhos: filhosFiltrados };
-      }
-      return null;
-    })
-    .filter((item): item is CentroCustoItem => item !== null);
+  return dados.flatMap<CentroCustoItem>((item) => {
+    const filhosFiltrados = item.filhos ? filtrarCentros(item.filhos, filtro) : [];
+    const corresponde = atendeFiltro(item);
+    if (corresponde || filhosFiltrados.length > 0) {
+      return [{ ...item, filhos: filhosFiltrados }];
+    }
+    return [];
+  });
 }
 
 export default function CentroCustoPage() {
