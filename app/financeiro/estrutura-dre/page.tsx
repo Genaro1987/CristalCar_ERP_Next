@@ -1,194 +1,426 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
-import { HeaderBar } from "@/components/HeaderBar";
-import { NotificationBar } from "@/components/NotificationBar";
 import { useMemo, useState } from "react";
+import {
+  BarraFiltros,
+  FiltroPadrao,
+  FinanceiroPageHeader,
+  DreSplitView,
+  ModalOverlay,
+} from "../_components/financeiro-layout";
 
-type Natureza = "RECEITA" | "DESPESA" | "CALCULADO";
-type TipoGasto = "FIXO" | "VARIAVEL" | "NAO_APLICA";
-
-interface EstruturaDreNode {
-  id: number;
+interface LinhaDre {
+  id: string;
   nome: string;
-  ordem: number;
-  natureza: Natureza;
-  tipoGasto: TipoGasto;
-  ativo: boolean;
+  codigo: string;
+  natureza: "RECEITA" | "DESPESA" | "OUTROS";
+  status: "ativo" | "inativo";
+  tipo?: string;
   contasVinculadas?: string[];
-  filhos?: EstruturaDreNode[];
+  filhos?: LinhaDre[];
 }
 
-function validarTipoGasto(natureza: Natureza, tipo: TipoGasto): boolean {
-  if (natureza === "DESPESA") return tipo === "FIXO" || tipo === "VARIAVEL";
-  return tipo === "NAO_APLICA";
-}
+const MOCK_DRE: LinhaDre[] = [
+  {
+    id: "dre1",
+    nome: "Receita Bruta",
+    codigo: "1",
+    natureza: "RECEITA",
+    status: "ativo",
+    contasVinculadas: ["3.1 Vendas de Produtos", "3.2 Serviços"],
+    filhos: [
+      {
+        id: "dre1-1",
+        nome: "Deduções",
+        codigo: "1.1",
+        natureza: "DESPESA",
+        status: "ativo",
+        contasVinculadas: ["4.1 Marketing"],
+      },
+    ],
+  },
+  {
+    id: "dre2",
+    nome: "Despesas Operacionais",
+    codigo: "2",
+    natureza: "DESPESA",
+    status: "ativo",
+    tipo: "Variável",
+    contasVinculadas: ["4.2 Folha de Pagamento"],
+    filhos: [
+      {
+        id: "dre2-1",
+        nome: "Pessoal",
+        codigo: "2.1",
+        natureza: "DESPESA",
+        status: "ativo",
+        contasVinculadas: ["4.2.1 Salários"],
+      },
+      {
+        id: "dre2-2",
+        nome: "Logística",
+        codigo: "2.2",
+        natureza: "DESPESA",
+        status: "inativo",
+        contasVinculadas: ["4.3 Custos Logísticos"],
+      },
+    ],
+  },
+  {
+    id: "dre3",
+    nome: "Resultado",
+    codigo: "3",
+    natureza: "OUTROS",
+    status: "ativo",
+    tipo: "Calculado",
+  },
+];
 
-function TreeView({ nodes }: { nodes: EstruturaDreNode[] }) {
-  return (
-    <ul className="ml-4 list-disc space-y-2">
-      {nodes.map((node) => (
-        <li key={node.id} className="space-y-1">
-          <div className="rounded border border-gray-200 bg-white p-3 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-gray-800">
-                  ({node.ordem}) {node.nome}
-                </p>
-                <p className="text-xs text-gray-600">
-                  Natureza: {node.natureza} | Tipo de gasto: {node.tipoGasto}
-                </p>
-                {node.contasVinculadas && node.contasVinculadas.length > 0 && (
-                  <p className="text-xs text-gray-600">
-                    Contas vinculadas: {node.contasVinculadas.join(", ")}
-                  </p>
-                )}
-              </div>
-              <span
-                className={`rounded px-2 py-1 text-xs font-semibold ${
-                  node.ativo ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-600"
-                }`}
-              >
-                {node.ativo ? "Ativo" : "Inativo"}
-              </span>
-            </div>
-          </div>
-          {node.filhos && node.filhos.length > 0 && <TreeView nodes={node.filhos} />}
-        </li>
-      ))}
-    </ul>
-  );
+function filtrarDre(dados: LinhaDre[], filtro: FiltroPadrao): LinhaDre[] {
+  const buscaNormalizada = filtro.busca.trim().toLowerCase();
+
+  const atendeFiltro = (item: LinhaDre) => {
+    const statusOk =
+      filtro.status === "todos" ||
+      (filtro.status === "ativos" && item.status === "ativo") ||
+      (filtro.status === "inativos" && item.status === "inativo");
+    const buscaOk = buscaNormalizada
+      ? `${item.codigo} ${item.nome}`.toLowerCase().includes(buscaNormalizada)
+      : true;
+
+    return statusOk && buscaOk;
+  };
+
+  return dados
+    .map((item) => {
+      const filhosFiltrados = item.filhos ? filtrarDre(item.filhos, filtro) : [];
+      const corresponde = atendeFiltro(item);
+      if (corresponde || filhosFiltrados.length > 0) {
+        return { ...item, filhos: filhosFiltrados };
+      }
+      return null;
+    })
+    .filter((item): item is LinhaDre => Boolean(item));
 }
 
 export default function EstruturaDrePage() {
-  const [filtroNatureza, setFiltroNatureza] = useState<string>("");
-  const [mensagemValidacao, setMensagemValidacao] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState<FiltroPadrao>({ busca: "", status: "ativos" });
+  const [selecionada, setSelecionada] = useState<LinhaDre | null>(null);
+  const [modalLinha, setModalLinha] = useState(false);
+  const [modalConta, setModalConta] = useState(false);
 
-  const dadosFicticios: EstruturaDreNode[] = useMemo(
-    () => [
-      {
-        id: 1,
-        nome: "Receita Líquida",
-        ordem: 1,
-        natureza: "RECEITA",
-        tipoGasto: "NAO_APLICA",
-        ativo: true,
-        contasVinculadas: ["3.1", "3.2"],
-      },
-      {
-        id: 2,
-        nome: "Despesas Operacionais",
-        ordem: 2,
-        natureza: "DESPESA",
-        tipoGasto: "FIXO",
-        ativo: true,
-        filhos: [
-          {
-            id: 3,
-            nome: "Marketing",
-            ordem: 2.1,
-            natureza: "DESPESA",
-            tipoGasto: "VARIAVEL",
-            ativo: true,
-            contasVinculadas: ["4.1"],
-          },
-          {
-            id: 4,
-            nome: "Pessoal",
-            ordem: 2.2,
-            natureza: "DESPESA",
-            tipoGasto: "FIXO",
-            ativo: true,
-            contasVinculadas: ["4.2"],
-          },
-        ],
-      },
-      {
-        id: 5,
-        nome: "Resultado Operacional",
-        ordem: 3,
-        natureza: "CALCULADO",
-        tipoGasto: "NAO_APLICA",
-        ativo: true,
-      },
-    ],
-    []
-  );
+  const arvoreFiltrada = useMemo(() => filtrarDre(MOCK_DRE, filtro), [filtro]);
 
-  const dadosFiltrados = useMemo(() => {
-    return dadosFicticios.filter((node) =>
-      filtroNatureza ? node.natureza === filtroNatureza : true
-    );
-  }, [dadosFicticios, filtroNatureza]);
-
-  const testarValidacao = () => {
-    const erros: string[] = [];
-
-    dadosFicticios.forEach((node) => {
-      if (!validarTipoGasto(node.natureza, node.tipoGasto)) {
-        erros.push(`Tipo de gasto inválido para a linha ${node.nome}`);
-      }
-    });
-
-    if (erros.length > 0) {
-      setMensagemValidacao(erros.join("; "));
-    } else {
-      setMensagemValidacao("Regras de natureza e tipo de gasto válidas para a estrutura atual.");
-    }
+  const handleNovo = () => {
+    setModalLinha(true);
   };
+
+  const renderNo = (item: LinhaDre) => {
+    const estaSelecionada = selecionada?.id === item.id;
+
+    return (
+      <div key={item.id} className="space-y-2">
+        <div
+          className={`flex flex-col gap-3 rounded-lg border border-gray-200 p-3 shadow-sm transition hover:border-orange-200 ${
+            estaSelecionada ? "border-orange-300 bg-orange-50" : "bg-white"
+          }`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{item.codigo}</p>
+              <p className="text-sm font-bold text-gray-900">{item.nome}</p>
+              <p className="text-xs text-gray-600">
+                Natureza: {item.natureza} {item.tipo ? `| Tipo: ${item.tipo}` : ""}
+              </p>
+            </div>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                item.status === "ativo" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700"
+              }`}
+            >
+              {item.status === "ativo" ? "Ativo" : "Inativo"}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+              onClick={() => setModalLinha(true)}
+            >
+              Novo filho
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+              onClick={() => setModalLinha(true)}
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-200"
+            >
+              Inativar
+            </button>
+            <button
+              type="button"
+              className="rounded-lg bg-orange-500 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-orange-600"
+              onClick={() => setSelecionada(item)}
+            >
+              Ver detalhes
+            </button>
+          </div>
+        </div>
+        {item.filhos && item.filhos.length > 0 ? (
+          <div className="ml-5 border-l border-dashed border-gray-200 pl-4">
+            {item.filhos.map((filho) => renderNo(filho))}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  const contasSelecionadas = selecionada?.contasVinculadas ?? [];
 
   return (
     <LayoutShell>
-      <HeaderBar
-        nomeTela="Estrutura do DRE"
-        codigoTela="FIN_ESTRUTURA_DRE"
-        caminhoRota="/financeiro/estrutura-dre"
-        modulo="FINANCEIRO"
-      />
-      <NotificationBar
-        type="info"
-        message="Em construção / MVP: vincule contas do plano de contas respeitando ID_EMPRESA e impeça vínculos cruzados entre empresas."
-      />
+      <div className="space-y-4">
+        <FinanceiroPageHeader
+          titulo="Estrutura do DRE"
+          subtitulo="Financeiro | Demonstração de resultados"
+          onNovo={handleNovo}
+          codigoAjuda="FIN_ESTRUTURA_DRE"
+        />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 rounded border border-gray-200 bg-white p-4 shadow">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <label className="text-sm font-semibold text-gray-700">
+        <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
+
+        <DreSplitView
+          esquerda={
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Linhas</p>
+                  <h3 className="text-lg font-bold text-gray-900">Árvore do DRE</h3>
+                </div>
+                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                  {arvoreFiltrada.length} blocos principais
+                </span>
+              </div>
+              <div className="space-y-3">{arvoreFiltrada.map((item) => renderNo(item))}</div>
+            </div>
+          }
+          centro={
+            <div className="flex h-full flex-col gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Detalhes</p>
+                <h3 className="text-lg font-bold text-gray-900">Linha selecionada</h3>
+                <p className="text-sm text-gray-600">
+                  Consulte a descrição da linha, natureza e comportamento antes de conectar ao plano de contas.
+                </p>
+              </div>
+              {selecionada ? (
+                <div className="space-y-4 rounded-lg bg-gray-50 p-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
+                      <p className="text-lg font-bold text-gray-900">{selecionada.codigo}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</p>
+                      <p className="text-sm font-semibold text-gray-900">{selecionada.status === "ativo" ? "Ativo" : "Inativo"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Natureza</p>
+                      <p className="text-sm font-semibold text-gray-900">{selecionada.natureza}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipo</p>
+                      <p className="text-sm font-semibold text-gray-900">{selecionada.tipo ?? "Livre"}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Título</p>
+                      <p className="text-base font-semibold text-gray-800">{selecionada.nome}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs uppercase tracking-wide text-gray-500">Regras e comentários</p>
+                    <p className="rounded-lg border border-dashed border-gray-200 bg-white p-3 text-sm text-gray-700">
+                      Explique como calcular esta linha, se aceita lançamentos diretos ou somente consolidado de filhos.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+                      onClick={() => setModalLinha(true)}
+                    >
+                      Editar linha
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                      onClick={() => setModalConta(true)}
+                    >
+                      Vincular contas
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
+                  <p className="font-semibold text-gray-800">Selecione uma linha para visualizar detalhes</p>
+                  <p>A navegação pela árvore do DRE está na coluna esquerda.</p>
+                </div>
+              )}
+            </div>
+          }
+          direita={
+            <div className="flex h-full flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Contas vinculadas</p>
+                  <h3 className="text-lg font-bold text-gray-900">Plano de contas no DRE</h3>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                  onClick={() => setModalConta(true)}
+                  disabled={!selecionada}
+                >
+                  Vincular conta
+                </button>
+              </div>
+              {selecionada ? (
+                <div className="space-y-3 rounded-lg bg-gray-50 p-4">
+                  {contasSelecionadas.length > 0 ? (
+                    <ul className="space-y-2">
+                      {contasSelecionadas.map((conta) => (
+                        <li key={conta} className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800">
+                          <span>{conta}</span>
+                          <button className="text-xs font-semibold text-orange-600 hover:underline">Remover</button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-600">Nenhuma conta associada a esta linha.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
+                  <p className="font-semibold text-gray-800">Selecione uma linha</p>
+                  <p>Escolha um item do DRE para listar as contas vinculadas.</p>
+                </div>
+              )}
+            </div>
+          }
+        />
+      </div>
+
+      <ModalOverlay
+        aberto={modalLinha}
+        onClose={() => setModalLinha(false)}
+        titulo="Cadastro de linha do DRE"
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <label className="space-y-1 text-sm font-semibold text-gray-700">
+            Nome da linha
+            <input
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+              placeholder="Ex: Resultado Operacional"
+            />
+          </label>
+          <label className="space-y-1 text-sm font-semibold text-gray-700">
+            Código
+            <input
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+              placeholder="1.2.1"
+            />
+          </label>
+          <label className="space-y-1 text-sm font-semibold text-gray-700">
             Natureza
-            <select
-              className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
-              value={filtroNatureza}
-              onChange={(e) => setFiltroNatureza(e.target.value)}
-            >
-              <option value="">Todas</option>
-              <option value="RECEITA">Receita</option>
-              <option value="DESPESA">Despesa</option>
-              <option value="CALCULADO">Calculado</option>
+            <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none">
+              <option>Receita</option>
+              <option>Despesa</option>
+              <option>Outros</option>
             </select>
           </label>
-
-          <button
-            type="button"
-            className="self-end rounded bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
-            onClick={testarValidacao}
-          >
-            Validar regras
-          </button>
+          <label className="space-y-1 text-sm font-semibold text-gray-700">
+            Tipo
+            <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none">
+              <option>Fixo</option>
+              <option>Variável</option>
+              <option>Calculado</option>
+            </select>
+          </label>
+          <label className="md:col-span-2 space-y-1 text-sm font-semibold text-gray-700">
+            Descrição
+            <textarea
+              className="min-h-[100px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+              placeholder="Explique como calcular e consolidar esta linha"
+            />
+          </label>
         </div>
-        {mensagemValidacao && (
-          <NotificationBar
-            type={mensagemValidacao.includes("inválido") ? "error" : "success"}
-            message={mensagemValidacao}
-          />
-        )}
-        <p className="text-xs text-gray-600">
-          Linhas de natureza DESPESA devem ser FIXO ou VARIAVEL. RECEITA e CALCULADO devem permanecer como NAO_APLICA. Vínculos com contas serão salvos em FIN_ESTRUTURA_DRE_CONTA.
-        </p>
-      </div>
+      </ModalOverlay>
 
-      <div className="rounded border border-gray-200 bg-gray-50 p-4 shadow-inner">
-        <h2 className="text-base font-bold text-gray-800">Pré-visualização da estrutura</h2>
-        <TreeView nodes={dadosFiltrados} />
-      </div>
+      <ModalOverlay
+        aberto={modalConta}
+        onClose={() => setModalConta(false)}
+        titulo="Vincular contas ao DRE"
+      >
+        <div className="space-y-4">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <label className="flex-1 space-y-1 text-sm font-semibold text-gray-700">
+              Buscar contas
+              <input
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                placeholder="Digite nome ou código"
+              />
+            </label>
+            <button
+              type="button"
+              className="mt-2 inline-flex items-center justify-center rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 md:mt-6"
+            >
+              Aplicar filtro
+            </button>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Sugestões mock</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                "3.1 Vendas de Produtos",
+                "4.1 Marketing",
+                "4.2 Folha de Pagamento",
+                "4.3 Custos Logísticos",
+              ].map((conta) => (
+                <span
+                  key={conta}
+                  className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-800"
+                >
+                  {conta}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Seleção atual</p>
+            <div className="flex flex-wrap gap-2">
+              {contasSelecionadas.length > 0 ? (
+                contasSelecionadas.map((conta) => (
+                  <span
+                    key={conta}
+                    className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700"
+                  >
+                    {conta}
+                    <button className="text-orange-600 hover:underline">remover</button>
+                  </span>
+                ))
+              ) : (
+                <span className="text-sm text-gray-600">Nenhuma conta selecionada.</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </ModalOverlay>
     </LayoutShell>
   );
 }
