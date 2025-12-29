@@ -1,143 +1,172 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
-import { useMemo, useState } from "react";
-import {
-  BarraFiltros,
-  FiltroPadrao,
-  FinanceiroPageHeader,
-  ModalOverlay,
-  SplitView,
-} from "../_components/financeiro-layout";
+import { HeaderBar } from "@/components/HeaderBar";
+import { NotificationBar } from "@/components/NotificationBar";
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
+import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-interface PlanoContaItem {
-  id: string;
+import { BarraFiltros, type FiltroPadrao, type StatusFiltro } from "../_components/financeiro-layout";
+
+interface PlanoContaApiItem {
+  FIN_PLANO_CONTA_ID: number;
+  FIN_PLANO_CONTA_PAI_ID: number | null;
+  FIN_PLANO_CONTA_NATUREZA: "RECEITA" | "DESPESA";
+  FIN_PLANO_CONTA_NOME: string;
+  FIN_PLANO_CONTA_CODIGO: string;
+  FIN_PLANO_CONTA_ATIVO: 0 | 1;
+  FIN_PLANO_CONTA_VISIVEL_DRE: 0 | 1;
+  FIN_PLANO_CONTA_OBRIGA_CENTRO_CUSTO: 0 | 1;
+}
+
+interface PlanoContaNode {
+  id: number;
+  paiId: number | null;
   nome: string;
   codigo: string;
   natureza: "RECEITA" | "DESPESA";
-  status: "ativo" | "inativo";
-  obrigatorioCentroCusto?: boolean;
-  filhos?: PlanoContaItem[];
+  ativo: boolean;
+  visivelDre: boolean;
+  obrigatorioCentroCusto: boolean;
+  filhos: PlanoContaNode[];
 }
 
-const MOCK_PLANO_CONTAS: PlanoContaItem[] = [
-  {
-    id: "1",
-    nome: "Receitas Operacionais",
-    codigo: "3.0",
-    natureza: "RECEITA",
-    status: "ativo",
-    filhos: [
-      {
-        id: "1.1",
-        nome: "Vendas de Produtos",
-        codigo: "3.1",
-        natureza: "RECEITA",
-        status: "ativo",
-      },
-      {
-        id: "1.2",
-        nome: "Serviços",
-        codigo: "3.2",
-        natureza: "RECEITA",
-        status: "ativo",
-      },
-    ],
-  },
-  {
-    id: "2",
-    nome: "Despesas Operacionais",
-    codigo: "4.0",
-    natureza: "DESPESA",
-    status: "ativo",
-    obrigatorioCentroCusto: true,
-    filhos: [
-      {
-        id: "2.1",
-        nome: "Marketing",
-        codigo: "4.1",
-        natureza: "DESPESA",
-        status: "ativo",
-        obrigatorioCentroCusto: true,
-      },
-      {
-        id: "2.2",
-        nome: "Folha de Pagamento",
-        codigo: "4.2",
-        natureza: "DESPESA",
-        status: "ativo",
-      },
-      {
-        id: "2.3",
-        nome: "Custos Logísticos",
-        codigo: "4.3",
-        natureza: "DESPESA",
-        status: "inativo",
-      },
-    ],
-  },
-];
+function construirArvore(nodes: PlanoContaNode[]): PlanoContaNode[] {
+  const mapa = new Map<number, PlanoContaNode & { filhos: PlanoContaNode[] }>();
+  const raizes: PlanoContaNode[] = [];
 
-function filtrarArvore(
-  dados: PlanoContaItem[],
-  filtro: FiltroPadrao
-): PlanoContaItem[] {
+  nodes.forEach((node) => {
+    mapa.set(node.id, { ...node, filhos: [] });
+  });
+
+  mapa.forEach((node) => {
+    if (node.paiId && mapa.has(node.paiId)) {
+      mapa.get(node.paiId)?.filhos.push(node);
+    } else {
+      raizes.push(node);
+    }
+  });
+
+  return raizes;
+}
+
+function filtrarArvore(dados: PlanoContaNode[], filtro: FiltroPadrao): PlanoContaNode[] {
   const buscaNormalizada = filtro.busca.trim().toLowerCase();
 
-  const atendeFiltro = (item: PlanoContaItem) => {
+  return dados.reduce<PlanoContaNode[]>((lista, item) => {
+    const filhosFiltrados = filtrarArvore(item.filhos, filtro);
     const statusOk =
       filtro.status === "todos" ||
-      (filtro.status === "ativos" && item.status === "ativo") ||
-      (filtro.status === "inativos" && item.status === "inativo");
+      (filtro.status === "ativos" && item.ativo) ||
+      (filtro.status === "inativos" && !item.ativo);
     const naturezaOk = filtro.natureza ? item.natureza === filtro.natureza : true;
     const buscaOk = buscaNormalizada
       ? `${item.codigo} ${item.nome}`.toLowerCase().includes(buscaNormalizada)
       : true;
 
-    return statusOk && naturezaOk && buscaOk;
-  };
-
-  return dados.flatMap((item): PlanoContaItem[] => {
-    const filhosFiltrados = item.filhos ? filtrarArvore(item.filhos, filtro) : [];
-    const corresponde = atendeFiltro(item);
-
-    if (corresponde || filhosFiltrados.length > 0) {
-      return [{ ...item, filhos: filhosFiltrados }];
+    if (statusOk && naturezaOk && buscaOk) {
+      lista.push({ ...item, filhos: filhosFiltrados });
+      return lista;
     }
 
-    return [];
-  });
+    if (filhosFiltrados.length > 0) {
+      lista.push({ ...item, filhos: filhosFiltrados });
+    }
+
+    return lista;
+  }, []);
 }
 
 export default function PlanoContasPage() {
+  const { empresa, carregando } = useEmpresaSelecionada();
+  useRequerEmpresaSelecionada();
+
   const [filtro, setFiltro] = useState<FiltroPadrao>({
     busca: "",
     status: "ativos",
     natureza: "",
   });
-  const [selecionado, setSelecionado] = useState<PlanoContaItem | null>(null);
-  const [modalAberto, setModalAberto] = useState(false);
-  const [modoEdicao, setModoEdicao] = useState<"novo" | "editar">("novo");
+  const [planoContas, setPlanoContas] = useState<PlanoContaNode[]>([]);
+  const [selecionadoId, setSelecionadoId] = useState<number | null>(null);
+  const [carregandoLista, setCarregandoLista] = useState(false);
+  const [erroLista, setErroLista] = useState<string | null>(null);
 
-  const arvoreFiltrada = useMemo(() => filtrarArvore(MOCK_PLANO_CONTAS, filtro), [filtro]);
+  const headersPadrao = useMemo<HeadersInit>(() => {
+    const headers: Record<string, string> = {};
+    if (empresa?.id) {
+      headers["x-empresa-id"] = String(empresa.id);
+    }
+    return headers;
+  }, [empresa?.id]);
 
-  const handleNovo = () => {
-    setModoEdicao("novo");
-    setModalAberto(true);
-  };
+  const carregarPlanoContas = useCallback(async () => {
+    if (!empresa?.id) return;
 
-  const handleEditar = (item: PlanoContaItem) => {
-    setSelecionado(item);
-    setModoEdicao("editar");
-    setModalAberto(true);
-  };
+    setCarregandoLista(true);
+    setErroLista(null);
 
-  const renderNo = (item: PlanoContaItem) => {
-    const estaSelecionado = selecionado?.id === item.id;
-    const statusClass =
-      item.status === "ativo"
-        ? "bg-green-100 text-green-700"
-        : "bg-gray-200 text-gray-700";
+    try {
+      const resposta = await fetch("/api/financeiro/plano-contas", {
+        headers: headersPadrao,
+      });
+      const json = await resposta.json();
+
+      if (resposta.ok && json?.success) {
+        const itens: PlanoContaApiItem[] = json.data ?? [];
+        const normalizados = itens.map<PlanoContaNode>((item) => ({
+          id: item.FIN_PLANO_CONTA_ID,
+          paiId: item.FIN_PLANO_CONTA_PAI_ID,
+          nome: item.FIN_PLANO_CONTA_NOME,
+          codigo: item.FIN_PLANO_CONTA_CODIGO,
+          natureza: item.FIN_PLANO_CONTA_NATUREZA,
+          ativo: item.FIN_PLANO_CONTA_ATIVO === 1,
+          visivelDre: item.FIN_PLANO_CONTA_VISIVEL_DRE === 1,
+          obrigatorioCentroCusto: item.FIN_PLANO_CONTA_OBRIGA_CENTRO_CUSTO === 1,
+          filhos: [],
+        }));
+
+        setPlanoContas(normalizados);
+        setSelecionadoId((idAtual) => idAtual ?? normalizados[0]?.id ?? null);
+      } else {
+        setErroLista("Não foi possível carregar o plano de contas.");
+      }
+    } catch (error) {
+      console.error(error);
+      setErroLista("Erro ao consultar o plano de contas.");
+    } finally {
+      setCarregandoLista(false);
+    }
+  }, [empresa?.id, headersPadrao]);
+
+  useEffect(() => {
+    if (carregando) return;
+    carregarPlanoContas();
+  }, [carregando, carregarPlanoContas]);
+
+  const arvoreCompleta = useMemo(() => construirArvore(planoContas), [planoContas]);
+  const arvoreFiltrada = useMemo(() => filtrarArvore(arvoreCompleta, filtro), [arvoreCompleta, filtro]);
+
+  const mapaPorId = useMemo(() => {
+    const mapa = new Map<number, PlanoContaNode>();
+    planoContas.forEach((item) => mapa.set(item.id, item));
+    return mapa;
+  }, [planoContas]);
+
+  const selecionado = selecionadoId ? mapaPorId.get(selecionadoId) ?? null : null;
+
+  const textoStatus = useMemo(() => {
+    const legenda: Record<StatusFiltro, string> = {
+      todos: "Todos os status",
+      ativos: "Apenas ativos",
+      inativos: "Apenas inativos",
+    };
+    return legenda[filtro.status];
+  }, [filtro.status]);
+
+  const renderNo = (item: PlanoContaNode) => {
+    const estaSelecionado = selecionadoId === item.id;
+    const statusClass = item.ativo ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700";
 
     return (
       <div key={item.id} className="space-y-2">
@@ -154,194 +183,118 @@ export default function PlanoContasPage() {
                 Natureza: {item.natureza} | Centro de custo obrigatório: {" "}
                 {item.obrigatorioCentroCusto ? "Sim" : "Não"}
               </p>
+              <p className="text-xs text-gray-600">Visível no DRE: {item.visivelDre ? "Sim" : "Não"}</p>
             </div>
             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}>
-              {item.status === "ativo" ? "Ativo" : "Inativo"}
+              {item.ativo ? "Ativo" : "Inativo"}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
-              onClick={handleNovo}
-            >
-              Novo filho
-            </button>
-            <button
-              type="button"
-              className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
-              onClick={() => handleEditar(item)}
-            >
-              Editar
-            </button>
-            <button
-              type="button"
-              className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-200"
-            >
-              Inativar
-            </button>
-            <button
-              type="button"
-              className="rounded-lg bg-orange-500 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-orange-600"
-              onClick={() => setSelecionado(item)}
+              onClick={() => setSelecionadoId(item.id)}
             >
               Ver detalhes
             </button>
           </div>
         </div>
-        {item.filhos && item.filhos.length > 0 ? (
-          <div className="ml-5 border-l border-dashed border-gray-200 pl-4">
-            {item.filhos.map((filho) => renderNo(filho))}
-          </div>
-        ) : null}
+        {item.filhos.length > 0 ? <div className="ml-5 border-l border-dashed border-gray-200 pl-4">{item.filhos.map((filho) => renderNo(filho))}</div> : null}
       </div>
     );
   };
 
   return (
     <LayoutShell>
-      <div className="space-y-4">
-        <FinanceiroPageHeader
-          titulo="Plano de Contas"
-          subtitulo="Financeiro | Hierarquia contábil"
-          onNovo={handleNovo}
-          codigoAjuda="FIN_PLANO_CONTAS"
-        />
+      <HeaderBar
+        nomeTela="Plano de Contas"
+        codigoTela="FIN001_PLANO_CONTA"
+        caminhoRota="/financeiro/plano-contas"
+        modulo="FINANCEIRO"
+      />
 
+      {erroLista ? <NotificationBar type="error" message={erroLista} /> : null}
+
+      <div className="space-y-4">
         <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} exibirNatureza />
 
-        <SplitView
-          left={
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Árvore</p>
-                  <h3 className="text-lg font-bold text-gray-900">Estrutura do plano</h3>
-                </div>
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                  {arvoreFiltrada.length} grupos principais
-                </span>
-              </div>
-              <div className="space-y-3">
-                {arvoreFiltrada.map((item) => renderNo(item))}
-              </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{empresa?.nomeFantasia ?? "Empresa"}</p>
+              <h3 className="text-lg font-bold text-gray-900">Hierarquia do plano de contas</h3>
+              <p className="text-sm text-gray-600">
+                {carregandoLista
+                  ? "Carregando contas..."
+                  : `Filtro aplicado: ${textoStatus}${filtro.natureza ? ` | Natureza ${filtro.natureza}` : ""}`}
+              </p>
             </div>
-          }
-          right={
-            <div className="flex h-full flex-col gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Detalhes</p>
-                <h3 className="text-lg font-bold text-gray-900">Conta selecionada</h3>
-                <p className="text-sm text-gray-600">
-                  Visualização simples para validar descrições, códigos e configurações antes de publicar no backend.
-                </p>
-              </div>
-              {selecionado ? (
-                <div className="space-y-4 rounded-lg bg-gray-50 p-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
-                    <p className="text-lg font-bold text-gray-900">{selecionado.codigo}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Título</p>
-                    <p className="text-base font-semibold text-gray-800">{selecionado.nome}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
-                    <div className="space-y-1">
-                      <p className="text-xs uppercase tracking-wide text-gray-500">Natureza</p>
-                      <p className="font-semibold text-gray-900">{selecionado.natureza}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs uppercase tracking-wide text-gray-500">Status</p>
-                      <p className="font-semibold text-gray-900">{selecionado.status === "ativo" ? "Ativo" : "Inativo"}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs uppercase tracking-wide text-gray-500">Centro de custo</p>
-                      <p className="font-semibold text-gray-900">
-                        {selecionado.obrigatorioCentroCusto ? "Obrigatório" : "Opcional"}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs uppercase tracking-wide text-gray-500">Visível no DRE</p>
-                      <p className="font-semibold text-gray-900">Sim (mock)</p>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-xs uppercase tracking-wide text-gray-500">Descrição / observações</p>
-                    <p className="rounded-lg border border-dashed border-gray-200 bg-white p-3 text-sm text-gray-700">
-                      Inclua orientações para lançamentos, responsáveis e se a conta deve aparecer em dashboards.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
-                      onClick={() => handleEditar(selecionado)}
-                    >
-                      Editar conta
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
-                    >
-                      Exportar mock
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
-                  <p className="font-semibold text-gray-800">Selecione uma conta para visualizar detalhes</p>
-                  <p>Use a coluna esquerda para navegar pela hierarquia.</p>
-                </div>
-              )}
-            </div>
-          }
-        />
-      </div>
-
-      <ModalOverlay
-        aberto={modalAberto}
-        onClose={() => setModalAberto(false)}
-        titulo={modoEdicao === "novo" ? "Nova conta" : "Editar conta"}
-      >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label className="space-y-1 text-sm font-semibold text-gray-700">
-            Nome da conta
-            <input
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
-              placeholder="Ex: Despesas administrativas"
-            />
-          </label>
-          <label className="space-y-1 text-sm font-semibold text-gray-700">
-            Código
-            <input
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
-              placeholder="4.1.01"
-            />
-          </label>
-          <label className="space-y-1 text-sm font-semibold text-gray-700">
-            Natureza
-            <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none">
-              <option>Receita</option>
-              <option>Despesa</option>
-            </select>
-          </label>
-          <label className="space-y-1 text-sm font-semibold text-gray-700">
-            Status
-            <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none">
-              <option>Ativo</option>
-              <option>Inativo</option>
-            </select>
-          </label>
-          <label className="md:col-span-2 space-y-1 text-sm font-semibold text-gray-700">
-            Observações
-            <textarea
-              className="min-h-[100px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
-              placeholder="Detalhes sobre obrigatoriedade de centro de custo, visibilidade no DRE e responsáveis"
-            />
-          </label>
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+              {arvoreFiltrada.length} grupos principais
+            </span>
+          </div>
+          <div className="mt-3 space-y-3">
+            {carregandoLista ? (
+              <p className="text-sm text-gray-600">Buscando contas financeiras...</p>
+            ) : arvoreFiltrada.length > 0 ? (
+              arvoreFiltrada.map((item) => renderNo(item))
+            ) : (
+              <p className="text-sm text-gray-600">Nenhuma conta encontrada para os filtros atuais.</p>
+            )}
+          </div>
         </div>
-      </ModalOverlay>
+
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Detalhes</p>
+            <h3 className="text-lg font-bold text-gray-900">Conta selecionada</h3>
+            <p className="text-sm text-gray-600">
+              Visualize status, obrigatoriedade de centro de custo e visibilidade no DRE da conta ativa.
+            </p>
+          </div>
+          {selecionado ? (
+            <div className="mt-4 space-y-4 rounded-lg bg-gray-50 p-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
+                  <p className="text-base font-bold text-gray-900">{selecionado.codigo}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</p>
+                  <p className="text-base font-semibold text-gray-900">{selecionado.ativo ? "Ativo" : "Inativo"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Título</p>
+                  <p className="text-base font-semibold text-gray-900">{selecionado.nome}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Natureza</p>
+                  <p className="text-base font-semibold text-gray-900">{selecionado.natureza}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Centro de custo</p>
+                  <p className="font-semibold text-gray-900">{selecionado.obrigatorioCentroCusto ? "Obrigatório" : "Opcional"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Visível no DRE</p>
+                  <p className="font-semibold text-gray-900">{selecionado.visivelDre ? "Sim" : "Não"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Código do pai</p>
+                  <p className="font-semibold text-gray-900">{selecionado.paiId ? `#${selecionado.paiId}` : "Raiz"}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
+              <p className="font-semibold text-gray-800">Selecione uma conta para visualizar detalhes.</p>
+              <p>Use a árvore à esquerda para navegar pela hierarquia.</p>
+            </div>
+          )}
+        </div>
+      </div>
     </LayoutShell>
   );
 }
