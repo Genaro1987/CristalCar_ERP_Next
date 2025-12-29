@@ -41,11 +41,12 @@ function construirArvore(nodes: PlanoContaNode[]): PlanoContaNode[] {
   });
 
   mapa.forEach((node) => {
-    if (node.paiId && mapa.has(node.paiId)) {
+    if (node.paiId !== null && mapa.has(node.paiId)) {
       mapa.get(node.paiId)?.filhos.push(node);
-    } else {
-      raizes.push(node);
+      return;
     }
+
+    raizes.push(node);
   });
 
   return raizes;
@@ -206,94 +207,108 @@ export default function PlanoContasPage() {
 
   return (
     <LayoutShell>
-      <HeaderBar
-        nomeTela="Plano de Contas"
-        codigoTela="FIN001_PLANO_CONTA"
-        caminhoRota="/financeiro/plano-contas"
-        modulo="FINANCEIRO"
-      />
+      <div className="page-container">
+        <HeaderBar
+          nomeTela="Plano de Contas"
+          codigoTela="FIN001_PLANO_CONTA"
+          caminhoRota="/financeiro/plano-contas"
+          modulo="FINANCEIRO"
+        />
 
-      {erroLista ? <NotificationBar type="error" message={erroLista} /> : null}
+        <main className="page-content-card space-y-4">
+          {erroLista ? <NotificationBar type="error" message={erroLista} /> : null}
 
-      <div className="space-y-4">
-        <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} exibirNatureza />
+          <section className="panel">
+            <header className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  {empresa?.nomeFantasia ?? "Empresa"}
+                </p>
+                <h2 className="text-xl font-bold text-gray-900">Hierarquia do plano de contas</h2>
+                <p className="text-sm text-gray-600">
+                  {carregandoLista
+                    ? "Carregando contas..."
+                    : `Filtro aplicado: ${textoStatus}${filtro.natureza ? ` | Natureza ${filtro.natureza}` : ""}`}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                  {arvoreFiltrada.length} grupos principais
+                </span>
+              </div>
+            </header>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{empresa?.nomeFantasia ?? "Empresa"}</p>
-              <h3 className="text-lg font-bold text-gray-900">Hierarquia do plano de contas</h3>
+            <div className="space-y-3">
+              <BarraFiltros
+                filtro={filtro}
+                onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))}
+                exibirNatureza
+              />
+
+              <div className="space-y-3">
+                {carregandoLista ? (
+                  <p className="text-sm text-gray-600">Buscando contas financeiras...</p>
+                ) : arvoreFiltrada.length > 0 ? (
+                  arvoreFiltrada.map((item) => renderNo(item))
+                ) : (
+                  <p className="text-sm text-gray-600">Nenhuma conta encontrada para os filtros atuais.</p>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="panel">
+            <header className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Detalhes</p>
+              <h2 className="text-xl font-bold text-gray-900">Conta selecionada</h2>
               <p className="text-sm text-gray-600">
-                {carregandoLista
-                  ? "Carregando contas..."
-                  : `Filtro aplicado: ${textoStatus}${filtro.natureza ? ` | Natureza ${filtro.natureza}` : ""}`}
+                Visualize status, obrigatoriedade de centro de custo e visibilidade no DRE da conta ativa.
               </p>
-            </div>
-            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-              {arvoreFiltrada.length} grupos principais
-            </span>
-          </div>
-          <div className="mt-3 space-y-3">
-            {carregandoLista ? (
-              <p className="text-sm text-gray-600">Buscando contas financeiras...</p>
-            ) : arvoreFiltrada.length > 0 ? (
-              arvoreFiltrada.map((item) => renderNo(item))
-            ) : (
-              <p className="text-sm text-gray-600">Nenhuma conta encontrada para os filtros atuais.</p>
-            )}
-          </div>
-        </div>
+            </header>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Detalhes</p>
-            <h3 className="text-lg font-bold text-gray-900">Conta selecionada</h3>
-            <p className="text-sm text-gray-600">
-              Visualize status, obrigatoriedade de centro de custo e visibilidade no DRE da conta ativa.
-            </p>
-          </div>
-          {selecionado ? (
-            <div className="mt-4 space-y-4 rounded-lg bg-gray-50 p-4">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
-                  <p className="text-base font-bold text-gray-900">{selecionado.codigo}</p>
+            {selecionado ? (
+              <div className="mt-4 space-y-4 rounded-lg bg-gray-50 p-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
+                    <p className="text-base font-bold text-gray-900">{selecionado.codigo}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</p>
+                    <p className="text-base font-semibold text-gray-900">{selecionado.ativo ? "Ativo" : "Inativo"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Título</p>
+                    <p className="text-base font-semibold text-gray-900">{selecionado.nome}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Natureza</p>
+                    <p className="text-base font-semibold text-gray-900">{selecionado.natureza}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</p>
-                  <p className="text-base font-semibold text-gray-900">{selecionado.ativo ? "Ativo" : "Inativo"}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Título</p>
-                  <p className="text-base font-semibold text-gray-900">{selecionado.nome}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Natureza</p>
-                  <p className="text-base font-semibold text-gray-900">{selecionado.natureza}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <div className="space-y-1">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Centro de custo</p>
-                  <p className="font-semibold text-gray-900">{selecionado.obrigatorioCentroCusto ? "Obrigatório" : "Opcional"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Visível no DRE</p>
-                  <p className="font-semibold text-gray-900">{selecionado.visivelDre ? "Sim" : "Não"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Código do pai</p>
-                  <p className="font-semibold text-gray-900">{selecionado.paiId ? `#${selecionado.paiId}` : "Raiz"}</p>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase tracking-wide text-gray-500">Centro de custo</p>
+                    <p className="font-semibold text-gray-900">{selecionado.obrigatorioCentroCusto ? "Obrigatório" : "Opcional"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase tracking-wide text-gray-500">Visível no DRE</p>
+                    <p className="font-semibold text-gray-900">{selecionado.visivelDre ? "Sim" : "Não"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase tracking-wide text-gray-500">Código do pai</p>
+                    <p className="font-semibold text-gray-900">{selecionado.paiId ? `#${selecionado.paiId}` : "Raiz"}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
-              <p className="font-semibold text-gray-800">Selecione uma conta para visualizar detalhes.</p>
-              <p>Use a árvore à esquerda para navegar pela hierarquia.</p>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
+                <p className="font-semibold text-gray-800">Selecione uma conta para visualizar detalhes.</p>
+                <p>Use a árvore à esquerda para navegar pela hierarquia.</p>
+              </div>
+            )}
+          </section>
+        </main>
       </div>
     </LayoutShell>
   );
