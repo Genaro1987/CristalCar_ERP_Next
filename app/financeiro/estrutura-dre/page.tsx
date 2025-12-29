@@ -92,16 +92,14 @@ function filtrarDre(dados: LinhaDre[], filtro: FiltroPadrao): LinhaDre[] {
     return statusOk && buscaOk;
   };
 
-  return dados
-    .map((item) => {
-      const filhosFiltrados = item.filhos ? filtrarDre(item.filhos, filtro) : [];
-      const corresponde = atendeFiltro(item);
-      if (corresponde || filhosFiltrados.length > 0) {
-        return { ...item, filhos: filhosFiltrados };
-      }
-      return null;
-    })
-    .filter((item): item is LinhaDre => Boolean(item));
+  return dados.flatMap((item) => {
+    const filhosFiltrados = item.filhos ? filtrarDre(item.filhos, filtro) : [];
+    const corresponde = atendeFiltro(item);
+    if (corresponde || filhosFiltrados.length > 0) {
+      return [{ ...item, filhos: filhosFiltrados }];
+    }
+    return [];
+  });
 }
 
 export default function EstruturaDrePage() {
