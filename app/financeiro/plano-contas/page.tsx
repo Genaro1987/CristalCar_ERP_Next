@@ -97,16 +97,16 @@ function filtrarArvore(
     return statusOk && naturezaOk && buscaOk;
   };
 
-  return dados
-    .map((item) => {
-      const filhosFiltrados = item.filhos ? filtrarArvore(item.filhos, filtro) : [];
-      const corresponde = atendeFiltro(item);
-      if (corresponde || filhosFiltrados.length > 0) {
-        return { ...item, filhos: filhosFiltrados };
-      }
-      return null;
-    })
-    .filter((item): item is PlanoContaItem => Boolean(item));
+  return dados.flatMap((item): PlanoContaItem[] => {
+    const filhosFiltrados = item.filhos ? filtrarArvore(item.filhos, filtro) : [];
+    const corresponde = atendeFiltro(item);
+
+    if (corresponde || filhosFiltrados.length > 0) {
+      return [{ ...item, filhos: filhosFiltrados }];
+    }
+
+    return [];
+  });
 }
 
 export default function PlanoContasPage() {
