@@ -1,7 +1,8 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { useEmpresaSelecionada, useRequerEmpresaSelecionada } from "@/hooks/useEmpresaSelecionada";
 import { FinanceiroPageHeader } from "../_components/financeiro-layout";
 
 type ResumoCarteira = {
@@ -17,25 +18,53 @@ type Indicador = {
   descricao: string;
 };
 
-const carteiraMock: ResumoCarteira[] = [
-  { empresa: "Grupo Matriz", saldo: 325000, entradas: 82000, saidas: 46000 },
-  { empresa: "Filial Joinville", saldo: 87000, entradas: 26000, saidas: 19000 },
-  { empresa: "Filial Curitiba", saldo: 45100, entradas: 12000, saidas: 8000 },
-];
-
-const indicadoresMock: Indicador[] = [
-  { titulo: "Margem", valor: "36%", descricao: "Média ponderada do mês" },
-  { titulo: "Burn Rate", valor: "R$ 142 mil", descricao: "Saídas fixas + variáveis" },
-  { titulo: "Fluxo Projetado", valor: "+R$ 210 mil", descricao: "Próximos 30 dias" },
-];
-
 export default function FinanceiroDashboardPage() {
-  const [empresaAtiva, setEmpresaAtiva] = useState("Grupo Matriz");
-  const [periodo, setPeriodo] = useState("2024-06");
+  useRequerEmpresaSelecionada();
+  const { empresa } = useEmpresaSelecionada();
+
+  const [periodo, setPeriodo] = useState("");
+  const [carteira, setCarteira] = useState<ResumoCarteira[]>([]);
+  const [indicadores, setIndicadores] = useState<Indicador[]>([]);
+  const [carregando, setCarregando] = useState(true);
+
+  // Buscar dados do dashboard da API
+  useEffect(() => {
+    if (!empresa?.id) return;
+
+    const buscarDashboard = async () => {
+      try {
+        setCarregando(true);
+        let url = "/api/financeiro/dashboard";
+        if (periodo) {
+          url += `?periodo=${periodo}`;
+        }
+
+        const resposta = await fetch(url, {
+          headers: {
+            "x-empresa-id": String(empresa.id),
+          },
+        });
+
+        if (resposta.ok) {
+          const dados = await resposta.json();
+          if (dados.success) {
+            setCarteira(dados.data.carteira);
+            setIndicadores(dados.data.indicadores);
+          }
+        }
+      } catch (erro) {
+        console.error("Erro ao buscar dados do dashboard:", erro);
+      } finally {
+        setCarregando(false);
+      }
+    };
+
+    buscarDashboard();
+  }, [empresa?.id, periodo]);
 
   const carteiraSelecionada = useMemo(
-    () => carteiraMock.find((item) => item.empresa === empresaAtiva) ?? carteiraMock[0],
-    [empresaAtiva]
+    () => carteira[0] || { empresa: "", saldo: 0, entradas: 0, saidas: 0 },
+    [carteira]
   );
 
   return (
@@ -50,20 +79,12 @@ export default function FinanceiroDashboardPage() {
 
         <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
+            <div className="space-y-1 text-sm font-semibold text-gray-700">
               Empresa
-              <select
-                value={empresaAtiva}
-                onChange={(e) => setEmpresaAtiva(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
-              >
-                {carteiraMock.map((item) => (
-                  <option key={item.empresa} value={item.empresa}>
-                    {item.empresa}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <div className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-800">
+                {empresa?.nome || "Carregando..."}
+              </div>
+            </div>
             <label className="space-y-1 text-sm font-semibold text-gray-700">
               Período
               <input
@@ -132,7 +153,12 @@ export default function FinanceiroDashboardPage() {
             </div>
           </div>
 
-          {indicadoresMock.map((card) => (
+          {carregando ? (
+            <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm md:col-span-3">
+              <p className="text-center text-sm text-gray-600">Carregando indicadores...</p>
+            </div>
+          ) : (
+            indicadores.map((card) => (
             <div
               key={card.titulo}
               className="rounded-lg border border-gray-200 bg-gradient-to-br from-white to-orange-50 p-4 shadow-sm"
@@ -142,7 +168,8 @@ export default function FinanceiroDashboardPage() {
               <p className="text-2xl font-extrabold text-orange-600">{card.valor}</p>
               <p className="text-sm text-gray-600">{card.descricao}</p>
             </div>
-          ))}
+            ))
+          )}
 
           <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm md:col-span-3">
             <div className="flex items-center justify-between">
@@ -163,7 +190,20 @@ export default function FinanceiroDashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {carteiraMock.map((item) => (
+                  {carregando ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-600">
+                        Carregando dados...
+                      </td>
+                    </tr>
+                  ) : carteira.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-600">
+                        Nenhum dado disponível
+                      </td>
+                    </tr>
+                  ) : (
+                    carteira.map((item) => (
                     <tr key={item.empresa} className="hover:bg-orange-50/40">
                       <td className="px-4 py-3 font-semibold text-gray-900">{item.empresa}</td>
                       <td className="px-4 py-3 text-gray-800">
@@ -176,7 +216,8 @@ export default function FinanceiroDashboardPage() {
                         R$ {item.saidas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
-                  ))}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

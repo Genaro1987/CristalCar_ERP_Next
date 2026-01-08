@@ -1,7 +1,8 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { useEmpresaSelecionada, useRequerEmpresaSelecionada } from "@/hooks/useEmpresaSelecionada";
 import { BarraFiltros, FiltroPadrao, FinanceiroPageHeader, ModalOverlay } from "../_components/financeiro-layout";
 
 type Lancamento = {
@@ -15,35 +16,51 @@ type Lancamento = {
   status: "confirmado" | "pendente";
 };
 
-const lancamentosMock: Lancamento[] = [
-  {
-    id: "LAN-001",
-    data: "2024-06-03",
-    historico: "Recebimento contrato 1020",
-    conta: "3.1 Vendas de Produtos",
-    centroCusto: "01.02 Pessoas",
-    valor: 18500,
-    tipo: "Entrada",
-    status: "confirmado",
-  },
-  {
-    id: "LAN-002",
-    data: "2024-06-04",
-    historico: "Pagamento fornecedor logístico",
-    conta: "4.3 Custos Logísticos",
-    centroCusto: "02.01 Serviços",
-    valor: -6200,
-    tipo: "Saída",
-    status: "pendente",
-  },
-];
-
 export default function LancamentosPage() {
+  useRequerEmpresaSelecionada();
+  const { empresa } = useEmpresaSelecionada();
+
   const [filtro, setFiltro] = useState<FiltroPadrao>({ busca: "", status: "todos" });
-  const [lancamentos, setLancamentos] = useState<Lancamento[]>(lancamentosMock);
+  const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
   const [selecionado, setSelecionado] = useState<Lancamento | null>(null);
   const [modo, setModo] = useState<"novo" | "editar">("novo");
+  const [carregando, setCarregando] = useState(true);
+  const [periodo, setPeriodo] = useState<string>("");
+
+  // Buscar lançamentos da API
+  useEffect(() => {
+    if (!empresa?.id) return;
+
+    const buscarLancamentos = async () => {
+      try {
+        setCarregando(true);
+        let url = "/api/financeiro/lancamentos";
+        if (periodo) {
+          url += `?periodo=${periodo}`;
+        }
+
+        const resposta = await fetch(url, {
+          headers: {
+            "x-empresa-id": String(empresa.id),
+          },
+        });
+
+        if (resposta.ok) {
+          const dados = await resposta.json();
+          if (dados.success) {
+            setLancamentos(dados.data);
+          }
+        }
+      } catch (erro) {
+        console.error("Erro ao buscar lançamentos:", erro);
+      } finally {
+        setCarregando(false);
+      }
+    };
+
+    buscarLancamentos();
+  }, [empresa?.id, periodo]);
 
   const dadosFiltrados = useMemo(() => {
     const busca = filtro.busca.trim().toLowerCase();
@@ -128,8 +145,9 @@ export default function LancamentosPage() {
               Período
               <input
                 type="month"
+                value={periodo}
+                onChange={(e) => setPeriodo(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
-                defaultValue="2024-06"
               />
             </label>
             <label className="space-y-1 text-sm font-semibold text-gray-700">
@@ -184,7 +202,20 @@ export default function LancamentosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {dadosFiltrados.map((item) => (
+                {carregando ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-600">
+                      Carregando lançamentos...
+                    </td>
+                  </tr>
+                ) : dadosFiltrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-600">
+                      Nenhum lançamento encontrado
+                    </td>
+                  </tr>
+                ) : (
+                  dadosFiltrados.map((item) => (
                   <tr key={item.id} className="hover:bg-orange-50/40">
                     <td className="px-4 py-3 text-xs font-semibold text-gray-800">{item.data}</td>
                     <td className="px-4 py-3 text-xs text-gray-800">{item.historico}</td>
@@ -223,7 +254,8 @@ export default function LancamentosPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
