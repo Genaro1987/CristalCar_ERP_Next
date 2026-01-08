@@ -1,7 +1,8 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useEmpresaSelecionada, useRequerEmpresaSelecionada } from "@/hooks/useEmpresaSelecionada";
 import {
   BarraFiltros,
   FiltroPadrao,
@@ -17,65 +18,10 @@ interface LinhaDre {
   natureza: "RECEITA" | "DESPESA" | "OUTROS";
   status: "ativo" | "inativo";
   tipo?: string;
+  descricao?: string;
   contasVinculadas?: string[];
   filhos?: LinhaDre[];
 }
-
-const MOCK_DRE: LinhaDre[] = [
-  {
-    id: "dre1",
-    nome: "Receita Bruta",
-    codigo: "1",
-    natureza: "RECEITA",
-    status: "ativo",
-    contasVinculadas: ["3.1 Vendas de Produtos", "3.2 Serviços"],
-    filhos: [
-      {
-        id: "dre1-1",
-        nome: "Deduções",
-        codigo: "1.1",
-        natureza: "DESPESA",
-        status: "ativo",
-        contasVinculadas: ["4.1 Marketing"],
-      },
-    ],
-  },
-  {
-    id: "dre2",
-    nome: "Despesas Operacionais",
-    codigo: "2",
-    natureza: "DESPESA",
-    status: "ativo",
-    tipo: "Variável",
-    contasVinculadas: ["4.2 Folha de Pagamento"],
-    filhos: [
-      {
-        id: "dre2-1",
-        nome: "Pessoal",
-        codigo: "2.1",
-        natureza: "DESPESA",
-        status: "ativo",
-        contasVinculadas: ["4.2.1 Salários"],
-      },
-      {
-        id: "dre2-2",
-        nome: "Logística",
-        codigo: "2.2",
-        natureza: "DESPESA",
-        status: "inativo",
-        contasVinculadas: ["4.3 Custos Logísticos"],
-      },
-    ],
-  },
-  {
-    id: "dre3",
-    nome: "Resultado",
-    codigo: "3",
-    natureza: "OUTROS",
-    status: "ativo",
-    tipo: "Calculado",
-  },
-];
 
 function filtrarDre(dados: LinhaDre[], filtro: FiltroPadrao): LinhaDre[] {
   const buscaNormalizada = filtro.busca.trim().toLowerCase();
@@ -103,12 +49,46 @@ function filtrarDre(dados: LinhaDre[], filtro: FiltroPadrao): LinhaDre[] {
 }
 
 export default function EstruturaDrePage() {
+  useRequerEmpresaSelecionada();
+  const { empresa } = useEmpresaSelecionada();
+
   const [filtro, setFiltro] = useState<FiltroPadrao>({ busca: "", status: "ativos" });
   const [selecionada, setSelecionada] = useState<LinhaDre | null>(null);
   const [modalLinha, setModalLinha] = useState(false);
   const [modalConta, setModalConta] = useState(false);
+  const [linhasDre, setLinhasDre] = useState<LinhaDre[]>([]);
+  const [carregando, setCarregando] = useState(true);
 
-  const arvoreFiltrada = useMemo(() => filtrarDre(MOCK_DRE, filtro), [filtro]);
+  // Buscar estrutura DRE da API
+  useEffect(() => {
+    if (!empresa?.id) return;
+
+    const buscarDre = async () => {
+      try {
+        setCarregando(true);
+        const resposta = await fetch("/api/financeiro/estrutura-dre", {
+          headers: {
+            "x-empresa-id": String(empresa.id),
+          },
+        });
+
+        if (resposta.ok) {
+          const dados = await resposta.json();
+          if (dados.success) {
+            setLinhasDre(dados.data);
+          }
+        }
+      } catch (erro) {
+        console.error("Erro ao buscar estrutura DRE:", erro);
+      } finally {
+        setCarregando(false);
+      }
+    };
+
+    buscarDre();
+  }, [empresa?.id]);
+
+  const arvoreFiltrada = useMemo(() => filtrarDre(linhasDre, filtro), [linhasDre, filtro]);
 
   const handleNovo = () => {
     setModalLinha(true);
@@ -205,7 +185,17 @@ export default function EstruturaDrePage() {
                   {arvoreFiltrada.length} blocos principais
                 </span>
               </div>
-              <div className="space-y-3">{arvoreFiltrada.map((item) => renderNo(item))}</div>
+              {carregando ? (
+                <div className="flex items-center justify-center py-8">
+                  <p className="text-sm text-gray-600">Carregando estrutura DRE...</p>
+                </div>
+              ) : arvoreFiltrada.length === 0 ? (
+                <div className="flex items-center justify-center rounded-lg border border-dashed border-gray-200 py-8">
+                  <p className="text-sm text-gray-600">Nenhuma linha do DRE encontrada</p>
+                </div>
+              ) : (
+                <div className="space-y-3">{arvoreFiltrada.map((item) => renderNo(item))}</div>
+              )}
             </div>
           }
           centro={

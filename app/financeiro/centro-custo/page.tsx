@@ -1,7 +1,8 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useEmpresaSelecionada, useRequerEmpresaSelecionada } from "@/hooks/useEmpresaSelecionada";
 import {
   BarraFiltros,
   FiltroPadrao,
@@ -18,31 +19,6 @@ interface CentroCustoItem {
   descricao?: string;
   filhos?: CentroCustoItem[];
 }
-
-const MOCK_CENTROS: CentroCustoItem[] = [
-  {
-    id: "100",
-    nome: "Administrativo",
-    codigo: "01",
-    status: "ativo",
-    descricao: "Custos corporativos e suporte",
-    filhos: [
-      { id: "101", nome: "Financeiro", codigo: "01.01", status: "ativo", descricao: "Contas a pagar e receber" },
-      { id: "102", nome: "Pessoas", codigo: "01.02", status: "ativo", descricao: "RH e desenvolvimento" },
-    ],
-  },
-  {
-    id: "200",
-    nome: "Operações",
-    codigo: "02",
-    status: "ativo",
-    descricao: "Atendimento e execução",
-    filhos: [
-      { id: "201", nome: "Serviços", codigo: "02.01", status: "ativo", descricao: "Projetos e entregas" },
-      { id: "202", nome: "Vendas", codigo: "02.02", status: "inativo", descricao: "Pré-vendas e hunters" },
-    ],
-  },
-];
 
 function filtrarCentros(dados: CentroCustoItem[], filtro: FiltroPadrao): CentroCustoItem[] {
   const buscaNormalizada = filtro.busca.trim().toLowerCase();
@@ -69,12 +45,46 @@ function filtrarCentros(dados: CentroCustoItem[], filtro: FiltroPadrao): CentroC
 }
 
 export default function CentroCustoPage() {
+  useRequerEmpresaSelecionada();
+  const { empresa } = useEmpresaSelecionada();
+
   const [filtro, setFiltro] = useState<FiltroPadrao>({ busca: "", status: "ativos" });
   const [selecionado, setSelecionado] = useState<CentroCustoItem | null>(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [modoEdicao, setModoEdicao] = useState<"novo" | "editar">("novo");
+  const [centros, setCentros] = useState<CentroCustoItem[]>([]);
+  const [carregando, setCarregando] = useState(true);
 
-  const arvoreFiltrada = useMemo(() => filtrarCentros(MOCK_CENTROS, filtro), [filtro]);
+  // Buscar centros de custo da API
+  useEffect(() => {
+    if (!empresa?.id) return;
+
+    const buscarCentros = async () => {
+      try {
+        setCarregando(true);
+        const resposta = await fetch("/api/financeiro/centro-custo", {
+          headers: {
+            "x-empresa-id": String(empresa.id),
+          },
+        });
+
+        if (resposta.ok) {
+          const dados = await resposta.json();
+          if (dados.success) {
+            setCentros(dados.data);
+          }
+        }
+      } catch (erro) {
+        console.error("Erro ao buscar centros de custo:", erro);
+      } finally {
+        setCarregando(false);
+      }
+    };
+
+    buscarCentros();
+  }, [empresa?.id]);
+
+  const arvoreFiltrada = useMemo(() => filtrarCentros(centros, filtro), [centros, filtro]);
 
   const handleNovo = () => {
     setModoEdicao("novo");
@@ -174,9 +184,19 @@ export default function CentroCustoPage() {
                   {arvoreFiltrada.length} grupos principais
                 </span>
               </div>
-              <div className="space-y-3">
-                {arvoreFiltrada.map((item) => renderNo(item))}
-              </div>
+              {carregando ? (
+                <div className="flex items-center justify-center py-8">
+                  <p className="text-sm text-gray-600">Carregando centros de custo...</p>
+                </div>
+              ) : arvoreFiltrada.length === 0 ? (
+                <div className="flex items-center justify-center rounded-lg border border-dashed border-gray-200 py-8">
+                  <p className="text-sm text-gray-600">Nenhum centro de custo encontrado</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {arvoreFiltrada.map((item) => renderNo(item))}
+                </div>
+              )}
             </div>
           }
           right={
