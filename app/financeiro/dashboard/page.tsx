@@ -2,7 +2,8 @@
 
 import LayoutShell from "@/components/LayoutShell";
 import React, { useMemo, useState, useEffect } from "react";
-import { useEmpresaSelecionada, useRequerEmpresaSelecionada } from "@/hooks/useEmpresaSelecionada";
+import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
+import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { FinanceiroPageHeader } from "../_components/financeiro-layout";
 
 type ResumoCarteira = {
