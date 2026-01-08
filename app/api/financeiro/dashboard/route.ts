@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { obterEmpresaIdDaRequest, respostaEmpresaSelecionada } from "@/lib/api-helper";
-import { getDbConnection } from "@/lib/db";
+import { obterEmpresaIdDaRequest, respostaEmpresaNaoSelecionada } from "@/app/api/_utils/empresa";
+import { db } from "@/db/client";
 
 interface ResumoCarteira {
   empresa: string;
@@ -21,15 +21,14 @@ interface DashboardData {
 }
 
 export async function GET(request: NextRequest) {
+  const empresaId = obterEmpresaIdDaRequest(request);
+  if (!empresaId) {
+    return respostaEmpresaNaoSelecionada();
+  }
+
+  const periodo = request.nextUrl.searchParams.get("periodo"); // formato: YYYY-MM
+
   try {
-    const empresaId = obterEmpresaIdDaRequest(request);
-    if (!empresaId) {
-      return respostaEmpresaSelecionada();
-    }
-
-    const periodo = request.nextUrl.searchParams.get("periodo"); // formato: YYYY-MM
-    const db = await getDbConnection();
-
     // Calcular resumo de carteira (entradas, saídas e saldo)
     let sqlResumo = `
       SELECT

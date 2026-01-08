@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { obterEmpresaIdDaRequest, respostaEmpresaSelecionada } from "@/lib/api-helper";
-import { getDbConnection } from "@/lib/db";
+import { obterEmpresaIdDaRequest, respostaEmpresaNaoSelecionada } from "@/app/api/_utils/empresa";
+import { db } from "@/db/client";
 
 interface LancamentoDB {
   FIN_LANCAMENTO_ID: number;
@@ -46,16 +46,15 @@ function converterLancamento(reg: LancamentoDB): Lancamento {
 }
 
 export async function GET(request: NextRequest) {
+  const empresaId = obterEmpresaIdDaRequest(request);
+  if (!empresaId) {
+    return respostaEmpresaNaoSelecionada();
+  }
+
+  const id = request.nextUrl.searchParams.get("id");
+  const periodo = request.nextUrl.searchParams.get("periodo"); // formato: YYYY-MM
+
   try {
-    const empresaId = obterEmpresaIdDaRequest(request);
-    if (!empresaId) {
-      return respostaEmpresaSelecionada();
-    }
-
-    const id = request.nextUrl.searchParams.get("id");
-    const periodo = request.nextUrl.searchParams.get("periodo"); // formato: YYYY-MM
-    const db = await getDbConnection();
-
     if (id) {
       // Buscar um lançamento específico
       const resultado = await db.execute({
@@ -143,24 +142,22 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const empresaId = obterEmpresaIdDaRequest(request);
+  if (!empresaId) {
+    return respostaEmpresaNaoSelecionada();
+  }
+
+  const body = await request.json();
+  const { data, historico, contaId, centroCustoId, valor, documento, status } = body;
+
+  if (!data || !historico || !contaId || valor === undefined) {
+    return NextResponse.json(
+      { success: false, error: "Data, histórico, conta e valor são obrigatórios" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const empresaId = obterEmpresaIdDaRequest(request);
-    if (!empresaId) {
-      return respostaEmpresaSelecionada();
-    }
-
-    const body = await request.json();
-    const { data, historico, contaId, centroCustoId, valor, documento, status } = body;
-
-    if (!data || !historico || !contaId || valor === undefined) {
-      return NextResponse.json(
-        { success: false, error: "Data, histórico, conta e valor são obrigatórios" },
-        { status: 400 }
-      );
-    }
-
-    const db = await getDbConnection();
-
     const resultado = await db.execute({
       sql: `
         INSERT INTO FIN_LANCAMENTO (
@@ -218,25 +215,23 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const empresaId = obterEmpresaIdDaRequest(request);
+  if (!empresaId) {
+    return respostaEmpresaNaoSelecionada();
+  }
+
+  const id = request.nextUrl.searchParams.get("id");
+  if (!id) {
+    return NextResponse.json(
+      { success: false, error: "ID é obrigatório" },
+      { status: 400 }
+    );
+  }
+
+  const body = await request.json();
+  const { data, historico, contaId, centroCustoId, valor, documento, status } = body;
+
   try {
-    const empresaId = obterEmpresaIdDaRequest(request);
-    if (!empresaId) {
-      return respostaEmpresaSelecionada();
-    }
-
-    const id = request.nextUrl.searchParams.get("id");
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: "ID é obrigatório" },
-        { status: 400 }
-      );
-    }
-
-    const body = await request.json();
-    const { data, historico, contaId, centroCustoId, valor, documento, status } = body;
-
-    const db = await getDbConnection();
-
     // Verificar se o lançamento existe
     const verificacao = await db.execute({
       sql: `SELECT COUNT(*) as total FROM FIN_LANCAMENTO WHERE FIN_LANCAMENTO_ID = ? AND ID_EMPRESA = ?`,
@@ -278,22 +273,20 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const empresaId = obterEmpresaIdDaRequest(request);
+  if (!empresaId) {
+    return respostaEmpresaNaoSelecionada();
+  }
+
+  const id = request.nextUrl.searchParams.get("id");
+  if (!id) {
+    return NextResponse.json(
+      { success: false, error: "ID é obrigatório" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const empresaId = obterEmpresaIdDaRequest(request);
-    if (!empresaId) {
-      return respostaEmpresaSelecionada();
-    }
-
-    const id = request.nextUrl.searchParams.get("id");
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: "ID é obrigatório" },
-        { status: 400 }
-      );
-    }
-
-    const db = await getDbConnection();
-
     await db.execute({
       sql: `DELETE FROM FIN_LANCAMENTO WHERE FIN_LANCAMENTO_ID = ? AND ID_EMPRESA = ?`,
       args: [id, empresaId],

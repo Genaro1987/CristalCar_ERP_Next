@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { obterEmpresaIdDaRequest, respostaEmpresaSelecionada } from "@/lib/api-helper";
-import { getDbConnection } from "@/lib/db";
+import { obterEmpresaIdDaRequest, respostaEmpresaNaoSelecionada } from "@/app/api/_utils/empresa";
+import { db } from "@/db/client";
 
 interface CentroCustoDB {
   FIN_CENTRO_CUSTO_ID: number;
@@ -71,14 +71,14 @@ function converterParaHierarquia(registros: CentroCustoDB[]): CentroCustoItem[] 
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    const empresaId = obterEmpresaIdDaRequest(request);
-    if (!empresaId) {
-      return respostaEmpresaSelecionada();
-    }
+  const empresaId = obterEmpresaIdDaRequest(request);
+  if (!empresaId) {
+    return respostaEmpresaNaoSelecionada();
+  }
 
-    const id = request.nextUrl.searchParams.get("id");
-    const db = await getDbConnection();
+  const id = request.nextUrl.searchParams.get("id");
+
+  try {
 
     if (id) {
       // Buscar um centro específico
@@ -150,23 +150,22 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const empresaId = obterEmpresaIdDaRequest(request);
+  if (!empresaId) {
+    return respostaEmpresaNaoSelecionada();
+  }
+
+  const body = await request.json();
+  const { nome, codigo, paiId, descricao, ordem } = body;
+
+  if (!nome || !codigo) {
+    return NextResponse.json(
+      { success: false, error: "Nome e código são obrigatórios" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const empresaId = obterEmpresaIdDaRequest(request);
-    if (!empresaId) {
-      return respostaEmpresaSelecionada();
-    }
-
-    const body = await request.json();
-    const { nome, codigo, paiId, descricao, ordem } = body;
-
-    if (!nome || !codigo) {
-      return NextResponse.json(
-        { success: false, error: "Nome e código são obrigatórios" },
-        { status: 400 }
-      );
-    }
-
-    const db = await getDbConnection();
 
     // Verificar se o código já existe
     const verificacao = await db.execute({
@@ -220,24 +219,23 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const empresaId = obterEmpresaIdDaRequest(request);
+  if (!empresaId) {
+    return respostaEmpresaNaoSelecionada();
+  }
+
+  const id = request.nextUrl.searchParams.get("id");
+  if (!id) {
+    return NextResponse.json(
+      { success: false, error: "ID é obrigatório" },
+      { status: 400 }
+    );
+  }
+
+  const body = await request.json();
+  const { nome, codigo, descricao, ativo, ordem } = body;
+
   try {
-    const empresaId = obterEmpresaIdDaRequest(request);
-    if (!empresaId) {
-      return respostaEmpresaSelecionada();
-    }
-
-    const id = request.nextUrl.searchParams.get("id");
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: "ID é obrigatório" },
-        { status: 400 }
-      );
-    }
-
-    const body = await request.json();
-    const { nome, codigo, descricao, ativo, ordem } = body;
-
-    const db = await getDbConnection();
 
     // Verificar se o centro existe
     const verificacao = await db.execute({
