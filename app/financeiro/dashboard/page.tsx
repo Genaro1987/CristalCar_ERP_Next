@@ -67,6 +67,7 @@ export default function FinanceiroDashboardPage() {
     () => carteira[0] || { empresa: "", saldo: 0, entradas: 0, saidas: 0 },
     [carteira]
   );
+  const nomeEmpresa = empresa?.nomeFantasia || empresa?.cnpj || "Carregando...";
 
   return (
     <LayoutShell>
@@ -83,7 +84,7 @@ export default function FinanceiroDashboardPage() {
             <div className="space-y-1 text-sm font-semibold text-gray-700">
               Empresa
               <div className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-800">
-                {empresa?.nome || "Carregando..."}
+                {nomeEmpresa}
               </div>
             </div>
             <label className="space-y-1 text-sm font-semibold text-gray-700">
