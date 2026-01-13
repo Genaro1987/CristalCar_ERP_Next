@@ -11,10 +11,23 @@ type Lancamento = {
   data: string;
   historico: string;
   conta: string;
+  contaId: number;
   centroCusto: string;
+  centroCustoId: number | null;
   valor: number;
   tipo: "Entrada" | "Saída";
   status: "confirmado" | "pendente";
+  documento?: string;
+};
+
+type PlanoContaOption = {
+  id: number;
+  label: string;
+};
+
+type CentroCustoOption = {
+  id: number;
+  label: string;
 };
 
 export default function LancamentosPage() {
@@ -28,6 +41,11 @@ export default function LancamentosPage() {
   const [modo, setModo] = useState<"novo" | "editar">("novo");
   const [carregando, setCarregando] = useState(true);
   const [periodo, setPeriodo] = useState<string>("");
+  const [planoContaSelecionado, setPlanoContaSelecionado] = useState<string>("");
+  const [centroCustoSelecionado, setCentroCustoSelecionado] = useState<string>("");
+  const [documentoFiltro, setDocumentoFiltro] = useState<string>("");
+  const [planoContas, setPlanoContas] = useState<PlanoContaOption[]>([]);
+  const [centrosCusto, setCentrosCusto] = useState<CentroCustoOption[]>([]);
 
   // Buscar lançamentos da API
   useEffect(() => {
@@ -63,8 +81,54 @@ export default function LancamentosPage() {
     buscarLancamentos();
   }, [empresa?.id, periodo]);
 
+  useEffect(() => {
+    if (!empresa?.id) return;
+
+    const carregarOpcoes = async () => {
+      try {
+        const [planosResposta, centrosResposta] = await Promise.all([
+          fetch("/api/financeiro/plano-contas", {
+            headers: { "x-empresa-id": String(empresa.id) },
+          }),
+          fetch("/api/financeiro/centro-custo", {
+            headers: { "x-empresa-id": String(empresa.id) },
+          }),
+        ]);
+
+        if (planosResposta.ok) {
+          const planosJson = await planosResposta.json();
+          if (planosJson.success) {
+            const opcoes = (planosJson.data ?? []).map((item: any) => ({
+              id: item.FIN_PLANO_CONTA_ID,
+              label: `${item.FIN_PLANO_CONTA_CODIGO} ${item.FIN_PLANO_CONTA_NOME}`,
+            }));
+            setPlanoContas(opcoes);
+          }
+        }
+
+        if (centrosResposta.ok) {
+          const centrosJson = await centrosResposta.json();
+          if (centrosJson.success) {
+            const normalizar = (items: any[]): CentroCustoOption[] =>
+              items.flatMap((item) => [
+                { id: Number(item.id), label: `${item.codigo} ${item.nome}` },
+                ...(item.filhos ? normalizar(item.filhos) : []),
+              ]);
+
+            setCentrosCusto(normalizar(centrosJson.data ?? []));
+          }
+        }
+      } catch (erro) {
+        console.error("Erro ao carregar filtros:", erro);
+      }
+    };
+
+    carregarOpcoes();
+  }, [empresa?.id]);
+
   const dadosFiltrados = useMemo(() => {
     const busca = filtro.busca.trim().toLowerCase();
+    const documentoNormalizado = documentoFiltro.trim().toLowerCase();
     return lancamentos.filter((item) => {
       const statusOk =
         filtro.status === "todos" ||
@@ -72,10 +136,14 @@ export default function LancamentosPage() {
         (filtro.status === "inativos" && item.status === "pendente");
       const buscaOk =
         !busca || `${item.historico} ${item.conta} ${item.centroCusto}`.toLowerCase().includes(busca);
+      const contaOk = !planoContaSelecionado || String(item.contaId) === planoContaSelecionado;
+      const centroOk =
+        !centroCustoSelecionado || String(item.centroCustoId ?? "") === centroCustoSelecionado;
+      const documentoOk = !documentoNormalizado || item.documento?.toLowerCase().includes(documentoNormalizado);
 
-      return statusOk && buscaOk;
+      return statusOk && buscaOk && contaOk && centroOk && documentoOk;
     });
-  }, [filtro, lancamentos]);
+  }, [filtro, lancamentos, planoContaSelecionado, centroCustoSelecionado, documentoFiltro]);
 
   const handleNovo = () => {
     setModo("novo");
@@ -92,28 +160,54 @@ export default function LancamentosPage() {
   const handleSalvar = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const novo: Lancamento = {
-      id: modo === "novo" ? `LAN-${String(lancamentos.length + 1).padStart(3, "0")}` : selecionado?.id ?? "",
+    const tipo = (form.get("tipo") as Lancamento["tipo"]) ?? "Entrada";
+    const valorInformado = Number(form.get("valor")) || 0;
+    const valorNormalizado =
+      tipo === "Saída" ? -Math.abs(valorInformado) : Math.abs(valorInformado);
+
+    const payload = {
+      id: selecionado?.id,
       data: (form.get("data") as string) ?? "",
       historico: (form.get("historico") as string) ?? "",
-      conta: (form.get("conta") as string) ?? "",
-      centroCusto: (form.get("centroCusto") as string) ?? "",
-      valor: Number(form.get("valor")) || 0,
-      tipo: (form.get("tipo") as Lancamento["tipo"]) ?? "Entrada",
+      contaId: Number(form.get("contaId")) || 0,
+      centroCustoId: Number(form.get("centroCustoId")) || null,
+      valor: valorNormalizado,
+      documento: (form.get("documento") as string) ?? "",
       status: (form.get("status") as Lancamento["status"]) ?? "confirmado",
     };
 
-    if (modo === "novo") {
-      setLancamentos((prev) => [...prev, novo]);
-    } else {
-      setLancamentos((prev) => prev.map((item) => (item.id === novo.id ? novo : item)));
-    }
-    setModalAberto(false);
+    const salvar = async () => {
+      try {
+        const resposta = await fetch("/api/financeiro/lancamentos", {
+          method: modo === "novo" ? "POST" : "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "x-empresa-id": String(empresa?.id ?? ""),
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const json = await resposta.json();
+        if (resposta.ok && json.success) {
+          const atualizado = json.data as Lancamento;
+          if (modo === "novo") {
+            setLancamentos((prev) => [atualizado, ...prev]);
+          } else {
+            setLancamentos((prev) => prev.map((item) => (item.id === atualizado.id ? atualizado : item)));
+          }
+          setModalAberto(false);
+        }
+      } catch (erro) {
+        console.error("Erro ao salvar lançamento:", erro);
+      }
+    };
+
+    salvar();
   };
 
   return (
     <LayoutShell>
-      <div className="space-y-4">
+      <div className="page-container">
         <FinanceiroPageHeader
           titulo="Lançamentos (Caixa)"
           subtitulo="Financeiro | Contas a pagar e receber"
@@ -121,146 +215,166 @@ export default function LancamentosPage() {
           codigoAjuda="FIN_LANCAMENTOS"
         />
 
-        <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((prev) => ({ ...prev, ...novo }))} />
+        <main className="page-content-card space-y-4">
+          <section className="panel space-y-4">
+            <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((prev) => ({ ...prev, ...novo }))} />
 
-        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Contexto</p>
-              <h2 className="text-lg font-bold text-gray-900">Filtros principais</h2>
-              <p className="text-sm text-gray-600">
-                Cada lançamento respeita a empresa ativa, natureza e centro de custo. Utilize os filtros antes de incluir dados.
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Contexto</p>
+                  <h2 className="text-lg font-bold text-gray-900">Filtros principais</h2>
+                  <p className="text-sm text-gray-600">
+                    Cada lançamento respeita a empresa ativa, natureza e centro de custo. Utilize os filtros antes de incluir dados.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                  onClick={handleNovo}
+                >
+                  Novo lançamento
+                </button>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <label className="space-y-1 text-sm font-semibold text-gray-700">
+                  Período
+                  <input
+                    type="month"
+                    value={periodo}
+                    onChange={(e) => setPeriodo(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                  />
+                </label>
+                <label className="space-y-1 text-sm font-semibold text-gray-700">
+                  Plano de Conta
+                  <select
+                    value={planoContaSelecionado}
+                    onChange={(e) => setPlanoContaSelecionado(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                  >
+                    <option value="">Todas</option>
+                    {planoContas.map((conta) => (
+                      <option key={conta.id} value={conta.id}>
+                        {conta.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1 text-sm font-semibold text-gray-700">
+                  Centro de Custo
+                  <select
+                    value={centroCustoSelecionado}
+                    onChange={(e) => setCentroCustoSelecionado(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                  >
+                    <option value="">Todos</option>
+                    {centrosCusto.map((centro) => (
+                      <option key={centro.id} value={centro.id}>
+                        {centro.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1 text-sm font-semibold text-gray-700">
+                  Documento
+                  <input
+                    type="text"
+                    value={documentoFiltro}
+                    onChange={(e) => setDocumentoFiltro(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                    placeholder="Número ou referência"
+                  />
+                </label>
+              </div>
             </div>
-            <button
-              type="button"
-              className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
-              onClick={handleNovo}
-            >
-              Novo lançamento
-            </button>
-          </div>
+          </section>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Período
-              <input
-                type="month"
-                value={periodo}
-                onChange={(e) => setPeriodo(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
-              />
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Plano de Conta
-              <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none">
-                <option>3.1 Vendas de Produtos</option>
-                <option>4.2 Folha de Pagamento</option>
-                <option>4.3 Custos Logísticos</option>
-              </select>
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Centro de Custo
-              <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none">
-                <option>01.01 Financeiro</option>
-                <option>01.02 Pessoas</option>
-                <option>02.01 Serviços</option>
-              </select>
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Forma de Pagamento
-              <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none">
-                <option>Boleto</option>
-                <option>Pix</option>
-                <option>Cartão</option>
-              </select>
-            </label>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-inner">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Visão consolidada</p>
-              <h3 className="text-lg font-bold text-gray-900">Lançamentos cadastrados</h3>
-              <p className="text-sm text-gray-600">Use editar para ajustar histórico, conta e centros antes do envio ao DRE.</p>
+          <section className="panel">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Visão consolidada</p>
+                <h3 className="text-lg font-bold text-gray-900">Lançamentos cadastrados</h3>
+                <p className="text-sm text-gray-600">Use editar para ajustar histórico, conta e centros antes do envio ao DRE.</p>
+              </div>
+              <span className="rounded bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">ID_EMPRESA obrigatório</span>
             </div>
-            <span className="rounded bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">ID_EMPRESA obrigatório</span>
-          </div>
 
-          <div className="overflow-x-auto rounded-lg border border-dashed border-gray-200 bg-white text-sm">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-500">
-                <tr>
-                  <th className="px-4 py-3 text-left">Data</th>
-                  <th className="px-4 py-3 text-left">Histórico</th>
-                  <th className="px-4 py-3 text-left">Conta</th>
-                  <th className="px-4 py-3 text-left">Centro de Custo</th>
-                  <th className="px-4 py-3 text-left">Tipo</th>
-                  <th className="px-4 py-3 text-left">Valor</th>
-                  <th className="px-4 py-3 text-left">Status</th>
-                  <th className="px-4 py-3 text-left">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {carregando ? (
+            <div className="overflow-x-auto rounded-lg border border-dashed border-gray-200 bg-white text-sm">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-600">
-                      Carregando lançamentos...
-                    </td>
+                    <th className="px-4 py-3 text-left">Data</th>
+                    <th className="px-4 py-3 text-left">Histórico</th>
+                    <th className="px-4 py-3 text-left">Conta</th>
+                    <th className="px-4 py-3 text-left">Centro de Custo</th>
+                    <th className="px-4 py-3 text-left">Tipo</th>
+                    <th className="px-4 py-3 text-left">Valor</th>
+                    <th className="px-4 py-3 text-left">Status</th>
+                    <th className="px-4 py-3 text-left">Ações</th>
                   </tr>
-                ) : dadosFiltrados.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-600">
-                      Nenhum lançamento encontrado
-                    </td>
-                  </tr>
-                ) : (
-                  dadosFiltrados.map((item) => (
-                  <tr key={item.id} className="hover:bg-orange-50/40">
-                    <td className="px-4 py-3 text-xs font-semibold text-gray-800">{item.data}</td>
-                    <td className="px-4 py-3 text-xs text-gray-800">{item.historico}</td>
-                    <td className="px-4 py-3 text-xs text-gray-800">{item.conta}</td>
-                    <td className="px-4 py-3 text-xs text-gray-800">{item.centroCusto}</td>
-                    <td className="px-4 py-3 text-xs text-gray-800">{item.tipo}</td>
-                    <td className="px-4 py-3 text-xs font-semibold text-gray-800">
-                      R$ {Math.abs(item.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-4 py-3 text-xs font-semibold">
-                      <span
-                        className={`rounded-full px-3 py-1 text-[11px] ${
-                          item.status === "confirmado"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-200 text-gray-700"
-                        }`}
-                      >
-                        {item.status === "confirmado" ? "Confirmado" : "Pendente"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="rounded-lg border border-gray-200 px-3 py-1 font-semibold text-gray-700 transition hover:bg-gray-100"
-                          onClick={() => handleEditar(item)}
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-lg bg-orange-500 px-3 py-1 font-semibold text-white shadow-sm transition hover:bg-orange-600"
-                        >
-                          Conciliar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {carregando ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-600">
+                        Carregando lançamentos...
+                      </td>
+                    </tr>
+                  ) : dadosFiltrados.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-600">
+                        Nenhum lançamento encontrado
+                      </td>
+                    </tr>
+                  ) : (
+                    dadosFiltrados.map((item) => (
+                      <tr key={item.id} className="hover:bg-orange-50/40">
+                        <td className="px-4 py-3 text-xs font-semibold text-gray-800">{item.data}</td>
+                        <td className="px-4 py-3 text-xs text-gray-800">{item.historico}</td>
+                        <td className="px-4 py-3 text-xs text-gray-800">{item.conta}</td>
+                        <td className="px-4 py-3 text-xs text-gray-800">{item.centroCusto}</td>
+                        <td className="px-4 py-3 text-xs text-gray-800">{item.tipo}</td>
+                        <td className="px-4 py-3 text-xs font-semibold text-gray-800">
+                          R$ {Math.abs(item.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-4 py-3 text-xs font-semibold">
+                          <span
+                            className={`rounded-full px-3 py-1 text-[11px] ${
+                              item.status === "confirmado"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-200 text-gray-700"
+                            }`}
+                          >
+                            {item.status === "confirmado" ? "Confirmado" : "Pendente"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className="rounded-lg border border-gray-200 px-3 py-1 font-semibold text-gray-700 transition hover:bg-gray-100"
+                              onClick={() => handleEditar(item)}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-lg bg-orange-500 px-3 py-1 font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                            >
+                              Conciliar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
       </div>
 
       <ModalOverlay
@@ -301,21 +415,34 @@ export default function LancamentosPage() {
             </label>
             <label className="space-y-1 text-sm font-semibold text-gray-700">
               Plano de Conta
-              <input
-                name="conta"
-                defaultValue={selecionado?.conta}
+              <select
+                name="contaId"
+                defaultValue={selecionado?.contaId}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
-                placeholder="Código e descrição"
-              />
+                required
+              >
+                <option value="">Selecione</option>
+                {planoContas.map((conta) => (
+                  <option key={conta.id} value={conta.id}>
+                    {conta.label}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="space-y-1 text-sm font-semibold text-gray-700">
               Centro de Custo
-              <input
-                name="centroCusto"
-                defaultValue={selecionado?.centroCusto}
+              <select
+                name="centroCustoId"
+                defaultValue={selecionado?.centroCustoId ?? ""}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
-                placeholder="Ex: 01.01 Financeiro"
-              />
+              >
+                <option value="">Selecione</option>
+                {centrosCusto.map((centro) => (
+                  <option key={centro.id} value={centro.id}>
+                    {centro.label}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="space-y-1 text-sm font-semibold text-gray-700">
               Valor
@@ -325,6 +452,15 @@ export default function LancamentosPage() {
                 defaultValue={selecionado?.valor ?? 0}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
                 placeholder="Informe valores positivos para entradas e negativos para saídas"
+              />
+            </label>
+            <label className="space-y-1 text-sm font-semibold text-gray-700">
+              Documento
+              <input
+                name="documento"
+                defaultValue={selecionado?.documento}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                placeholder="Número ou referência"
               />
             </label>
             <label className="space-y-1 text-sm font-semibold text-gray-700">

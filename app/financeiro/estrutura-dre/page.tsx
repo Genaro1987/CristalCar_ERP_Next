@@ -24,6 +24,11 @@ interface LinhaDre {
   filhos?: LinhaDre[];
 }
 
+interface PlanoContaOption {
+  id: number;
+  label: string;
+}
+
 function filtrarDre(dados: LinhaDre[], filtro: FiltroPadrao): LinhaDre[] {
   const buscaNormalizada = filtro.busca.trim().toLowerCase();
 
@@ -59,6 +64,7 @@ export default function EstruturaDrePage() {
   const [modalConta, setModalConta] = useState(false);
   const [linhasDre, setLinhasDre] = useState<LinhaDre[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [planoContas, setPlanoContas] = useState<PlanoContaOption[]>([]);
 
   // Buscar estrutura DRE da API
   useEffect(() => {
@@ -87,6 +93,33 @@ export default function EstruturaDrePage() {
     };
 
     buscarDre();
+  }, [empresa?.id]);
+
+  useEffect(() => {
+    if (!empresa?.id) return;
+
+    const carregarPlanoContas = async () => {
+      try {
+        const resposta = await fetch("/api/financeiro/plano-contas", {
+          headers: { "x-empresa-id": String(empresa.id) },
+        });
+
+        if (resposta.ok) {
+          const dados = await resposta.json();
+          if (dados.success) {
+            const opcoes = (dados.data ?? []).map((item: any) => ({
+              id: item.FIN_PLANO_CONTA_ID,
+              label: `${item.FIN_PLANO_CONTA_CODIGO} ${item.FIN_PLANO_CONTA_NOME}`,
+            }));
+            setPlanoContas(opcoes);
+          }
+        }
+      } catch (erro) {
+        console.error("Erro ao carregar plano de contas:", erro);
+      }
+    };
+
+    carregarPlanoContas();
   }, [empresa?.id]);
 
   const arvoreFiltrada = useMemo(() => filtrarDre(linhasDre, filtro), [linhasDre, filtro]);
@@ -164,7 +197,7 @@ export default function EstruturaDrePage() {
 
   return (
     <LayoutShell>
-      <div className="space-y-4">
+      <div className="page-container">
         <FinanceiroPageHeader
           titulo="Estrutura do DRE"
           subtitulo="Financeiro | Demonstração de resultados"
@@ -172,137 +205,143 @@ export default function EstruturaDrePage() {
           codigoAjuda="FIN_ESTRUTURA_DRE"
         />
 
-        <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
+        <main className="page-content-card space-y-4">
+          <section className="panel">
+            <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
+          </section>
 
-        <DreSplitView
-          esquerda={
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Linhas</p>
-                  <h3 className="text-lg font-bold text-gray-900">Árvore do DRE</h3>
-                </div>
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                  {arvoreFiltrada.length} blocos principais
-                </span>
-              </div>
-              {carregando ? (
-                <div className="flex items-center justify-center py-8">
-                  <p className="text-sm text-gray-600">Carregando estrutura DRE...</p>
-                </div>
-              ) : arvoreFiltrada.length === 0 ? (
-                <div className="flex items-center justify-center rounded-lg border border-dashed border-gray-200 py-8">
-                  <p className="text-sm text-gray-600">Nenhuma linha do DRE encontrada</p>
-                </div>
-              ) : (
-                <div className="space-y-3">{arvoreFiltrada.map((item) => renderNo(item))}</div>
-              )}
-            </div>
-          }
-          centro={
-            <div className="flex h-full flex-col gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Detalhes</p>
-                <h3 className="text-lg font-bold text-gray-900">Linha selecionada</h3>
-                <p className="text-sm text-gray-600">
-                  Consulte a descrição da linha, natureza e comportamento antes de conectar ao plano de contas.
-                </p>
-              </div>
-              {selecionada ? (
-                <div className="space-y-4 rounded-lg bg-gray-50 p-4">
-                  <div className="grid grid-cols-2 gap-3">
+          <section className="panel">
+            <DreSplitView
+              esquerda={
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
-                      <p className="text-lg font-bold text-gray-900">{selecionada.codigo}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Linhas</p>
+                      <h3 className="text-lg font-bold text-gray-900">Árvore do DRE</h3>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</p>
-                      <p className="text-sm font-semibold text-gray-900">{selecionada.status === "ativo" ? "Ativo" : "Inativo"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Natureza</p>
-                      <p className="text-sm font-semibold text-gray-900">{selecionada.natureza}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipo</p>
-                      <p className="text-sm font-semibold text-gray-900">{selecionada.tipo ?? "Livre"}</p>
-                    </div>
-                    <div className="md:col-span-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Título</p>
-                      <p className="text-base font-semibold text-gray-800">{selecionada.nome}</p>
-                    </div>
+                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                      {arvoreFiltrada.length} blocos principais
+                    </span>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-xs uppercase tracking-wide text-gray-500">Regras e comentários</p>
-                    <p className="rounded-lg border border-dashed border-gray-200 bg-white p-3 text-sm text-gray-700">
-                      Explique como calcular esta linha, se aceita lançamentos diretos ou somente consolidado de filhos.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
-                      onClick={() => setModalLinha(true)}
-                    >
-                      Editar linha
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
-                      onClick={() => setModalConta(true)}
-                    >
-                      Vincular contas
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
-                  <p className="font-semibold text-gray-800">Selecione uma linha para visualizar detalhes</p>
-                  <p>A navegação pela árvore do DRE está na coluna esquerda.</p>
-                </div>
-              )}
-            </div>
-          }
-          direita={
-            <div className="flex h-full flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Contas vinculadas</p>
-                  <h3 className="text-lg font-bold text-gray-900">Plano de contas no DRE</h3>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
-                  onClick={() => setModalConta(true)}
-                  disabled={!selecionada}
-                >
-                  Vincular conta
-                </button>
-              </div>
-              {selecionada ? (
-                <div className="space-y-3 rounded-lg bg-gray-50 p-4">
-                  {contasSelecionadas.length > 0 ? (
-                    <ul className="space-y-2">
-                      {contasSelecionadas.map((conta) => (
-                        <li key={conta} className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800">
-                          <span>{conta}</span>
-                          <button className="text-xs font-semibold text-orange-600 hover:underline">Remover</button>
-                        </li>
-                      ))}
-                    </ul>
+                  {carregando ? (
+                    <div className="flex items-center justify-center py-8">
+                      <p className="text-sm text-gray-600">Carregando estrutura DRE...</p>
+                    </div>
+                  ) : arvoreFiltrada.length === 0 ? (
+                    <div className="flex items-center justify-center rounded-lg border border-dashed border-gray-200 py-8">
+                      <p className="text-sm text-gray-600">Nenhuma linha do DRE encontrada</p>
+                    </div>
                   ) : (
-                    <p className="text-sm text-gray-600">Nenhuma conta associada a esta linha.</p>
+                    <div className="space-y-3">{arvoreFiltrada.map((item) => renderNo(item))}</div>
                   )}
                 </div>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
-                  <p className="font-semibold text-gray-800">Selecione uma linha</p>
-                  <p>Escolha um item do DRE para listar as contas vinculadas.</p>
+              }
+              centro={
+                <div className="flex h-full flex-col gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Detalhes</p>
+                    <h3 className="text-lg font-bold text-gray-900">Linha selecionada</h3>
+                    <p className="text-sm text-gray-600">
+                      Consulte a descrição da linha, natureza e comportamento antes de conectar ao plano de contas.
+                    </p>
+                  </div>
+                  {selecionada ? (
+                    <div className="space-y-4 rounded-lg bg-gray-50 p-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
+                          <p className="text-lg font-bold text-gray-900">{selecionada.codigo}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</p>
+                          <p className="text-sm font-semibold text-gray-900">{selecionada.status === "ativo" ? "Ativo" : "Inativo"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Natureza</p>
+                          <p className="text-sm font-semibold text-gray-900">{selecionada.natureza}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipo</p>
+                          <p className="text-sm font-semibold text-gray-900">{selecionada.tipo ?? "Livre"}</p>
+                        </div>
+                        <div className="md:col-span-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Título</p>
+                          <p className="text-base font-semibold text-gray-800">{selecionada.nome}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xs uppercase tracking-wide text-gray-500">Regras e comentários</p>
+                        <p className="rounded-lg border border-dashed border-gray-200 bg-white p-3 text-sm text-gray-700">
+                          {selecionada.descricao || "Sem descrição cadastrada para esta linha."}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+                          onClick={() => setModalLinha(true)}
+                        >
+                          Editar linha
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                          onClick={() => setModalConta(true)}
+                        >
+                          Vincular contas
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
+                      <p className="font-semibold text-gray-800">Selecione uma linha para visualizar detalhes</p>
+                      <p>A navegação pela árvore do DRE está na coluna esquerda.</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          }
-        />
+              }
+              direita={
+                <div className="flex h-full flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Contas vinculadas</p>
+                      <h3 className="text-lg font-bold text-gray-900">Plano de contas no DRE</h3>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                      onClick={() => setModalConta(true)}
+                      disabled={!selecionada}
+                    >
+                      Vincular conta
+                    </button>
+                  </div>
+                  {selecionada ? (
+                    <div className="space-y-3 rounded-lg bg-gray-50 p-4">
+                      {contasSelecionadas.length > 0 ? (
+                        <ul className="space-y-2">
+                          {contasSelecionadas.map((conta) => (
+                            <li key={conta} className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800">
+                              <span>{conta}</span>
+                              <button className="text-xs font-semibold text-orange-600 hover:underline">Remover</button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-gray-600">Nenhuma conta associada a esta linha.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
+                      <p className="font-semibold text-gray-800">Selecione uma linha</p>
+                      <p>Escolha um item do DRE para listar as contas vinculadas.</p>
+                    </div>
+                  )}
+                </div>
+              }
+            />
+          </section>
+        </main>
       </div>
 
       <ModalOverlay
@@ -373,19 +412,14 @@ export default function EstruturaDrePage() {
             </button>
           </div>
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wide text-gray-500">Sugestões mock</p>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Sugestões por plano de contas</p>
             <div className="flex flex-wrap gap-2">
-              {[
-                "3.1 Vendas de Produtos",
-                "4.1 Marketing",
-                "4.2 Folha de Pagamento",
-                "4.3 Custos Logísticos",
-              ].map((conta) => (
+              {planoContas.slice(0, 6).map((conta) => (
                 <span
-                  key={conta}
+                  key={conta.id}
                   className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-800"
                 >
-                  {conta}
+                  {conta.label}
                 </span>
               ))}
             </div>
