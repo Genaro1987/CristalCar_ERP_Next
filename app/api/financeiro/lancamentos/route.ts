@@ -174,6 +174,11 @@ export async function POST(request: NextRequest) {
       args: [data, historico, valor, contaId, centroCustoId || null, documento || null, status || 'confirmado', empresaId],
     });
 
+    const lancamentoId = resultado.lastInsertRowid;
+    if (lancamentoId === undefined) {
+      throw new Error("ID do lançamento não retornado após inserção.");
+    }
+
     // Buscar o lançamento criado com joins
     const lancamentoResult = await db.execute({
       sql: `
@@ -195,7 +200,7 @@ export async function POST(request: NextRequest) {
         LEFT JOIN FIN_CENTRO_CUSTO cc ON cc.FIN_CENTRO_CUSTO_ID = l.FIN_CENTRO_CUSTO_ID
         WHERE l.FIN_LANCAMENTO_ID = ?
       `,
-      args: [resultado.lastInsertRowid],
+      args: [lancamentoId],
     });
 
     const registro = lancamentoResult.rows[0] as unknown as LancamentoDB;
