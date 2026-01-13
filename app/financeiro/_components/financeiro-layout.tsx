@@ -29,15 +29,15 @@ export function FinanceiroPageHeader({
   const { abrirAjuda } = useHelpContext();
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <header className="page-header-wrapper">
+      <div className="page-header-card">
         <div className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
             {subtitulo}
           </p>
           <h1 className="text-2xl font-bold text-gray-900">{titulo}</h1>
           <p className="text-sm text-gray-600">
-            Explore, filtre e organize cadastros sem depender do backend. Todos os dados aqui são exemplos.
+            Explore, filtre e organize os cadastros com dados reais do financeiro.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -59,7 +59,7 @@ export function FinanceiroPageHeader({
           </button>
         </div>
       </div>
-    </div>
+    </header>
   );
 }
 
@@ -199,7 +199,7 @@ export function ModalOverlay({ aberto, titulo, onClose, children }: ModalProps) 
             type="button"
             className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
           >
-            Salvar mock
+            Salvar
           </button>
         </div>
       </div>

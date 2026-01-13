@@ -18,6 +18,13 @@ interface Indicador {
 interface DashboardData {
   carteira: ResumoCarteira[];
   indicadores: Indicador[];
+  alertas: Alertas;
+}
+
+interface Alertas {
+  entradasPeriodo: number;
+  saidasPeriodo: number;
+  vencidos: number;
 }
 
 export async function GET(request: NextRequest) {
@@ -113,9 +120,39 @@ export async function GET(request: NextRequest) {
       descricao: "Resultado do período",
     });
 
+    const dataHoje = new Date().toISOString().slice(0, 10);
+
+    let sqlAlertas = `
+      SELECT
+        COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR >= 0 THEN l.FIN_LANCAMENTO_VALOR ELSE 0 END), 0) as entradasPeriodo,
+        COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR < 0 THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as saidasPeriodo,
+        COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_DATA < ? THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as vencidos
+      FROM FIN_LANCAMENTO l
+      WHERE l.ID_EMPRESA = ?
+    `;
+
+    const alertasArgs: any[] = [dataHoje, empresaId];
+
+    if (periodo) {
+      sqlAlertas += ` AND strftime('%Y-%m', l.FIN_LANCAMENTO_DATA) = ?`;
+      alertasArgs.push(periodo);
+    }
+
+    const resultadoAlertas = await db.execute({
+      sql: sqlAlertas,
+      args: alertasArgs,
+    });
+
+    const alertas: Alertas = {
+      entradasPeriodo: Number((resultadoAlertas.rows[0] as any)?.entradasPeriodo ?? 0),
+      saidasPeriodo: Number((resultadoAlertas.rows[0] as any)?.saidasPeriodo ?? 0),
+      vencidos: Number((resultadoAlertas.rows[0] as any)?.vencidos ?? 0),
+    };
+
     const dashboardData: DashboardData = {
       carteira,
       indicadores,
+      alertas,
     };
 
     return NextResponse.json({ success: true, data: dashboardData });

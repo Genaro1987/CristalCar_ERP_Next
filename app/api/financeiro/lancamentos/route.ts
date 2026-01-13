@@ -22,7 +22,9 @@ interface Lancamento {
   data: string;
   historico: string;
   conta: string;
+  contaId: number;
   centroCusto: string;
+  centroCustoId: number | null;
   valor: number;
   tipo: "Entrada" | "Saída";
   status: "confirmado" | "pendente";
@@ -35,9 +37,11 @@ function converterLancamento(reg: LancamentoDB): Lancamento {
     data: reg.FIN_LANCAMENTO_DATA,
     historico: reg.FIN_LANCAMENTO_HISTORICO,
     conta: `${reg.CONTA_CODIGO} ${reg.CONTA_NOME}`,
+    contaId: reg.FIN_PLANO_CONTA_ID,
     centroCusto: reg.CENTRO_CUSTO_CODIGO && reg.CENTRO_CUSTO_NOME
       ? `${reg.CENTRO_CUSTO_CODIGO} ${reg.CENTRO_CUSTO_NOME}`
       : "-",
+    centroCustoId: reg.FIN_CENTRO_CUSTO_ID,
     valor: reg.FIN_LANCAMENTO_VALOR,
     tipo: reg.FIN_LANCAMENTO_VALOR >= 0 ? "Entrada" : "Saída",
     status: reg.FIN_LANCAMENTO_STATUS === "confirmado" ? "confirmado" : "pendente",
@@ -214,6 +218,93 @@ export async function POST(request: NextRequest) {
     console.error("Erro ao criar lançamento:", error);
     return NextResponse.json(
       { success: false, error: "Erro ao criar lançamento" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const empresaId = obterEmpresaIdDaRequest(request);
+  if (!empresaId) {
+    return respostaEmpresaNaoSelecionada();
+  }
+
+  const body = await request.json();
+  const { id, data, historico, contaId, centroCustoId, valor, documento, status } = body;
+
+  if (!id || !data || !historico || !contaId || valor === undefined) {
+    return NextResponse.json(
+      { success: false, error: "ID, data, histórico, conta e valor são obrigatórios" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    await db.execute({
+      sql: `
+        UPDATE FIN_LANCAMENTO
+        SET
+          FIN_LANCAMENTO_DATA = ?,
+          FIN_LANCAMENTO_HISTORICO = ?,
+          FIN_LANCAMENTO_VALOR = ?,
+          FIN_PLANO_CONTA_ID = ?,
+          FIN_CENTRO_CUSTO_ID = ?,
+          FIN_LANCAMENTO_DOCUMENTO = ?,
+          FIN_LANCAMENTO_STATUS = ?,
+          FIN_LANCAMENTO_ATUALIZADO_EM = datetime('now')
+        WHERE FIN_LANCAMENTO_ID = ? AND ID_EMPRESA = ?
+      `,
+      args: [
+        data,
+        historico,
+        valor,
+        contaId,
+        centroCustoId || null,
+        documento || null,
+        status || "confirmado",
+        id,
+        empresaId,
+      ],
+    });
+
+    const lancamentoResult = await db.execute({
+      sql: `
+        SELECT
+          l.FIN_LANCAMENTO_ID,
+          l.FIN_LANCAMENTO_DATA,
+          l.FIN_LANCAMENTO_HISTORICO,
+          l.FIN_LANCAMENTO_VALOR,
+          l.FIN_LANCAMENTO_DOCUMENTO,
+          COALESCE(l.FIN_LANCAMENTO_STATUS, 'confirmado') as FIN_LANCAMENTO_STATUS,
+          l.FIN_PLANO_CONTA_ID,
+          l.FIN_CENTRO_CUSTO_ID,
+          pc.FIN_PLANO_CONTA_CODIGO as CONTA_CODIGO,
+          pc.FIN_PLANO_CONTA_NOME as CONTA_NOME,
+          cc.FIN_CENTRO_CUSTO_CODIGO as CENTRO_CUSTO_CODIGO,
+          cc.FIN_CENTRO_CUSTO_NOME as CENTRO_CUSTO_NOME
+        FROM FIN_LANCAMENTO l
+        INNER JOIN FIN_PLANO_CONTA pc ON pc.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID
+        LEFT JOIN FIN_CENTRO_CUSTO cc ON cc.FIN_CENTRO_CUSTO_ID = l.FIN_CENTRO_CUSTO_ID
+        WHERE l.FIN_LANCAMENTO_ID = ? AND l.ID_EMPRESA = ?
+      `,
+      args: [id, empresaId],
+    });
+
+    if (lancamentoResult.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Lançamento não encontrado" },
+        { status: 404 }
+      );
+    }
+
+    const registro = lancamentoResult.rows[0] as unknown as LancamentoDB;
+    const lancamentoAtualizado = converterLancamento(registro);
+
+    return NextResponse.json({ success: true, data: lancamentoAtualizado });
+  } catch (error) {
+    console.error("Erro ao atualizar lançamento:", error);
+    return NextResponse.json(
+      { success: false, error: "Erro ao atualizar lançamento" },
       { status: 500 }
     );
   }

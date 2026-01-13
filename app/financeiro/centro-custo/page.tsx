@@ -163,7 +163,7 @@ export default function CentroCustoPage() {
 
   return (
     <LayoutShell>
-      <div className="space-y-4">
+      <div className="page-container">
         <FinanceiroPageHeader
           titulo="Centros de Custo"
           subtitulo="Financeiro | Estrutura analítica"
@@ -171,91 +171,91 @@ export default function CentroCustoPage() {
           codigoAjuda="FIN_CENTRO_CUSTO"
         />
 
-        <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
+        <main className="page-content-card space-y-4">
+          <section className="panel">
+            <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
+          </section>
 
-        <SplitView
-          left={
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Árvore</p>
-                  <h3 className="text-lg font-bold text-gray-900">Organização por áreas</h3>
-                </div>
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                  {arvoreFiltrada.length} grupos principais
-                </span>
-              </div>
-              {carregando ? (
-                <div className="flex items-center justify-center py-8">
-                  <p className="text-sm text-gray-600">Carregando centros de custo...</p>
-                </div>
-              ) : arvoreFiltrada.length === 0 ? (
-                <div className="flex items-center justify-center rounded-lg border border-dashed border-gray-200 py-8">
-                  <p className="text-sm text-gray-600">Nenhum centro de custo encontrado</p>
-                </div>
-              ) : (
+          <section className="panel">
+            <SplitView
+              left={
                 <div className="space-y-3">
-                  {arvoreFiltrada.map((item) => renderNo(item))}
-                </div>
-              )}
-            </div>
-          }
-          right={
-            <div className="flex h-full flex-col gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Detalhes</p>
-                <h3 className="text-lg font-bold text-gray-900">Centro selecionado</h3>
-                <p className="text-sm text-gray-600">
-                  Reveja nomes, códigos e observações para orientar lançamentos e relatórios.
-                </p>
-              </div>
-              {selecionado ? (
-                <div className="space-y-4 rounded-lg bg-gray-50 p-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
-                      <p className="text-lg font-bold text-gray-900">{selecionado.codigo}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Árvore</p>
+                      <h3 className="text-lg font-bold text-gray-900">Organização por áreas</h3>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</p>
-                      <p className="text-sm font-semibold text-gray-900">{selecionado.status === "ativo" ? "Ativo" : "Inativo"}</p>
-                    </div>
-                    <div className="md:col-span-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Título</p>
-                      <p className="text-base font-semibold text-gray-800">{selecionado.nome}</p>
-                    </div>
+                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                      {arvoreFiltrada.length} grupos principais
+                    </span>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-xs uppercase tracking-wide text-gray-500">Descrição</p>
-                    <p className="rounded-lg border border-dashed border-gray-200 bg-white p-3 text-sm text-gray-700">
-                      {selecionado.descricao || "Inclua orientações para quem faz lançamentos"}
+                  {carregando ? (
+                    <div className="flex items-center justify-center py-8">
+                      <p className="text-sm text-gray-600">Carregando centros de custo...</p>
+                    </div>
+                  ) : arvoreFiltrada.length === 0 ? (
+                    <div className="flex items-center justify-center rounded-lg border border-dashed border-gray-200 py-8">
+                      <p className="text-sm text-gray-600">Nenhum centro de custo encontrado</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {arvoreFiltrada.map((item) => renderNo(item))}
+                    </div>
+                  )}
+                </div>
+              }
+              right={
+                <div className="flex h-full flex-col gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Detalhes</p>
+                    <h3 className="text-lg font-bold text-gray-900">Centro selecionado</h3>
+                    <p className="text-sm text-gray-600">
+                      Reveja nomes, códigos e observações para orientar lançamentos e relatórios.
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
-                      onClick={() => handleEditar(selecionado)}
-                    >
-                      Editar centro
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
-                    >
-                      Compartilhar mock
-                    </button>
-                  </div>
+                  {selecionado ? (
+                    <div className="space-y-4 rounded-lg bg-gray-50 p-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
+                          <p className="text-lg font-bold text-gray-900">{selecionado.codigo}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</p>
+                          <p className="text-sm font-semibold text-gray-900">{selecionado.status === "ativo" ? "Ativo" : "Inativo"}</p>
+                        </div>
+                        <div className="md:col-span-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Título</p>
+                          <p className="text-base font-semibold text-gray-800">{selecionado.nome}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xs uppercase tracking-wide text-gray-500">Descrição</p>
+                        <p className="rounded-lg border border-dashed border-gray-200 bg-white p-3 text-sm text-gray-700">
+                          {selecionado.descricao || "Inclua orientações para quem faz lançamentos"}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+                          onClick={() => handleEditar(selecionado)}
+                        >
+                          Editar centro
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
+                      <p className="font-semibold text-gray-800">Selecione um centro para visualizar detalhes</p>
+                      <p>Use o painel da esquerda para navegar.</p>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
-                  <p className="font-semibold text-gray-800">Selecione um centro para visualizar detalhes</p>
-                  <p>Use o painel da esquerda para navegar.</p>
-                </div>
-              )}
-            </div>
-          }
-        />
+              }
+            />
+          </section>
+        </main>
       </div>
 
       <ModalOverlay
