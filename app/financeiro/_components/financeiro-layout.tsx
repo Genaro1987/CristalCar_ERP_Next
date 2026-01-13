@@ -1,7 +1,8 @@
 "use client";
 
 import { useHelpContext } from "@/components/LayoutShell";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type StatusFiltro = "todos" | "ativos" | "inativos";
 
@@ -171,11 +172,44 @@ export interface ModalProps {
 }
 
 export function ModalOverlay({ aberto, titulo, onClose, children }: ModalProps) {
-  if (!aberto) return null;
+  const [montado, setMontado] = useState(false);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
+  useEffect(() => {
+    setMontado(true);
+  }, []);
+
+  useEffect(() => {
+    if (!aberto) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    const overflowAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = overflowAnterior;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [aberto, onClose]);
+
+  if (!aberto || !montado) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Formulário</p>
@@ -190,22 +224,8 @@ export function ModalOverlay({ aberto, titulo, onClose, children }: ModalProps) 
           </button>
         </div>
         <div className="px-6 py-5">{children}</div>
-        <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="button button-secondary"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            className="button button-primary"
-          >
-            Salvar
-          </button>
-        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
