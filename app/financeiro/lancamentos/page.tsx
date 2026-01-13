@@ -230,7 +230,7 @@ export default function LancamentosPage() {
                 </div>
                 <button
                   type="button"
-                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                  className="button button-primary"
                   onClick={handleNovo}
                 >
                   Novo lançamento
@@ -238,21 +238,23 @@ export default function LancamentosPage() {
               </div>
 
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <label className="space-y-1 text-sm font-semibold text-gray-700">
-                  Período
+                <div className="form-group">
+                  <label htmlFor="filtro-periodo">Período</label>
                   <input
+                    id="filtro-periodo"
                     type="month"
                     value={periodo}
                     onChange={(e) => setPeriodo(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                    className="form-input"
                   />
-                </label>
-                <label className="space-y-1 text-sm font-semibold text-gray-700">
-                  Plano de Conta
+                </div>
+                <div className="form-group">
+                  <label htmlFor="filtro-plano-conta">Plano de Conta</label>
                   <select
+                    id="filtro-plano-conta"
                     value={planoContaSelecionado}
                     onChange={(e) => setPlanoContaSelecionado(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                    className="form-input"
                   >
                     <option value="">Todas</option>
                     {planoContas.map((conta) => (
@@ -261,13 +263,14 @@ export default function LancamentosPage() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="space-y-1 text-sm font-semibold text-gray-700">
-                  Centro de Custo
+                </div>
+                <div className="form-group">
+                  <label htmlFor="filtro-centro-custo">Centro de Custo</label>
                   <select
+                    id="filtro-centro-custo"
                     value={centroCustoSelecionado}
                     onChange={(e) => setCentroCustoSelecionado(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                    className="form-input"
                   >
                     <option value="">Todos</option>
                     {centrosCusto.map((centro) => (
@@ -276,17 +279,18 @@ export default function LancamentosPage() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="space-y-1 text-sm font-semibold text-gray-700">
-                  Documento
+                </div>
+                <div className="form-group">
+                  <label htmlFor="filtro-documento">Documento</label>
                   <input
+                    id="filtro-documento"
                     type="text"
                     value={documentoFiltro}
                     onChange={(e) => setDocumentoFiltro(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                    className="form-input"
                     placeholder="Número ou referência"
                   />
-                </label>
+                </div>
               </div>
             </div>
           </section>
@@ -354,14 +358,14 @@ export default function LancamentosPage() {
                           <div className="flex flex-wrap gap-2">
                             <button
                               type="button"
-                              className="rounded-lg border border-gray-200 px-3 py-1 font-semibold text-gray-700 transition hover:bg-gray-100"
+                              className="button button-secondary button-compact"
                               onClick={() => handleEditar(item)}
                             >
                               Editar
                             </button>
                             <button
                               type="button"
-                              className="rounded-lg bg-orange-500 px-3 py-1 font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                              className="button button-primary button-compact"
                             >
                               Conciliar
                             </button>
@@ -384,41 +388,45 @@ export default function LancamentosPage() {
       >
         <form className="space-y-3" onSubmit={handleSalvar}>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Data
+            <div className="form-group">
+              <label htmlFor="modal-data">Data</label>
               <input
+                id="modal-data"
                 name="data"
                 type="date"
                 defaultValue={selecionado?.data}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
               />
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Tipo
+            </div>
+            <div className="form-group">
+              <label htmlFor="modal-tipo">Tipo</label>
               <select
+                id="modal-tipo"
                 name="tipo"
                 defaultValue={selecionado?.tipo ?? "Entrada"}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
               >
                 <option value="Entrada">Entrada</option>
                 <option value="Saída">Saída</option>
               </select>
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Histórico
+            </div>
+            <div className="form-group">
+              <label htmlFor="modal-historico">Histórico</label>
               <input
+                id="modal-historico"
                 name="historico"
                 defaultValue={selecionado?.historico}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
                 placeholder="Descrição do lançamento"
               />
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Plano de Conta
+            </div>
+            <div className="form-group">
+              <label htmlFor="modal-conta">Plano de Conta</label>
               <select
+                id="modal-conta"
                 name="contaId"
                 defaultValue={selecionado?.contaId}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
                 required
               >
                 <option value="">Selecione</option>
@@ -428,13 +436,14 @@ export default function LancamentosPage() {
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Centro de Custo
+            </div>
+            <div className="form-group">
+              <label htmlFor="modal-centro-custo">Centro de Custo</label>
               <select
+                id="modal-centro-custo"
                 name="centroCustoId"
                 defaultValue={selecionado?.centroCustoId ?? ""}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
               >
                 <option value="">Selecione</option>
                 {centrosCusto.map((centro) => (
@@ -443,49 +452,52 @@ export default function LancamentosPage() {
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Valor
+            </div>
+            <div className="form-group">
+              <label htmlFor="modal-valor">Valor</label>
               <input
+                id="modal-valor"
                 name="valor"
                 type="number"
                 defaultValue={selecionado?.valor ?? 0}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
                 placeholder="Informe valores positivos para entradas e negativos para saídas"
               />
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Documento
+            </div>
+            <div className="form-group">
+              <label htmlFor="modal-documento">Documento</label>
               <input
+                id="modal-documento"
                 name="documento"
                 defaultValue={selecionado?.documento}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
                 placeholder="Número ou referência"
               />
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Status
+            </div>
+            <div className="form-group">
+              <label htmlFor="modal-status">Status</label>
               <select
+                id="modal-status"
                 name="status"
                 defaultValue={selecionado?.status ?? "confirmado"}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
               >
                 <option value="confirmado">Confirmado</option>
                 <option value="pendente">Pendente</option>
               </select>
-            </label>
+            </div>
           </div>
           <div className="flex justify-end gap-3">
             <button
               type="button"
               onClick={() => setModalAberto(false)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+              className="button button-secondary"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+              className="button button-primary"
             >
               Salvar lançamento
             </button>
