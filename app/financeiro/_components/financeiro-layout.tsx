@@ -45,7 +45,7 @@ export function FinanceiroPageHeader({
             <button
               type="button"
               onClick={() => abrirAjuda(codigoAjuda, nomeAjuda ?? titulo)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+              className="button button-secondary"
             >
               Ajuda
             </button>
@@ -53,7 +53,7 @@ export function FinanceiroPageHeader({
           <button
             type="button"
             onClick={onNovo}
-            className="rounded-lg bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+            className="button button-primary"
           >
             Novo
           </button>
@@ -82,23 +82,25 @@ export function BarraFiltros({ filtro, onFiltroChange, exibirNatureza = false }:
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <label className="flex flex-col gap-1 text-sm font-semibold text-gray-700 md:col-span-2">
-          Busca
+        <div className="form-group md:col-span-2">
+          <label htmlFor="financeiro-busca">Busca</label>
           <input
+            id="financeiro-busca"
             type="text"
             value={filtro.busca}
             onChange={(e) => onFiltroChange({ busca: e.target.value })}
             placeholder="Nome, código ou palavra-chave"
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+            className="form-input"
           />
-        </label>
+        </div>
 
-        <label className="flex flex-col gap-1 text-sm font-semibold text-gray-700">
-          Status
+        <div className="form-group">
+          <label htmlFor="financeiro-status">Status</label>
           <select
+            id="financeiro-status"
             value={filtro.status}
             onChange={(e) => onFiltroChange({ status: e.target.value as StatusFiltro })}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+            className="form-input"
           >
             {opcoesStatus.map((opcao) => (
               <option key={opcao.value} value={opcao.value}>
@@ -106,21 +108,22 @@ export function BarraFiltros({ filtro, onFiltroChange, exibirNatureza = false }:
               </option>
             ))}
           </select>
-        </label>
+        </div>
 
         {exibirNatureza ? (
-          <label className="flex flex-col gap-1 text-sm font-semibold text-gray-700">
-            Natureza
+          <div className="form-group">
+            <label htmlFor="financeiro-natureza">Natureza</label>
             <select
+              id="financeiro-natureza"
               value={filtro.natureza ?? ""}
               onChange={(e) => onFiltroChange({ natureza: e.target.value })}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+              className="form-input"
             >
               <option value="">Todas</option>
               <option value="RECEITA">Receita</option>
               <option value="DESPESA">Despesa</option>
             </select>
-          </label>
+          </div>
         ) : null}
       </div>
       <p className="mt-3 text-xs text-gray-600">
@@ -181,7 +184,7 @@ export function ModalOverlay({ aberto, titulo, onClose, children }: ModalProps) 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-gray-200 px-3 py-1 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+            className="button button-secondary button-compact"
           >
             Fechar
           </button>
@@ -191,13 +194,13 @@ export function ModalOverlay({ aberto, titulo, onClose, children }: ModalProps) 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+            className="button button-secondary"
           >
             Cancelar
           </button>
           <button
             type="button"
-            className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+            className="button button-primary"
           >
             Salvar
           </button>
