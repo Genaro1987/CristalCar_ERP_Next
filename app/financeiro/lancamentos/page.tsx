@@ -4,7 +4,8 @@ import LayoutShell from "@/components/LayoutShell";
 import React, { useMemo, useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
-import { BarraFiltros, FiltroPadrao, FinanceiroPageHeader, ModalOverlay } from "../_components/financeiro-layout";
+import { BarraFiltros, FiltroPadrao, ModalOverlay } from "../_components/financeiro-layout";
+import { HeaderBar } from "@/components/HeaderBar";
 
 type Lancamento = {
   id: string;
@@ -232,11 +233,11 @@ export default function LancamentosPage() {
   return (
     <LayoutShell>
       <div className="page-container">
-        <FinanceiroPageHeader
-          titulo="Lançamentos (Caixa)"
-          subtitulo="Financeiro | Contas a pagar e receber"
-          onNovo={handleNovo}
-          codigoAjuda="FIN_LANCAMENTOS"
+        <HeaderBar
+          codigoTela="FIN_LANCAMENTOS"
+          nomeTela="Lançamentos (Caixa)"
+          caminhoRota="/financeiro/lancamentos"
+          modulo="Financeiro"
         />
 
         <main className="page-content-card space-y-4">
