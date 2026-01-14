@@ -4,7 +4,8 @@ import LayoutShell from "@/components/LayoutShell";
 import React, { useMemo, useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
-import { BarraFiltros, FiltroPadrao, FinanceiroPageHeader, ModalOverlay } from "../_components/financeiro-layout";
+import { BarraFiltros, FiltroPadrao, ModalOverlay } from "../_components/financeiro-layout";
+import { HeaderBar } from "@/components/HeaderBar";
 
 type Lancamento = {
   id: string;
@@ -145,6 +146,30 @@ export default function LancamentosPage() {
     });
   }, [filtro, lancamentos, planoContaSelecionado, centroCustoSelecionado, documentoFiltro]);
 
+  const formatadorMoeda = useMemo(
+    () => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }),
+    []
+  );
+
+  const resumoOperacional = useMemo(() => {
+    const entradas = dadosFiltrados.filter((item) => item.tipo === "Entrada");
+    const saidas = dadosFiltrados.filter((item) => item.tipo === "Saída");
+    const totalEntradas = entradas.reduce((total, item) => total + Math.abs(item.valor), 0);
+    const totalSaidas = saidas.reduce((total, item) => total + Math.abs(item.valor), 0);
+    const saldo = totalEntradas - totalSaidas;
+    const pendentes = dadosFiltrados.filter((item) => item.status === "pendente").length;
+    const confirmados = dadosFiltrados.filter((item) => item.status === "confirmado").length;
+
+    return {
+      totalEntradas,
+      totalSaidas,
+      saldo,
+      pendentes,
+      confirmados,
+      total: dadosFiltrados.length,
+    };
+  }, [dadosFiltrados]);
+
   const handleNovo = () => {
     setModo("novo");
     setSelecionado(null);
@@ -208,11 +233,11 @@ export default function LancamentosPage() {
   return (
     <LayoutShell>
       <div className="page-container">
-        <FinanceiroPageHeader
-          titulo="Lançamentos (Caixa)"
-          subtitulo="Financeiro | Contas a pagar e receber"
-          onNovo={handleNovo}
-          codigoAjuda="FIN_LANCAMENTOS"
+        <HeaderBar
+          codigoTela="FIN_LANCAMENTOS"
+          nomeTela="Lançamentos (Caixa)"
+          caminhoRota="/financeiro/lancamentos"
+          modulo="Financeiro"
         />
 
         <main className="page-content-card space-y-4">
@@ -291,6 +316,54 @@ export default function LancamentosPage() {
                     placeholder="Número ou referência"
                   />
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="panel">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Resumo operacional</p>
+                <h3 className="text-lg font-bold text-gray-900">Indicadores com dados reais filtrados</h3>
+                <p className="text-sm text-gray-600">
+                  Valores atualizados automaticamente conforme a empresa ativa e filtros aplicados.
+                </p>
+              </div>
+              <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                {resumoOperacional.total} lançamentos
+              </span>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Entradas</p>
+                <p className="mt-2 text-2xl font-bold text-gray-900">
+                  {formatadorMoeda.format(resumoOperacional.totalEntradas)}
+                </p>
+                <p className="mt-1 text-xs text-gray-600">{resumoOperacional.confirmados} confirmados</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Saídas</p>
+                <p className="mt-2 text-2xl font-bold text-gray-900">
+                  {formatadorMoeda.format(resumoOperacional.totalSaidas)}
+                </p>
+                <p className="mt-1 text-xs text-gray-600">{resumoOperacional.pendentes} pendentes</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Saldo</p>
+                <p
+                  className={`mt-2 text-2xl font-bold ${
+                    resumoOperacional.saldo >= 0 ? "text-green-600" : "text-red-600"
+                  }`}
+                >
+                  {formatadorMoeda.format(resumoOperacional.saldo)}
+                </p>
+                <p className="mt-1 text-xs text-gray-600">Diferença entre entradas e saídas</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pendências</p>
+                <p className="mt-2 text-2xl font-bold text-gray-900">{resumoOperacional.pendentes}</p>
+                <p className="mt-1 text-xs text-gray-600">Lançamentos aguardando confirmação</p>
               </div>
             </div>
           </section>
