@@ -96,7 +96,7 @@ export default function DrePage() {
 
   return (
     <LayoutShell>
-      <div className="page-container">
+      <div className="page-container financeiro-page">
         <HeaderBar
           nomeTela="Relatório DRE"
           codigoTela="FIN_DRE"
@@ -107,25 +107,27 @@ export default function DrePage() {
         <main className="page-content-card space-y-4">
           <section className="panel">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <label className="text-sm font-semibold text-gray-700">
-                Período inicial
+              <div className="form-group">
+                <label htmlFor="dre-inicial">Período inicial</label>
                 <input
+                  id="dre-inicial"
                   type="date"
-                  className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
+                  className="form-input"
                   value={periodoInicial}
                   onChange={(e) => setPeriodoInicial(e.target.value)}
                 />
-              </label>
+              </div>
 
-              <label className="text-sm font-semibold text-gray-700">
-                Período final
+              <div className="form-group">
+                <label htmlFor="dre-final">Período final</label>
                 <input
+                  id="dre-final"
                   type="date"
-                  className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
+                  className="form-input"
                   value={periodoFinal}
                   onChange={(e) => setPeriodoFinal(e.target.value)}
                 />
-              </label>
+              </div>
             </div>
             <p className="text-xs text-gray-600">
               Valores são exibidos como absolutos, mas receitas somam e despesas diminuem o resultado. Contas que exigem centro de custo devem ser lançadas com FIN_CENTRO_CUSTO_ID preenchido.

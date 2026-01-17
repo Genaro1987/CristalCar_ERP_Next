@@ -232,12 +232,12 @@ export default function LancamentosPage() {
 
   return (
     <LayoutShell>
-      <div className="page-container">
+      <div className="page-container financeiro-page">
         <HeaderBar
           codigoTela="FIN_LANCAMENTOS"
           nomeTela="Lançamentos (Caixa)"
           caminhoRota="/financeiro/lancamentos"
-          modulo="Financeiro"
+          modulo="FINANCEIRO"
         />
 
         <main className="page-content-card space-y-4">

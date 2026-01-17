@@ -1098,6 +1098,13 @@ a {
   margin: 0;
 }
 
+.financeiro-page .page-header-card,
+.financeiro-page .page-content-card {
+  width: 95%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .page-header-wrapper {
   padding: 0;
 }

@@ -1,10 +1,10 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
+import { HeaderBar } from "@/components/HeaderBar";
 import React, { useMemo, useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
-import { FinanceiroPageHeader } from "../_components/financeiro-layout";
 
 type ResumoCarteira = {
   empresa: string;
@@ -84,36 +84,41 @@ export default function FinanceiroDashboardPage() {
 
   return (
     <LayoutShell>
-      <div className="page-container">
-        <FinanceiroPageHeader
-          titulo="Dashboard Financeiro"
-          subtitulo="Financeiro | Consolidação de saldos"
-          onNovo={() => undefined}
-          codigoAjuda="FIN_DASHBOARD"
+      <div className="page-container financeiro-page">
+        <HeaderBar
+          nomeTela="Dashboard Financeiro"
+          codigoTela="FIN_DASHBOARD"
+          caminhoRota="/financeiro/dashboard"
+          modulo="FINANCEIRO"
         />
 
         <main className="page-content-card space-y-4">
           <section className="panel">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="space-y-1 text-sm font-semibold text-gray-700">
-                Empresa
-                <div className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-800">
-                  {nomeEmpresa}
-                </div>
-              </div>
-              <label className="space-y-1 text-sm font-semibold text-gray-700">
-                Período
+              <div className="form-group">
+                <label htmlFor="dashboard-empresa">Empresa</label>
                 <input
+                  id="dashboard-empresa"
+                  type="text"
+                  value={nomeEmpresa}
+                  readOnly
+                  className="form-input bg-gray-50 text-gray-800"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="dashboard-periodo">Período</label>
+                <input
+                  id="dashboard-periodo"
                   type="month"
                   value={periodo}
                   onChange={(e) => setPeriodo(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                  className="form-input"
                 />
-              </label>
+              </div>
               <div className="flex items-end justify-end">
                 <button
                   type="button"
-                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                  className="button button-secondary"
                 >
                   Exportar resumo
                 </button>

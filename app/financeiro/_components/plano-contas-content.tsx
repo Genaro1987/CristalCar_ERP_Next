@@ -193,7 +193,7 @@ export function PlanoContasContent() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+              className="button button-secondary button-compact"
               onClick={() => setSelecionadoId(item.id)}
             >
               Ver detalhes
@@ -211,7 +211,7 @@ export function PlanoContasContent() {
 
   return (
     <LayoutShell>
-      <div className="page-container">
+      <div className="page-container financeiro-page">
         <HeaderBar
           nomeTela="Plano de Contas"
           codigoTela="FIN001_PLANO_CONTA"

@@ -1,13 +1,13 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
+import { HeaderBar } from "@/components/HeaderBar";
 import { useMemo, useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import {
   BarraFiltros,
   FiltroPadrao,
-  FinanceiroPageHeader,
   ModalOverlay,
   SplitView,
 } from "../_components/financeiro-layout";
@@ -125,27 +125,27 @@ export default function CentroCustoPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+              className="button button-secondary button-compact"
               onClick={handleNovo}
             >
               Novo filho
             </button>
             <button
               type="button"
-              className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+              className="button button-secondary button-compact"
               onClick={() => handleEditar(item)}
             >
               Editar
             </button>
             <button
               type="button"
-              className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-200"
+              className="button button-secondary button-compact"
             >
               Inativar
             </button>
             <button
               type="button"
-              className="rounded-lg bg-orange-500 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-orange-600"
+              className="button button-primary button-compact"
               onClick={() => setSelecionado(item)}
             >
               Ver detalhes
@@ -163,17 +163,32 @@ export default function CentroCustoPage() {
 
   return (
     <LayoutShell>
-      <div className="page-container">
-        <FinanceiroPageHeader
-          titulo="Centros de Custo"
-          subtitulo="Financeiro | Estrutura analítica"
-          onNovo={handleNovo}
-          codigoAjuda="FIN_CENTRO_CUSTO"
+      <div className="page-container financeiro-page">
+        <HeaderBar
+          nomeTela="Centros de Custo"
+          codigoTela="FIN_CENTRO_CUSTO"
+          caminhoRota="/financeiro/centro-custo"
+          modulo="FINANCEIRO"
         />
 
         <main className="page-content-card space-y-4">
           <section className="panel">
-            <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cadastro financeiro</p>
+                <h2 className="text-lg font-bold text-gray-900">Estrutura de centros de custo</h2>
+                <p className="text-sm text-gray-600">
+                  Organize agrupamentos e mantenha a hierarquia alinhada ao orçamento da empresa.
+                </p>
+              </div>
+              <button type="button" className="button button-primary" onClick={handleNovo}>
+                Novo centro de custo
+              </button>
+            </div>
+
+            <div className="mt-4">
+              <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
+            </div>
           </section>
 
           <section className="panel">
@@ -238,7 +253,7 @@ export default function CentroCustoPage() {
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
-                          className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+                          className="button button-secondary"
                           onClick={() => handleEditar(selecionado)}
                         >
                           Editar centro
@@ -264,34 +279,33 @@ export default function CentroCustoPage() {
         titulo={modoEdicao === "novo" ? "Novo centro de custo" : "Editar centro de custo"}
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label className="space-y-1 text-sm font-semibold text-gray-700">
-            Nome
+          <div className="form-group">
+            <label htmlFor="centro-nome">Nome</label>
             <input
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+              id="centro-nome"
+              className="form-input"
               placeholder="Ex: Operações Norte"
             />
-          </label>
-          <label className="space-y-1 text-sm font-semibold text-gray-700">
-            Código
-            <input
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
-              placeholder="02.04"
-            />
-          </label>
-          <label className="space-y-1 text-sm font-semibold text-gray-700">
-            Status
-            <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none">
+          </div>
+          <div className="form-group">
+            <label htmlFor="centro-codigo">Código</label>
+            <input id="centro-codigo" className="form-input" placeholder="02.04" />
+          </div>
+          <div className="form-group">
+            <label htmlFor="centro-status">Status</label>
+            <select id="centro-status" className="form-input">
               <option>Ativo</option>
               <option>Inativo</option>
             </select>
-          </label>
-          <label className="md:col-span-2 space-y-1 text-sm font-semibold text-gray-700">
-            Observações
+          </div>
+          <div className="form-group md:col-span-2">
+            <label htmlFor="centro-observacao">Observações</label>
             <textarea
-              className="min-h-[100px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+              id="centro-observacao"
+              className="form-input min-h-[100px]"
               placeholder="Regras de rateio, aprovadores ou integrações esperadas"
             />
-          </label>
+          </div>
         </div>
       </ModalOverlay>
     </LayoutShell>
