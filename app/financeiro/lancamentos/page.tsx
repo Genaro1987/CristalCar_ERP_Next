@@ -385,8 +385,8 @@ export default function LancamentosPage() {
               <span className="rounded bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">ID_EMPRESA obrigatório</span>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-dashed border-gray-200 bg-white text-sm">
-              <table className="min-w-full divide-y divide-gray-200">
+            <div className="financeiro-table-wrapper overflow-x-auto rounded-lg border border-dashed border-gray-200 bg-white text-sm">
+              <table className="financeiro-table min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                   <tr>
                     <th className="px-4 py-3 text-left">Data</th>
