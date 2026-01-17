@@ -5,6 +5,7 @@ import { HeaderBar } from "@/components/HeaderBar";
 import { useMemo, useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
+import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 
 interface DreLinha {
   id: number;
@@ -52,6 +53,12 @@ function TreeValores({ nodes }: { nodes: DreLinha[] }) {
 export default function DrePage() {
   useRequerEmpresaSelecionada();
   const { empresa } = useEmpresaSelecionada();
+  const caminhoRota = "/financeiro/dre";
+  const { tela } = useTelaFinanceira(caminhoRota);
+  const codigoTela = tela?.CODIGO_TELA ?? "FIN_DRE";
+  const nomeTela = tela?.NOME_TELA ?? "Relatório DRE";
+  const moduloTela = tela?.MODULO ?? "FINANCEIRO";
+  const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const [periodoInicial, setPeriodoInicial] = useState<string>("");
   const [periodoFinal, setPeriodoFinal] = useState<string>("");
@@ -98,10 +105,10 @@ export default function DrePage() {
     <LayoutShell>
       <div className="page-container financeiro-page">
         <HeaderBar
-          nomeTela="Relatório DRE"
-          codigoTela="FIN_DRE"
-          caminhoRota="/financeiro/dre"
-          modulo="FINANCEIRO"
+          nomeTela={nomeTela}
+          codigoTela={codigoTela}
+          caminhoRota={caminhoTela}
+          modulo={moduloTela}
         />
 
         <main className="page-content-card space-y-4">

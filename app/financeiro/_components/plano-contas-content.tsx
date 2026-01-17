@@ -6,6 +6,7 @@ import { NotificationBar } from "@/components/NotificationBar";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 
 import { BarraFiltros, type FiltroPadrao, type StatusFiltro } from "./financeiro-layout";
 
@@ -82,6 +83,12 @@ function filtrarArvore(dados: PlanoContaNode[], filtro: FiltroPadrao): PlanoCont
 export function PlanoContasContent() {
   const { empresa, carregando } = useEmpresaSelecionada();
   useRequerEmpresaSelecionada();
+  const caminhoRota = "/financeiro/plano-contas";
+  const { tela } = useTelaFinanceira(caminhoRota);
+  const codigoTela = tela?.CODIGO_TELA ?? "FIN001_PLANO_CONTA";
+  const nomeTela = tela?.NOME_TELA ?? "Plano de Contas";
+  const moduloTela = tela?.MODULO ?? "FINANCEIRO";
+  const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const [filtro, setFiltro] = useState<FiltroPadrao>({
     busca: "",
@@ -213,10 +220,10 @@ export function PlanoContasContent() {
     <LayoutShell>
       <div className="page-container financeiro-page">
         <HeaderBar
-          nomeTela="Plano de Contas"
-          codigoTela="FIN001_PLANO_CONTA"
-          caminhoRota="/financeiro/plano-contas"
-          modulo="FINANCEIRO"
+          nomeTela={nomeTela}
+          codigoTela={codigoTela}
+          caminhoRota={caminhoTela}
+          modulo={moduloTela}
         />
 
         <main className="page-content-card space-y-4">
