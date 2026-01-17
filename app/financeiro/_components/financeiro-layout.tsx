@@ -68,9 +68,15 @@ interface BarraFiltrosProps {
   filtro: FiltroPadrao;
   onFiltroChange: (novoFiltro: Partial<FiltroPadrao>) => void;
   exibirNatureza?: boolean;
+  exibirBusca?: boolean;
 }
 
-export function BarraFiltros({ filtro, onFiltroChange, exibirNatureza = false }: BarraFiltrosProps) {
+export function BarraFiltros({
+  filtro,
+  onFiltroChange,
+  exibirNatureza = false,
+  exibirBusca = true,
+}: BarraFiltrosProps) {
   const opcoesStatus = useMemo(
     () => [
       { label: "Todos", value: "todos" },
@@ -82,18 +88,20 @@ export function BarraFiltros({ filtro, onFiltroChange, exibirNatureza = false }:
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div className="form-group md:col-span-2">
-          <label htmlFor="financeiro-busca">Busca</label>
-          <input
-            id="financeiro-busca"
-            type="text"
-            value={filtro.busca}
-            onChange={(e) => onFiltroChange({ busca: e.target.value })}
-            placeholder="Nome, código ou palavra-chave"
-            className="form-input"
-          />
-        </div>
+      <div className={`grid grid-cols-1 gap-4 ${exibirBusca ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
+        {exibirBusca ? (
+          <div className="form-group md:col-span-2">
+            <label htmlFor="financeiro-busca">Busca</label>
+            <input
+              id="financeiro-busca"
+              type="text"
+              value={filtro.busca}
+              onChange={(e) => onFiltroChange({ busca: e.target.value })}
+              placeholder="Nome, código ou palavra-chave"
+              className="form-input"
+            />
+          </div>
+        ) : null}
 
         <div className="form-group">
           <label htmlFor="financeiro-status">Status</label>
