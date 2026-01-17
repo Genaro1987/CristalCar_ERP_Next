@@ -99,6 +99,7 @@ export function PlanoContasContent() {
   const [selecionadoId, setSelecionadoId] = useState<number | null>(null);
   const [carregandoLista, setCarregandoLista] = useState(false);
   const [erroLista, setErroLista] = useState<string | null>(null);
+  const [consideraDre, setConsideraDre] = useState(false);
 
   const headersPadrao = useMemo<HeadersInit>(() => {
     const headers: Record<string, string> = {};
@@ -205,6 +206,9 @@ export function PlanoContasContent() {
             >
               Ver detalhes
             </button>
+            <button type="button" className="button button-secondary button-compact">
+              Editar conta
+            </button>
           </div>
         </div>
         {item.filhos.length > 0 ? (
@@ -232,9 +236,117 @@ export function PlanoContasContent() {
           <section className="panel">
             <header className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  {empresa?.nomeFantasia ?? "Empresa"}
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cadastro principal</p>
+                <h2 className="text-xl font-bold text-gray-900">Plano de contas oficial</h2>
+                <p className="text-sm text-gray-600">
+                  Defina as contas sintéticas e analíticas para organizar lançamentos e a DRE do financeiro.
                 </p>
+              </div>
+            </header>
+
+            <form className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div className="form-group">
+                  <label htmlFor="plano-nivel">Nível</label>
+                  <input id="plano-nivel" type="number" min={1} className="form-input" placeholder="Ex.: 1" />
+                </div>
+                <div className="form-group lg:col-span-2">
+                  <label htmlFor="plano-descricao">Descrição</label>
+                  <input
+                    id="plano-descricao"
+                    type="text"
+                    className="form-input"
+                    placeholder="Informe a descrição oficial da conta"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div className="form-group">
+                  <label htmlFor="plano-tipo">Tipo de conta</label>
+                  <select id="plano-tipo" className="form-input">
+                    <option value="SINTETICA">Sintética</option>
+                    <option value="ANALITICA">Analítica</option>
+                  </select>
+                  <p className="text-xs text-gray-500">Apenas contas analíticas recebem lançamento.</p>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="plano-natureza">Natureza</label>
+                  <select id="plano-natureza" className="form-input">
+                    <option value="RECEITA">Receita</option>
+                    <option value="DESPESA">Despesa</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="plano-status">Status</label>
+                  <select id="plano-status" className="form-input">
+                    <option value="ATIVA">Ativa</option>
+                    <option value="INATIVA">Inativa</option>
+                  </select>
+                  <p className="text-xs text-gray-500">Contas inativas deixam de aparecer para lançamentos.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div className="form-group">
+                  <label htmlFor="plano-conta-dre">Conta do DRE vinculada</label>
+                  <select id="plano-conta-dre" className="form-input">
+                    <option value="">Selecione a conta do DRE</option>
+                    <option value="DRE_RECEITA_BRUTA">Receita bruta</option>
+                    <option value="DRE_CUSTOS">Custos</option>
+                    <option value="DRE_DESPESAS">Despesas operacionais</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="plano-considera-dre">Considerar no DRE</label>
+                  <select
+                    id="plano-considera-dre"
+                    className="form-input"
+                    value={consideraDre ? "SIM" : "NAO"}
+                    onChange={(event) => setConsideraDre(event.target.value === "SIM")}
+                  >
+                    <option value="SIM">Sim</option>
+                    <option value="NAO">Não</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="plano-data-inclusao">Data de inclusão</label>
+                  <input id="plano-data-inclusao" type="date" className="form-input" />
+                  <p className="text-xs text-gray-500">
+                    Evita lançamentos com data anterior à criação da conta.
+                  </p>
+                </div>
+              </div>
+
+              {consideraDre ? (
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                  <div className="form-group lg:col-span-2">
+                    <label htmlFor="plano-rubrica-dre">Rubrica do DRE relacionada</label>
+                    <select id="plano-rubrica-dre" className="form-input">
+                      <option value="">Selecione a rubrica do DRE</option>
+                      <option value="RUBRICA_RECEITAS">Receitas operacionais</option>
+                      <option value="RUBRICA_DESPESAS">Despesas administrativas</option>
+                      <option value="RUBRICA_IMPOSTOS">Impostos e contribuições</option>
+                    </select>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" className="button button-primary">
+                  Salvar conta
+                </button>
+                <button type="button" className="button button-secondary">
+                  Limpar formulário
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section className="panel">
+            <header className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Estrutura financeira</p>
                 <h2 className="text-xl font-bold text-gray-900">Hierarquia do plano de contas</h2>
                 <p className="text-sm text-gray-600">
                   {carregandoLista
@@ -254,6 +366,7 @@ export function PlanoContasContent() {
                 filtro={filtro}
                 onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))}
                 exibirNatureza
+                exibirBusca={false}
               />
 
               <div className="space-y-3">
@@ -310,6 +423,11 @@ export function PlanoContasContent() {
                     <p className="text-xs uppercase tracking-wide text-gray-500">Código do pai</p>
                     <p className="font-semibold text-gray-900">{selecionado.paiId ? `#${selecionado.paiId}` : "Raiz"}</p>
                   </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" className="button button-secondary">
+                    Editar conta
+                  </button>
                 </div>
               </div>
             ) : (
