@@ -209,8 +209,8 @@ export default function FinanceiroDashboardPage() {
                 </div>
                 <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">Multiempresa</span>
               </div>
-              <div className="mt-3 overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <div className="financeiro-table-wrapper mt-3 overflow-x-auto">
+                <table className="financeiro-table min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                     <tr>
                       <th className="px-4 py-3 text-left">Empresa</th>

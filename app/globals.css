@@ -315,6 +315,13 @@ a {
   margin: 0 auto;
 }
 
+.financeiro-page .panel {
+  width: 100%;
+  max-width: none;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .banco-horas-page {
   background-color: transparent;
   box-shadow: none;
@@ -1100,9 +1107,19 @@ a {
 
 .financeiro-page .page-header-card,
 .financeiro-page .page-content-card {
-  width: 95%;
+  width: 100%;
   margin-left: auto;
   margin-right: auto;
+}
+
+.financeiro-page .financeiro-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.financeiro-page .financeiro-table {
+  width: 100%;
+  min-width: 640px;
 }
 
 .page-header-wrapper {
