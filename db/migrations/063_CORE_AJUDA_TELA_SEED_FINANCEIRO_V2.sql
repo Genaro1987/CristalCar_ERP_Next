@@ -5,6 +5,11 @@
 -- ===================================================================
 -- INSTRUÇÕES DE AJUDA PARA PLANO DE CONTAS
 -- ===================================================================
+WITH tela AS (
+  SELECT ID_TELA
+  FROM CORE_TELA
+  WHERE CODIGO_TELA = 'FIN_PLANO_CONTA'
+)
 INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ID_AJUDA,
   ID_TELA,
@@ -19,12 +24,12 @@ INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ATIVA,
   DATA_CADASTRO
 )
-VALUES (
+SELECT
   COALESCE(
-    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_PLANO_CONTA')),
+    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = tela.ID_TELA),
     (SELECT COALESCE(MAX(ID_AJUDA), 0) + 1 FROM CORE_AJUDA_TELA)
   ),
-  (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_PLANO_CONTA'),
+  tela.ID_TELA,
   'Estruturar e organizar o plano de contas financeiro da empresa, classificando receitas e despesas de forma hierárquica.',
   'Utilize esta tela no início da implantação do sistema ou quando precisar criar/editar contas contábeis. É a base para todos os lançamentos financeiros.',
   'O plano de contas é organizado hierarquicamente, permitindo criar contas pai e contas filhas. Cada conta possui código único, natureza (RECEITA ou DESPESA) e pode estar ativa ou inativa.',
@@ -49,11 +54,16 @@ VALUES (
 - Inativar contas que possuem lançamentos vinculados',
   1,
   datetime('now')
-);
+FROM tela;
 
 -- ===================================================================
 -- INSTRUÇÕES DE AJUDA PARA CENTRO DE CUSTO
 -- ===================================================================
+WITH tela AS (
+  SELECT ID_TELA
+  FROM CORE_TELA
+  WHERE CODIGO_TELA = 'FIN_CENTRO_CUSTO'
+)
 INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ID_AJUDA,
   ID_TELA,
@@ -68,12 +78,12 @@ INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ATIVA,
   DATA_CADASTRO
 )
-VALUES (
+SELECT
   COALESCE(
-    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_CENTRO_CUSTO')),
+    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = tela.ID_TELA),
     (SELECT COALESCE(MAX(ID_AJUDA), 0) + 1 FROM CORE_AJUDA_TELA)
   ),
-  (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_CENTRO_CUSTO'),
+  tela.ID_TELA,
   'Criar e gerenciar centros de custo para permitir a análise de despesas e receitas por departamento, projeto ou área da empresa.',
   'Use quando precisar organizar custos por áreas (Administrativo, Vendas, Produção, etc.) ou quando o plano de contas exigir centro de custo obrigatório.',
   'Centros de custo são organizados hierarquicamente. Podem representar departamentos, projetos, filiais ou qualquer divisão relevante para análise gerencial.',
@@ -95,11 +105,16 @@ VALUES (
 - Duplicar códigos',
   1,
   datetime('now')
-);
+FROM tela;
 
 -- ===================================================================
 -- INSTRUÇÕES DE AJUDA PARA ESTRUTURA DO DRE
 -- ===================================================================
+WITH tela AS (
+  SELECT ID_TELA
+  FROM CORE_TELA
+  WHERE CODIGO_TELA = 'FIN_ESTRUTURA_DRE'
+)
 INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ID_AJUDA,
   ID_TELA,
@@ -114,12 +129,12 @@ INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ATIVA,
   DATA_CADASTRO
 )
-VALUES (
+SELECT
   COALESCE(
-    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_ESTRUTURA_DRE')),
+    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = tela.ID_TELA),
     (SELECT COALESCE(MAX(ID_AJUDA), 0) + 1 FROM CORE_AJUDA_TELA)
   ),
-  (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_ESTRUTURA_DRE'),
+  tela.ID_TELA,
   'Definir a estrutura do Demonstrativo de Resultado do Exercício (DRE) e vincular contas do plano de contas às linhas do relatório.',
   'Configure antes de gerar relatórios DRE. Defina a estrutura uma vez e mantenha atualizada conforme necessário.',
   'O DRE é estruturado em linhas hierárquicas (Receita Bruta, Deduções, Lucro Líquido, etc.). Cada linha pode ter contas do plano de contas vinculadas.',
@@ -145,11 +160,16 @@ VALUES (
 - Deixar linhas importantes sem contas vinculadas',
   1,
   datetime('now')
-);
+FROM tela;
 
 -- ===================================================================
 -- INSTRUÇÕES DE AJUDA PARA RELATÓRIO DRE
 -- ===================================================================
+WITH tela AS (
+  SELECT ID_TELA
+  FROM CORE_TELA
+  WHERE CODIGO_TELA = 'FIN_DRE'
+)
 INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ID_AJUDA,
   ID_TELA,
@@ -164,12 +184,12 @@ INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ATIVA,
   DATA_CADASTRO
 )
-VALUES (
+SELECT
   COALESCE(
-    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_DRE')),
+    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = tela.ID_TELA),
     (SELECT COALESCE(MAX(ID_AJUDA), 0) + 1 FROM CORE_AJUDA_TELA)
   ),
-  (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_DRE'),
+  tela.ID_TELA,
   'Visualizar e analisar o Demonstrativo de Resultado do Exercício (DRE) com dados consolidados de receitas, despesas e resultados.',
   'Use mensalmente ou quando precisar analisar a performance financeira da empresa em um período específico.',
   'O relatório DRE consolida todos os lançamentos financeiros conforme a estrutura configurada, apresentando receitas, custos, despesas e resultado final.',
@@ -188,11 +208,16 @@ VALUES (
 - Comparar períodos sem considerar sazonalidade',
   1,
   datetime('now')
-);
+FROM tela;
 
 -- ===================================================================
 -- INSTRUÇÕES DE AJUDA PARA LANÇAMENTOS FINANCEIROS
 -- ===================================================================
+WITH tela AS (
+  SELECT ID_TELA
+  FROM CORE_TELA
+  WHERE CODIGO_TELA = 'FIN_LANCAMENTOS'
+)
 INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ID_AJUDA,
   ID_TELA,
@@ -207,12 +232,12 @@ INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ATIVA,
   DATA_CADASTRO
 )
-VALUES (
+SELECT
   COALESCE(
-    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_LANCAMENTOS')),
+    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = tela.ID_TELA),
     (SELECT COALESCE(MAX(ID_AJUDA), 0) + 1 FROM CORE_AJUDA_TELA)
   ),
-  (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_LANCAMENTOS'),
+  tela.ID_TELA,
   'Registrar todas as movimentações financeiras da empresa (entradas e saídas), vinculando-as ao plano de contas e centros de custo.',
   'Use diariamente para registrar pagamentos, recebimentos e demais movimentações financeiras.',
   'Cada lançamento representa uma entrada ou saída de dinheiro, classificada em uma conta contábil e opcionalmente em um centro de custo.',
@@ -243,11 +268,16 @@ VALUES (
 - Não informar histórico claro',
   1,
   datetime('now')
-);
+FROM tela;
 
 -- ===================================================================
 -- INSTRUÇÕES DE AJUDA PARA DASHBOARD FINANCEIRO
 -- ===================================================================
+WITH tela AS (
+  SELECT ID_TELA
+  FROM CORE_TELA
+  WHERE CODIGO_TELA = 'FIN_DASHBOARD'
+)
 INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ID_AJUDA,
   ID_TELA,
@@ -262,12 +292,12 @@ INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ATIVA,
   DATA_CADASTRO
 )
-VALUES (
+SELECT
   COALESCE(
-    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_DASHBOARD')),
+    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = tela.ID_TELA),
     (SELECT COALESCE(MAX(ID_AJUDA), 0) + 1 FROM CORE_AJUDA_TELA)
   ),
-  (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_DASHBOARD'),
+  tela.ID_TELA,
   'Visualizar indicadores financeiros consolidados, incluindo saldo, entradas, saídas, margem e fluxo projetado.',
   'Use diariamente para acompanhar a saúde financeira da empresa e tomar decisões gerenciais rápidas.',
   'O dashboard apresenta resumo financeiro consolidado por empresa e período, calculando automaticamente indicadores como margem, burn rate e fluxo projetado.',
@@ -287,11 +317,16 @@ VALUES (
 - Não considerar sazonalidade do negócio',
   1,
   datetime('now')
-);
+FROM tela;
 
 -- ===================================================================
 -- INSTRUÇÕES DE AJUDA PARA OBJETIVOS FINANCEIROS
 -- ===================================================================
+WITH tela AS (
+  SELECT ID_TELA
+  FROM CORE_TELA
+  WHERE CODIGO_TELA = 'FIN_OBJETIVOS'
+)
 INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ID_AJUDA,
   ID_TELA,
@@ -306,12 +341,12 @@ INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ATIVA,
   DATA_CADASTRO
 )
-VALUES (
+SELECT
   COALESCE(
-    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_OBJETIVOS')),
+    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = tela.ID_TELA),
     (SELECT COALESCE(MAX(ID_AJUDA), 0) + 1 FROM CORE_AJUDA_TELA)
   ),
-  (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_OBJETIVOS'),
+  tela.ID_TELA,
   'Definir metas financeiras por período, com responsáveis e acompanhamento da evolução.',
   'Use ao planejar metas mensais, trimestrais ou anuais para orientar o desempenho financeiro da empresa.',
   'Cada objetivo registra o título, período, meta e responsável. Pode ser ativado/inativado e recebe observações para contextualizar a meta.',
@@ -333,11 +368,16 @@ VALUES (
 - Informar valores fora da realidade do negócio',
   1,
   datetime('now')
-);
+FROM tela;
 
 -- ===================================================================
 -- INSTRUÇÕES DE AJUDA PARA OBJETIVOS SEMANAIS
 -- ===================================================================
+WITH tela AS (
+  SELECT ID_TELA
+  FROM CORE_TELA
+  WHERE CODIGO_TELA = 'FIN_OBJETIVOS_SEMANAIS'
+)
 INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ID_AJUDA,
   ID_TELA,
@@ -352,12 +392,12 @@ INSERT OR REPLACE INTO CORE_AJUDA_TELA (
   ATIVA,
   DATA_CADASTRO
 )
-VALUES (
+SELECT
   COALESCE(
-    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_OBJETIVOS_SEMANAIS')),
+    (SELECT ID_AJUDA FROM CORE_AJUDA_TELA WHERE ID_TELA = tela.ID_TELA),
     (SELECT COALESCE(MAX(ID_AJUDA), 0) + 1 FROM CORE_AJUDA_TELA)
   ),
-  (SELECT ID_TELA FROM CORE_TELA WHERE CODIGO_TELA = 'FIN_OBJETIVOS_SEMANAIS'),
+  tela.ID_TELA,
   'Desdobrar objetivos financeiros em metas semanais para acompanhamento mais próximo do resultado.',
   'Use quando precisar detalhar um objetivo em metas por semana e acompanhar o status (pendente, em andamento, concluído).',
   'Cada objetivo semanal pertence a um objetivo principal e registra a semana, a meta semanal e o status de execução.',
@@ -380,4 +420,4 @@ VALUES (
 - Valores semanais inconsistentes com a meta global',
   1,
   datetime('now')
-);
+FROM tela;
