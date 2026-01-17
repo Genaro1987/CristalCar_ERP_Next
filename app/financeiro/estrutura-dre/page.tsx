@@ -5,6 +5,7 @@ import { HeaderBar } from "@/components/HeaderBar";
 import { useMemo, useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
+import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 import {
   BarraFiltros,
   FiltroPadrao,
@@ -57,6 +58,12 @@ function filtrarDre(dados: LinhaDre[], filtro: FiltroPadrao): LinhaDre[] {
 export default function EstruturaDrePage() {
   useRequerEmpresaSelecionada();
   const { empresa } = useEmpresaSelecionada();
+  const caminhoRota = "/financeiro/estrutura-dre";
+  const { tela } = useTelaFinanceira(caminhoRota);
+  const codigoTela = tela?.CODIGO_TELA ?? "FIN_ESTRUTURA_DRE";
+  const nomeTela = tela?.NOME_TELA ?? "Estrutura do DRE";
+  const moduloTela = tela?.MODULO ?? "FINANCEIRO";
+  const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const [filtro, setFiltro] = useState<FiltroPadrao>({ busca: "", status: "ativos" });
   const [selecionada, setSelecionada] = useState<LinhaDre | null>(null);
@@ -199,10 +206,10 @@ export default function EstruturaDrePage() {
     <LayoutShell>
       <div className="page-container financeiro-page">
         <HeaderBar
-          nomeTela="Estrutura do DRE"
-          codigoTela="FIN_ESTRUTURA_DRE"
-          caminhoRota="/financeiro/estrutura-dre"
-          modulo="FINANCEIRO"
+          nomeTela={nomeTela}
+          codigoTela={codigoTela}
+          caminhoRota={caminhoTela}
+          modulo={moduloTela}
         />
 
         <main className="page-content-card space-y-4">

@@ -5,6 +5,7 @@ import { HeaderBar } from "@/components/HeaderBar";
 import { useMemo, useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
+import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 import {
   BarraFiltros,
   FiltroPadrao,
@@ -48,6 +49,12 @@ function filtrarCentros(dados: CentroCustoItem[], filtro: FiltroPadrao): CentroC
 export default function CentroCustoPage() {
   useRequerEmpresaSelecionada();
   const { empresa } = useEmpresaSelecionada();
+  const caminhoRota = "/financeiro/centro-custo";
+  const { tela } = useTelaFinanceira(caminhoRota);
+  const codigoTela = tela?.CODIGO_TELA ?? "FIN_CENTRO_CUSTO";
+  const nomeTela = tela?.NOME_TELA ?? "Centros de Custo";
+  const moduloTela = tela?.MODULO ?? "FINANCEIRO";
+  const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const [filtro, setFiltro] = useState<FiltroPadrao>({ busca: "", status: "ativos" });
   const [selecionado, setSelecionado] = useState<CentroCustoItem | null>(null);
@@ -165,10 +172,10 @@ export default function CentroCustoPage() {
     <LayoutShell>
       <div className="page-container financeiro-page">
         <HeaderBar
-          nomeTela="Centros de Custo"
-          codigoTela="FIN_CENTRO_CUSTO"
-          caminhoRota="/financeiro/centro-custo"
-          modulo="FINANCEIRO"
+          nomeTela={nomeTela}
+          codigoTela={codigoTela}
+          caminhoRota={caminhoTela}
+          modulo={moduloTela}
         />
 
         <main className="page-content-card space-y-4">

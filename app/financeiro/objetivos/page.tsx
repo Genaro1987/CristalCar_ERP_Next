@@ -5,6 +5,7 @@ import { HeaderBar } from "@/components/HeaderBar";
 import React, { useEffect, useMemo, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
+import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 import {
   BarraFiltros,
   FiltroPadrao,
@@ -24,6 +25,12 @@ type ObjetivoFinanceiro = {
 export default function ObjetivosPage() {
   useRequerEmpresaSelecionada();
   const { empresa } = useEmpresaSelecionada();
+  const caminhoRota = "/financeiro/objetivos";
+  const { tela } = useTelaFinanceira(caminhoRota);
+  const codigoTela = tela?.CODIGO_TELA ?? "FIN_OBJETIVOS";
+  const nomeTela = tela?.NOME_TELA ?? "Objetivos Financeiros";
+  const moduloTela = tela?.MODULO ?? "FINANCEIRO";
+  const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const [filtro, setFiltro] = useState<FiltroPadrao>({ busca: "", status: "ativos" });
   const [objetivos, setObjetivos] = useState<ObjetivoFinanceiro[]>([]);
@@ -133,10 +140,10 @@ export default function ObjetivosPage() {
     <LayoutShell>
       <div className="page-container financeiro-page">
         <HeaderBar
-          nomeTela="Objetivos Financeiros"
-          codigoTela="FIN_OBJETIVOS"
-          caminhoRota="/financeiro/objetivos"
-          modulo="FINANCEIRO"
+          nomeTela={nomeTela}
+          codigoTela={codigoTela}
+          caminhoRota={caminhoTela}
+          modulo={moduloTela}
         />
 
         <main className="page-content-card space-y-4">

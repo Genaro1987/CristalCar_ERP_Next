@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { ModalOverlay } from "../_components/financeiro-layout";
+import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 
 type ObjetivoSemanal = {
   id: string;
@@ -26,6 +27,12 @@ type ObjetivoOption = {
 export default function ObjetivosSemanaisPage() {
   useRequerEmpresaSelecionada();
   const { empresa } = useEmpresaSelecionada();
+  const caminhoRota = "/financeiro/objetivos-semanais";
+  const { tela } = useTelaFinanceira(caminhoRota);
+  const codigoTela = tela?.CODIGO_TELA ?? "FIN_OBJETIVOS_SEMANAIS";
+  const nomeTela = tela?.NOME_TELA ?? "Objetivos Semanais";
+  const moduloTela = tela?.MODULO ?? "FINANCEIRO";
+  const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const [filtroObjetivo, setFiltroObjetivo] = useState<string>("");
   const [itens, setItens] = useState<ObjetivoSemanal[]>([]);
@@ -143,10 +150,10 @@ export default function ObjetivosSemanaisPage() {
     <LayoutShell>
       <div className="page-container financeiro-page">
         <HeaderBar
-          nomeTela="Objetivos Semanais"
-          codigoTela="FIN_OBJETIVOS_SEMANAIS"
-          caminhoRota="/financeiro/objetivos-semanais"
-          modulo="FINANCEIRO"
+          nomeTela={nomeTela}
+          codigoTela={codigoTela}
+          caminhoRota={caminhoTela}
+          modulo={moduloTela}
         />
 
         <main className="page-content-card space-y-4">

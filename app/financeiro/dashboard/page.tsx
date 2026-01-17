@@ -5,6 +5,7 @@ import { HeaderBar } from "@/components/HeaderBar";
 import React, { useMemo, useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
+import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 
 type ResumoCarteira = {
   empresa: string;
@@ -28,6 +29,12 @@ type Alertas = {
 export default function FinanceiroDashboardPage() {
   useRequerEmpresaSelecionada();
   const { empresa } = useEmpresaSelecionada();
+  const caminhoRota = "/financeiro/dashboard";
+  const { tela } = useTelaFinanceira(caminhoRota);
+  const codigoTela = tela?.CODIGO_TELA ?? "FIN_DASHBOARD";
+  const nomeTela = tela?.NOME_TELA ?? "Dashboard Financeiro";
+  const moduloTela = tela?.MODULO ?? "FINANCEIRO";
+  const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const [periodo, setPeriodo] = useState("");
   const [carteira, setCarteira] = useState<ResumoCarteira[]>([]);
@@ -86,10 +93,10 @@ export default function FinanceiroDashboardPage() {
     <LayoutShell>
       <div className="page-container financeiro-page">
         <HeaderBar
-          nomeTela="Dashboard Financeiro"
-          codigoTela="FIN_DASHBOARD"
-          caminhoRota="/financeiro/dashboard"
-          modulo="FINANCEIRO"
+          nomeTela={nomeTela}
+          codigoTela={codigoTela}
+          caminhoRota={caminhoTela}
+          modulo={moduloTela}
         />
 
         <main className="page-content-card space-y-4">

@@ -6,6 +6,7 @@ import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { BarraFiltros, FiltroPadrao, ModalOverlay } from "../_components/financeiro-layout";
 import { HeaderBar } from "@/components/HeaderBar";
+import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 
 type Lancamento = {
   id: string;
@@ -34,6 +35,12 @@ type CentroCustoOption = {
 export default function LancamentosPage() {
   useRequerEmpresaSelecionada();
   const { empresa } = useEmpresaSelecionada();
+  const caminhoRota = "/financeiro/lancamentos";
+  const { tela } = useTelaFinanceira(caminhoRota);
+  const codigoTela = tela?.CODIGO_TELA ?? "FIN_LANCAMENTOS";
+  const nomeTela = tela?.NOME_TELA ?? "Lançamentos (Caixa)";
+  const moduloTela = tela?.MODULO ?? "FINANCEIRO";
+  const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const [filtro, setFiltro] = useState<FiltroPadrao>({ busca: "", status: "todos" });
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
@@ -234,10 +241,10 @@ export default function LancamentosPage() {
     <LayoutShell>
       <div className="page-container financeiro-page">
         <HeaderBar
-          codigoTela="FIN_LANCAMENTOS"
-          nomeTela="Lançamentos (Caixa)"
-          caminhoRota="/financeiro/lancamentos"
-          modulo="FINANCEIRO"
+          codigoTela={codigoTela}
+          nomeTela={nomeTela}
+          caminhoRota={caminhoTela}
+          modulo={moduloTela}
         />
 
         <main className="page-content-card space-y-4">
