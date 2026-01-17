@@ -1,10 +1,11 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
+import { HeaderBar } from "@/components/HeaderBar";
 import React, { useEffect, useMemo, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
-import { FinanceiroPageHeader, ModalOverlay } from "../_components/financeiro-layout";
+import { ModalOverlay } from "../_components/financeiro-layout";
 
 type ObjetivoSemanal = {
   id: string;
@@ -140,12 +141,12 @@ export default function ObjetivosSemanaisPage() {
 
   return (
     <LayoutShell>
-      <div className="page-container">
-        <FinanceiroPageHeader
-          titulo="Objetivos Semanais"
-          subtitulo="Financeiro | Execução"
-          onNovo={handleNovo}
-          codigoAjuda="FIN_OBJETIVOS_SEMANAIS"
+      <div className="page-container financeiro-page">
+        <HeaderBar
+          nomeTela="Objetivos Semanais"
+          codigoTela="FIN_OBJETIVOS_SEMANAIS"
+          caminhoRota="/financeiro/objetivos-semanais"
+          modulo="FINANCEIRO"
         />
 
         <main className="page-content-card space-y-4">
@@ -156,19 +157,23 @@ export default function ObjetivosSemanaisPage() {
                 <h2 className="text-lg font-bold text-gray-900">Roadmap semanal</h2>
                 <p className="text-sm text-gray-600">Planeje entregas semanais alinhadas ao plano financeiro.</p>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={filtroObjetivo}
-                  onChange={(e) => setFiltroObjetivo(e.target.value)}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
-                  placeholder="Busque pelo nome do objetivo"
-                />
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="form-group">
+                  <label htmlFor="objetivo-filtro">Buscar objetivo</label>
+                  <input
+                    id="objetivo-filtro"
+                    type="text"
+                    value={filtroObjetivo}
+                    onChange={(e) => setFiltroObjetivo(e.target.value)}
+                    className="form-input"
+                    placeholder="Busque pelo nome do objetivo"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={handleNovo}
                   disabled={!podeCriar}
-                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                  className="button button-primary"
                 >
                   Nova semana
                 </button>
@@ -220,14 +225,14 @@ export default function ObjetivosSemanaisPage() {
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
-                        className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+                        className="button button-secondary button-compact"
                         onClick={() => handleEditar(item)}
                       >
                         Editar
                       </button>
                       <button
                         type="button"
-                        className="rounded-lg bg-orange-500 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                        className="button button-primary button-compact"
                       >
                         Atualizar status
                       </button>
@@ -247,13 +252,14 @@ export default function ObjetivosSemanaisPage() {
       >
         <form className="space-y-3" onSubmit={handleSalvar}>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Objetivo
+            <div className="form-group">
+              <label htmlFor="semanal-objetivo">Objetivo</label>
               <select
+                id="semanal-objetivo"
                 name="objetivoId"
                 defaultValue={selecionado?.objetivoId ?? ""}
                 required
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
               >
                 <option value="">Selecione</option>
                 {objetivos.map((objetivo) => (
@@ -262,72 +268,77 @@ export default function ObjetivosSemanaisPage() {
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Semana
+            </div>
+            <div className="form-group">
+              <label htmlFor="semanal-semana">Semana</label>
               <select
+                id="semanal-semana"
                 name="semana"
                 defaultValue={selecionado?.semana}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
               >
                 <option>Semana 1</option>
                 <option>Semana 2</option>
                 <option>Semana 3</option>
                 <option>Semana 4</option>
               </select>
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Meta semanal
+            </div>
+            <div className="form-group">
+              <label htmlFor="semanal-meta">Meta semanal</label>
               <input
+                id="semanal-meta"
                 name="metaSemanal"
                 type="number"
                 defaultValue={selecionado?.metaSemanal}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
                 placeholder="Valor ou percentual"
               />
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Responsável
+            </div>
+            <div className="form-group">
+              <label htmlFor="semanal-responsavel">Responsável</label>
               <input
+                id="semanal-responsavel"
                 name="responsavel"
                 defaultValue={selecionado?.responsavel}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
                 placeholder="Equipe ou pessoa"
               />
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Status
+            </div>
+            <div className="form-group">
+              <label htmlFor="semanal-status">Status</label>
               <select
+                id="semanal-status"
                 name="status"
                 defaultValue={selecionado?.status ?? "pendente"}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
               >
                 <option value="pendente">Pendente</option>
                 <option value="andamento">Em andamento</option>
                 <option value="concluido">Concluído</option>
               </select>
-            </label>
-            <label className="md:col-span-2 space-y-1 text-sm font-semibold text-gray-700">
-              Observações
+            </div>
+            <div className="form-group md:col-span-2">
+              <label htmlFor="semanal-observacao">Observações</label>
               <textarea
+                id="semanal-observacao"
                 name="observacao"
                 defaultValue={selecionado?.observacao}
-                className="min-h-[80px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input min-h-[80px]"
                 placeholder="Alinhe dependências, entregáveis e impactos no caixa"
               />
-            </label>
+            </div>
           </div>
           <div className="flex justify-end gap-3">
             <button
               type="button"
               onClick={() => setModalAberto(false)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+              className="button button-secondary"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+              className="button button-primary"
             >
               Salvar semana
             </button>

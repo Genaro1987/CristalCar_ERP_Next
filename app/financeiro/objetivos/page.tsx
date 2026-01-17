@@ -1,13 +1,13 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
+import { HeaderBar } from "@/components/HeaderBar";
 import React, { useEffect, useMemo, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import {
   BarraFiltros,
   FiltroPadrao,
-  FinanceiroPageHeader,
   ModalOverlay,
 } from "../_components/financeiro-layout";
 
@@ -131,17 +131,32 @@ export default function ObjetivosPage() {
 
   return (
     <LayoutShell>
-      <div className="page-container">
-        <FinanceiroPageHeader
-          titulo="Objetivos Financeiros"
-          subtitulo="Financeiro | Planejamento"
-          onNovo={handleNovo}
-          codigoAjuda="FIN_OBJETIVOS"
+      <div className="page-container financeiro-page">
+        <HeaderBar
+          nomeTela="Objetivos Financeiros"
+          codigoTela="FIN_OBJETIVOS"
+          caminhoRota="/financeiro/objetivos"
+          modulo="FINANCEIRO"
         />
 
         <main className="page-content-card space-y-4">
           <section className="panel">
-            <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((prev) => ({ ...prev, ...novo }))} />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Planejamento</p>
+                <h2 className="text-lg font-bold text-gray-900">Mapa de objetivos financeiros</h2>
+                <p className="text-sm text-gray-600">
+                  Cadastre metas, períodos e responsáveis para acompanhar a execução.
+                </p>
+              </div>
+              <button type="button" className="button button-primary" onClick={handleNovo}>
+                Novo objetivo
+              </button>
+            </div>
+
+            <div className="mt-4">
+              <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((prev) => ({ ...prev, ...novo }))} />
+            </div>
           </section>
 
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -195,14 +210,14 @@ export default function ObjetivosPage() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+                      className="button button-secondary"
                       onClick={() => handleEditar(objetivo)}
                     >
                       Editar objetivo
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                      className="button button-primary"
                     >
                       Aplicar metas semanais
                     </button>
@@ -221,87 +236,94 @@ export default function ObjetivosPage() {
       >
         <form className="space-y-3" onSubmit={handleSalvar}>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Título
+            <div className="form-group">
+              <label htmlFor="objetivo-titulo">Título</label>
               <input
+                id="objetivo-titulo"
                 name="titulo"
                 defaultValue={selecionado?.titulo}
                 required
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
                 placeholder="Ex: Receita mensal"
               />
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Empresa ativa
+            </div>
+            <div className="form-group">
+              <label htmlFor="objetivo-empresa">Empresa ativa</label>
               <input
+                id="objetivo-empresa"
                 value={empresa?.nomeFantasia ?? empresa?.cnpj ?? ""}
                 disabled
-                className="w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-700"
+                className="form-input bg-gray-100 text-gray-700"
               />
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Período de medição
+            </div>
+            <div className="form-group">
+              <label htmlFor="objetivo-periodo">Período de medição</label>
               <select
+                id="objetivo-periodo"
                 name="periodo"
                 defaultValue={selecionado?.periodo}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
               >
                 <option value="Mensal">Mensal</option>
                 <option value="Trimestral">Trimestral</option>
                 <option value="Anual">Anual</option>
               </select>
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Meta
+            </div>
+            <div className="form-group">
+              <label htmlFor="objetivo-meta">Meta</label>
               <input
+                id="objetivo-meta"
                 name="meta"
                 type="number"
                 defaultValue={selecionado?.meta}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
                 placeholder="Valor numérico"
               />
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Responsável
+            </div>
+            <div className="form-group">
+              <label htmlFor="objetivo-responsavel">Responsável</label>
               <input
+                id="objetivo-responsavel"
                 name="responsavel"
                 defaultValue={selecionado?.responsavel}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
                 placeholder="Equipe ou pessoa"
               />
-            </label>
-            <label className="space-y-1 text-sm font-semibold text-gray-700">
-              Status
+            </div>
+            <div className="form-group">
+              <label htmlFor="objetivo-status">Status</label>
               <select
+                id="objetivo-status"
                 name="status"
                 defaultValue={selecionado?.status ?? "ativo"}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input"
               >
                 <option value="ativo">Ativo</option>
                 <option value="inativo">Inativo</option>
               </select>
-            </label>
-            <label className="md:col-span-2 space-y-1 text-sm font-semibold text-gray-700">
-              Observações
+            </div>
+            <div className="form-group md:col-span-2">
+              <label htmlFor="objetivo-observacao">Observações</label>
               <textarea
+                id="objetivo-observacao"
                 name="observacao"
                 defaultValue={selecionado?.observacao}
-                className="min-h-[100px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                className="form-input min-h-[100px]"
                 placeholder="Oriente o time sobre como medir, quem atualiza e onde o resultado impacta o DRE"
               />
-            </label>
+            </div>
           </div>
           <div className="flex justify-end gap-3">
             <button
               type="button"
               onClick={() => setModalAberto(false)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+              className="button button-secondary"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+              className="button button-primary"
             >
               Salvar alterações
             </button>

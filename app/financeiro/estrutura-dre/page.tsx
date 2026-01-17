@@ -1,13 +1,13 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
+import { HeaderBar } from "@/components/HeaderBar";
 import { useMemo, useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import {
   BarraFiltros,
   FiltroPadrao,
-  FinanceiroPageHeader,
   DreSplitView,
   ModalOverlay,
 } from "../_components/financeiro-layout";
@@ -157,27 +157,27 @@ export default function EstruturaDrePage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+              className="button button-secondary button-compact"
               onClick={() => setModalLinha(true)}
             >
               Novo filho
             </button>
             <button
               type="button"
-              className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+              className="button button-secondary button-compact"
               onClick={() => setModalLinha(true)}
             >
               Editar
             </button>
             <button
               type="button"
-              className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-200"
+              className="button button-secondary button-compact"
             >
               Inativar
             </button>
             <button
               type="button"
-              className="rounded-lg bg-orange-500 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-orange-600"
+              className="button button-primary button-compact"
               onClick={() => setSelecionada(item)}
             >
               Ver detalhes
@@ -197,17 +197,32 @@ export default function EstruturaDrePage() {
 
   return (
     <LayoutShell>
-      <div className="page-container">
-        <FinanceiroPageHeader
-          titulo="Estrutura do DRE"
-          subtitulo="Financeiro | Demonstração de resultados"
-          onNovo={handleNovo}
-          codigoAjuda="FIN_ESTRUTURA_DRE"
+      <div className="page-container financeiro-page">
+        <HeaderBar
+          nomeTela="Estrutura do DRE"
+          codigoTela="FIN_ESTRUTURA_DRE"
+          caminhoRota="/financeiro/estrutura-dre"
+          modulo="FINANCEIRO"
         />
 
         <main className="page-content-card space-y-4">
           <section className="panel">
-            <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cadastro financeiro</p>
+                <h2 className="text-lg font-bold text-gray-900">Árvore da estrutura do DRE</h2>
+                <p className="text-sm text-gray-600">
+                  Estruture linhas e conecte contas para garantir o fechamento correto do resultado.
+                </p>
+              </div>
+              <button type="button" className="button button-primary" onClick={handleNovo}>
+                Nova linha
+              </button>
+            </div>
+
+            <div className="mt-4">
+              <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
+            </div>
           </section>
 
           <section className="panel">
@@ -278,14 +293,14 @@ export default function EstruturaDrePage() {
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
-                          className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+                          className="button button-secondary"
                           onClick={() => setModalLinha(true)}
                         >
                           Editar linha
                         </button>
                         <button
                           type="button"
-                          className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                          className="button button-primary"
                           onClick={() => setModalConta(true)}
                         >
                           Vincular contas
@@ -309,7 +324,7 @@ export default function EstruturaDrePage() {
                     </div>
                     <button
                       type="button"
-                      className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                      className="button button-primary"
                       onClick={() => setModalConta(true)}
                       disabled={!selecionada}
                     >
@@ -350,43 +365,42 @@ export default function EstruturaDrePage() {
         titulo="Cadastro de linha do DRE"
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label className="space-y-1 text-sm font-semibold text-gray-700">
-            Nome da linha
+          <div className="form-group">
+            <label htmlFor="dre-linha-nome">Nome da linha</label>
             <input
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+              id="dre-linha-nome"
+              className="form-input"
               placeholder="Ex: Resultado Operacional"
             />
-          </label>
-          <label className="space-y-1 text-sm font-semibold text-gray-700">
-            Código
-            <input
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
-              placeholder="1.2.1"
-            />
-          </label>
-          <label className="space-y-1 text-sm font-semibold text-gray-700">
-            Natureza
-            <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none">
+          </div>
+          <div className="form-group">
+            <label htmlFor="dre-linha-codigo">Código</label>
+            <input id="dre-linha-codigo" className="form-input" placeholder="1.2.1" />
+          </div>
+          <div className="form-group">
+            <label htmlFor="dre-linha-natureza">Natureza</label>
+            <select id="dre-linha-natureza" className="form-input">
               <option>Receita</option>
               <option>Despesa</option>
               <option>Outros</option>
             </select>
-          </label>
-          <label className="space-y-1 text-sm font-semibold text-gray-700">
-            Tipo
-            <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none">
+          </div>
+          <div className="form-group">
+            <label htmlFor="dre-linha-tipo">Tipo</label>
+            <select id="dre-linha-tipo" className="form-input">
               <option>Fixo</option>
               <option>Variável</option>
               <option>Calculado</option>
             </select>
-          </label>
-          <label className="md:col-span-2 space-y-1 text-sm font-semibold text-gray-700">
-            Descrição
+          </div>
+          <div className="form-group md:col-span-2">
+            <label htmlFor="dre-linha-descricao">Descrição</label>
             <textarea
-              className="min-h-[100px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+              id="dre-linha-descricao"
+              className="form-input min-h-[100px]"
               placeholder="Explique como calcular e consolidar esta linha"
             />
-          </label>
+          </div>
         </div>
       </ModalOverlay>
 
@@ -397,16 +411,17 @@ export default function EstruturaDrePage() {
       >
         <div className="space-y-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <label className="flex-1 space-y-1 text-sm font-semibold text-gray-700">
-              Buscar contas
+            <div className="form-group flex-1">
+              <label htmlFor="dre-busca-conta">Buscar contas</label>
               <input
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none"
+                id="dre-busca-conta"
+                className="form-input"
                 placeholder="Digite nome ou código"
               />
-            </label>
+            </div>
             <button
               type="button"
-              className="mt-2 inline-flex items-center justify-center rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 md:mt-6"
+              className="button button-secondary md:mt-6"
             >
               Aplicar filtro
             </button>
