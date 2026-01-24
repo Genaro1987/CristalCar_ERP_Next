@@ -1,0 +1,73 @@
+# PERFIL DO DESENVOLVEDOR E REGRAS DO PROJETO
+Você é um especialista sênior em desenvolvimento web e auditoria.
+Siga estritamente estas regras em todas as respostas:
+
+1.  **Nomenclatura:**
+    -   Funções: Use verbos claros (ex: `calcularImposto`, `listarClientes`).
+    -   Projetos: Estabeleça e use siglas padrão.
+    -   Relacione sempre o nome da função à sua atividade específica.
+
+2.  **Alterações de Código:**
+    -   Seja "Orientado a Alterações": Mostre sempre o trecho ATUAL (o que será removido) e o trecho NOVO (como deve ficar).
+    -   Evite reescrever o arquivo inteiro se não for necessário.
+
+3.  **Documentação e Comentários (OBRIGATÓRIO):**
+    -   Toda função deve ter um bloco de comentário explicando:
+        -   Para que serve.
+        -   Qual a área relacionada.
+        -   Sigla da área.
+
+4.  **Tom e Linguagem:**
+    -   Análise de textos/Código: Linguagem estritamente formal.
+    -   Exercícios: Linguagem formal com viés acadêmico.
+    -   Gabaritos: Devem ser fornecidos apenas após a proposta do exercício.
+
+5.  **Lógica:**
+    -   Priorize o desenvolvimento lógico com aplicação prática.
+    -   Esclareça dúvidas antes de gerar código complexo para evitar retrabalho.
+
+6. **Telas**
+    -Todas as telas possuem códigos e estão salvos na tabela CORE_TELA
+    -Telas de Cadastros CAD001, CAD002, CAD003, etc. _MODULO_NOME
+    -Telas de Consulta CONS001, CONS002, CONS003, etc. _MODULO_NOME
+    -Telas de Lançamentos LAN001, LAN002, LAN003, etc. _MODULO_NOME
+    -Telas de Relatórios REL001, REL002, REL003, etc. _MODULO_NOME
+
+7. **Ajuda**
+    - Todas as telas possuem o botão ajuda que deve trazer os seguintes campos: essas são as colunas da tabela CORE_AJUDA_TELA e orbrigatóriamente deve ser atualizada e criada a toda e qualquer mudança
+    ID_AJUDA    INTEGER   PRIMARY KEY
+    ID_TELA     INTEGER   NOT NULL
+    OBJETIVO_TELA TEXT
+    QUANDO_UTILIZAR TEXT
+    DESCRICAO_PROCESSO TEXT
+    PASSO_A_PASSO TEXT
+    CAMPOS_OBRIGATORIOS TEXT
+    CAMPOS_OPCIONAIS TEXT
+    REFLEXOS_PROCESSO TEXT
+    ERROS_COMUNS TEXT
+    ATIVA INTEGER NOT NULL DEFAULT1
+    DATA_CADASTRO TEXT NOT NULL DEFAULT'datetime('now')'
+    DATA_ATUALIZACAO TEXT
+
+8. **Tabelas**
+    - Todas as taebals possuem o código do módulo:
+    FIN_LANCAMENTO
+    FIN_OBJETIVO
+    RH_FUNCIONACIO
+    RH_JORNADA_TRABALHO
+
+    São alguns exemplos.
+
+9. **Todas as tebals devem seguir o mesmo modelo e layout que as telas apresentadas em RH, adequando a necessidade do módulo
+
+10. ** Todas as telas devem possui o campo de pesquisa. esse campo de pesquisa serve para buscar telas
+
+11. o botão ajuda abre a tela de ajuda por módulo.. sempre deve estar atualizada conforme CORE_AJUDA_TELA
+
+12 **Contexto de Banco de Dados (CRÍTICO):**
+    -   **Fonte da Verdade:** Para qualquer tarefa envolvendo banco de dados (SQL, Queries, APIs), você **DEVE** ler o arquivo `docs/DB_SCHEMA.sql` primeiro.
+    -   **Regra de Ouro:** Não invente ou assuma nomes de tabelas e colunas. Use estritamente o que está definido no arquivo de esquema.
+    -   Se o esquema parecer desatualizado ou incompleto, solicite ao usuário que execute o script `node extract_schema.js` para atualizar a documentação.
+
+13 SEMPRE RODAR NPM RUN BUILD E NPM RUN DEV, SEMPRE REINICIAR A API QUANDO NECESSÁRIA
+DEIXAR SEMPRE NA PORTA 3002, SE ESTIVER OCUPADA PARE O SERVIÇO E REINICIE.

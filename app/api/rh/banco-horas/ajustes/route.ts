@@ -72,3 +72,55 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  const empresaId = obterEmpresaIdDaRequest(request);
+
+  if (!empresaId) {
+    return respostaEmpresaNaoSelecionada();
+  }
+
+  const body = (await request.json().catch(() => null)) as { idAjuste?: number } | null;
+  const idAjuste = Number(body?.idAjuste);
+
+  if (!Number.isFinite(idAjuste)) {
+    return NextResponse.json(
+      { success: false, error: "PARAMETROS_INVALIDOS" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    // Verificar se o ajuste pertence a empresa e é do tipo AJUSTE_MANUAL
+    const verificacao = await db.execute({
+      sql: `
+        SELECT ID_AJUSTE 
+          FROM RH_BANCO_HORAS_AJUSTE 
+         WHERE ID_AJUSTE = ? 
+           AND ID_EMPRESA = ? 
+           AND TIPO_AJUSTE = 'AJUSTE_MANUAL'
+      `,
+      args: [idAjuste, empresaId],
+    });
+
+    if (!verificacao.rows?.length) {
+      return NextResponse.json(
+        { success: false, error: "AJUSTE_NAO_ENCONTRADO_OU_INVALIDO" },
+        { status: 404 }
+      );
+    }
+
+    await db.execute({
+      sql: `DELETE FROM RH_BANCO_HORAS_AJUSTE WHERE ID_AJUSTE = ?`,
+      args: [idAjuste],
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { success: false, error: "ERRO_INESPERADO" },
+      { status: 500 }
+    );
+  }
+}

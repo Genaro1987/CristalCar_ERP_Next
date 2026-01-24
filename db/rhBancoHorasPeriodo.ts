@@ -157,6 +157,18 @@ export async function reabrirPeriodo(params: RegistrarPeriodoParams) {
     `,
     args: [idUsuario, idEmpresa, idFuncionario, anoReferencia, mesReferencia],
   });
+
+  // Remove o registro de fechamento consolidado, se existir
+  await db.execute({
+    sql: `
+      DELETE FROM RH_BANCO_HORAS_FECHAMENTO
+       WHERE ID_EMPRESA = ?
+         AND ID_FUNCIONARIO = ?
+         AND ANO = ?
+         AND MES = ?
+    `,
+    args: [idEmpresa, idFuncionario, anoReferencia, mesReferencia],
+  });
 }
 
 export async function obterSituacaoPeriodo(

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
 
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
@@ -160,8 +161,8 @@ export default function BancoHorasPage() {
   const saldoMesHoras = saldoAnteriorHoras + extras50Horas + extras100Horas + horasDevidas;
   const saldoMesValor =
     saldoAnteriorHoras * (valorHora / 60) +
-    (extras50Horas / 60) * valorHora * 1.5 +
-    (extras100Horas / 60) * valorHora * 2 +
+    (extras50Horas / 60) * valorHora +
+    (extras100Horas / 60) * valorHora +
     (horasDevidas / 60) * valorHora;
 
   const horasMovimentacao = parseHoraParaMinutos(horasBancoQuantidade) ?? 0;
@@ -262,6 +263,31 @@ export default function BancoHorasPage() {
     } catch (error) {
       console.error(error);
       setNotification({ type: "error", message: "Erro ao incluir ajuste" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const excluirAjuste = async (idAjuste: number) => {
+    if (!confirm("Tem certeza que deseja excluir este ajuste?")) return;
+
+    try {
+      setLoading(true);
+      const resp = await fetch("/api/rh/banco-horas/ajustes", {
+        method: "DELETE",
+        headers: headersPadrao,
+        body: JSON.stringify({ idAjuste }),
+      });
+      const json = await resp.json();
+      if (json?.success) {
+        setNotification({ type: "success", message: "Ajuste excluído com sucesso" });
+        await carregarResumo();
+      } else {
+        setNotification({ type: "error", message: "Não foi possível excluir o ajuste." });
+      }
+    } catch (error) {
+      console.error(error);
+      setNotification({ type: "error", message: "Erro ao excluir ajuste" });
     } finally {
       setLoading(false);
     }
@@ -569,13 +595,13 @@ export default function BancoHorasPage() {
                       <div className="form-group">
                         <label>EXTRAS 50% (VALOR)</label>
                         <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669" }}>
-                          {formatarMoeda((extras50Horas / 60) * valorHora * 1.5)}
+                          {formatarMoeda((extras50Horas / 60) * valorHora)}
                         </div>
                       </div>
                       <div className="form-group">
                         <label>EXTRAS 100% (VALOR)</label>
                         <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669" }}>
-                          {formatarMoeda((extras100Horas / 60) * valorHora * 2)}
+                          {formatarMoeda((extras100Horas / 60) * valorHora)}
                         </div>
                       </div>
                       <div className="form-group">
@@ -723,8 +749,8 @@ export default function BancoHorasPage() {
                                   dia.classificacao === "EXTRA_UTIL" || dia.classificacao === "EXTRA_100"
                                     ? "badge badge-success"
                                     : dia.classificacao === "DEVEDOR" || dia.classificacao.includes("FALTA")
-                                    ? "badge badge-danger"
-                                    : "badge"
+                                      ? "badge badge-danger"
+                                      : "badge"
                                 }
                               >
                                 {dia.classificacao}
@@ -758,6 +784,7 @@ export default function BancoHorasPage() {
                             <th>Tipo</th>
                             <th>Minutos</th>
                             <th>Observação</th>
+                            <th style={{ width: "50px" }}>Ações</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -769,6 +796,18 @@ export default function BancoHorasPage() {
                                 {minutosParaHora(mov.minutos)}
                               </td>
                               <td>{mov.observacao ?? "-"}</td>
+                              <td>
+                                {mov.tipo === "AJUSTE_MANUAL" && (
+                                  <button
+                                    onClick={() => excluirAjuste(mov.id)}
+                                    className="button-icon-only"
+                                    style={{ color: "#dc2626" }}
+                                    title="Excluir ajuste"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
+                              </td>
                             </tr>
                           ))}
                         </tbody>

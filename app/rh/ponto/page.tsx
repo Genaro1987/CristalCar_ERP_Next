@@ -68,9 +68,8 @@ function TimeInput(props: InputHTMLAttributes<HTMLInputElement>) {
     <input
       type="time"
       {...rest}
-      className={`w-[72px] h-8 rounded border border-gray-300 px-2 text-sm text-center${
-        className ? ` ${className}` : ""
-      }`}
+      className={`w-[72px] h-8 rounded border border-gray-300 px-2 text-sm text-center${className ? ` ${className}` : ""
+        }`}
     />
   );
 }
@@ -165,6 +164,11 @@ export default function PontoPage() {
   const [motivoFaltaSelecionado, setMotivoFaltaSelecionado] = useState("");
   const [observacaoFalta, setObservacaoFalta] = useState("");
   const [modalFaltaAberto, setModalFaltaAberto] = useState(false);
+
+  // Estados para Controle de Férias
+  const [feriasHabilitado, setFeriasHabilitado] = useState(false);
+  const [feriasInicio, setFeriasInicio] = useState("");
+  const [feriasFim, setFeriasFim] = useState("");
 
   const empresaId = empresa?.id ?? null;
 
@@ -505,8 +509,7 @@ export default function PontoPage() {
 
     try {
       const resposta = await fetch(
-        `/api/ponto?funcionarioId=${encodeURIComponent(funcionarioSelecionado)}&competencia=${competencia}${
-          empresaId ? `&empresaId=${empresaId}` : ""
+        `/api/ponto?funcionarioId=${encodeURIComponent(funcionarioSelecionado)}&competencia=${competencia}${empresaId ? `&empresaId=${empresaId}` : ""
         }`,
         { headers: headersPadrao }
       );
@@ -715,6 +718,55 @@ export default function PontoPage() {
     setObservacaoFalta("");
     setTipoFaltaSelecionada("FALTA_JUSTIFICADA");
     setModalFaltaAberto(false);
+    setFeriasHabilitado(false);
+    setFeriasInicio("");
+    setFeriasFim("");
+  };
+
+  const aplicarFerias = () => {
+    if (!feriasHabilitado || !feriasInicio || !feriasFim) return;
+
+    const dataInicio = criarDataLocal(feriasInicio);
+    const dataFim = criarDataLocal(feriasFim);
+
+    if (dataFim < dataInicio) {
+      setNotification({ type: "error", message: "Data final deve ser maior ou igual a data inicial." });
+      return;
+    }
+
+    setDiasPonto((diasAnteriores) => {
+      return diasAnteriores.map((dia) => {
+        const dataDia = criarDataLocal(dia.dataReferencia);
+
+        // Verificar se está dentro do intervalo
+        if (dataDia >= dataInicio && dataDia <= dataFim) {
+          // Resetar dia como Férias
+          const diaFerias: LancamentoDia = {
+            ...dia,
+            tipoOcorrencia: "FERIAS", // Usar um tipo específico ou tratar como observação
+            statusDia: "FERIAS",
+            observacao: "--- Férias ---",
+            entradaManha: null,
+            saidaManha: null,
+            entradaTarde: null,
+            saidaTarde: null,
+            entradaExtra: null,
+            saidaExtra: null,
+            minutosTrabalhados: 0,
+            minutosExtras: 0,
+            saldoBancoMinutos: 0,
+            minutosPagosFeriadoFds: 0
+          };
+          return diaFerias;
+        }
+
+        // Se estava marcado como férias mas saiu do intervalo (caso o usuario mude as datas), 
+        // idealmente deveria restaurar, mas como nao temos backup, vamos manter o estado atual se nao for ferias
+        return dia;
+      });
+    });
+
+    setNotification({ type: "success", message: "Férias aplicadas no período selecionado." });
   };
 
   const diaSelecionadoParaFalta =
@@ -798,219 +850,272 @@ export default function PontoPage() {
                     </div>
                   </div>
                 </div>
+
+                <div className="ferias-control-panel" style={{ marginTop: "16px", padding: "16px", backgroundColor: "#f9fafb", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
+                  <div className="form-group" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "8px", marginBottom: feriasHabilitado ? "12px" : "0" }}>
+                    <input
+                      type="checkbox"
+                      id="chkFerias"
+                      checked={feriasHabilitado}
+                      onChange={(e) => setFeriasHabilitado(e.target.checked)}
+                      className="form-checkbox"
+                      style={{ width: "16px", height: "16px" }}
+                    />
+                    <label htmlFor="chkFerias" style={{ margin: 0, fontWeight: 600 }}>Registrar Férias</label>
+                  </div>
+
+                  {feriasHabilitado && (
+                    <div className="form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", alignItems: "flex-end" }}>
+                      <div className="form-group">
+                        <label htmlFor="feriasInicio">Início</label>
+                        <input
+                          type="date"
+                          id="feriasInicio"
+                          value={feriasInicio}
+                          onChange={(e) => setFeriasInicio(e.target.value)}
+                          className="form-input"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="feriasFim">Fim</label>
+                        <input
+                          type="date"
+                          id="feriasFim"
+                          value={feriasFim}
+                          onChange={(e) => setFeriasFim(e.target.value)}
+                          className="form-input"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <button
+                          type="button"
+                          className="button button-secondary"
+                          onClick={aplicarFerias}
+                          disabled={!feriasInicio || !feriasFim}
+                        >
+                          Aplicar Férias
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </section>
 
-            <section className="panel">
-              <header className="form-section-header">
-                <h2>Grade de dias</h2>
-                <p>Preencha ou ajuste os horários para cada dia da competência selecionada.</p>
-              </header>
+              <section className="panel">
+                <header className="form-section-header">
+                  <h2>Grade de dias</h2>
+                  <p>Preencha ou ajuste os horários para cada dia da competência selecionada.</p>
+                </header>
 
-              {diasPonto.length === 0 && (
-                <p className="helper-text">Carregue um funcionário e uma competência para montar a grade.</p>
-              )}
+                {diasPonto.length === 0 && (
+                  <p className="helper-text">Carregue um funcionário e uma competência para montar a grade.</p>
+                )}
 
-              {diasPonto.length > 0 && (
-                <div className="departamento-tabela-wrapper ponto-tabela">
-                  <table className="w-full table-fixed border-collapse data-table">
-                    <thead>
-                      <tr>
-                        <th className="w-32 px-4 py-2 text-left">Dia</th>
-                        <th className="px-4 py-2 text-center">Horários de Trabalho</th>
-                        <th className="w-40 px-4 py-2 text-center">Intervalo (Registro)</th>
-                        <th className="w-32 px-4 py-2 text-center">Tempo trabalhado</th>
-                        <th className="w-32 px-4 py-2 text-center">Horas extras</th>
-                        <th className="w-40 px-4 py-2 text-center">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {diasPonto.map((dia, index) => {
-                        const data = criarDataLocal(dia.dataReferencia);
-                        const tipoDia = dia.tipoDia ?? determinarTipoDia(dia.dataReferencia, dia.eFeriado);
-                        const ehFimDeSemana = tipoDia === "SABADO" || tipoDia === "DOMINGO";
-                        const ehFeriado = tipoDia === "FERIADO";
-                        const estiloLinha: Record<string, string> = {};
+                {diasPonto.length > 0 && (
+                  <div className="departamento-tabela-wrapper ponto-tabela">
+                    <table className="w-full table-fixed border-collapse data-table">
+                      <thead>
+                        <tr>
+                          <th className="w-32 px-4 py-2 text-left">Dia</th>
+                          <th className="px-4 py-2 text-center">Horários de Trabalho</th>
+                          <th className="w-40 px-4 py-2 text-center">Intervalo (Registro)</th>
+                          <th className="w-32 px-4 py-2 text-center">Tempo trabalhado</th>
+                          <th className="w-32 px-4 py-2 text-center">Horas extras</th>
+                          <th className="w-40 px-4 py-2 text-center">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {diasPonto.map((dia, index) => {
+                          const data = criarDataLocal(dia.dataReferencia);
+                          const tipoDia = dia.tipoDia ?? determinarTipoDia(dia.dataReferencia, dia.eFeriado);
+                          const ehFimDeSemana = tipoDia === "SABADO" || tipoDia === "DOMINGO";
+                          const ehFeriado = tipoDia === "FERIADO";
+                          const estiloLinha: Record<string, string> = {};
 
-                        if (ehFimDeSemana) {
-                          estiloLinha.color = "#6b7280";
-                        }
+                          if (ehFimDeSemana) {
+                            estiloLinha.color = "#6b7280";
+                          }
 
-                        if (ehFeriado) {
-                          estiloLinha.backgroundColor = "#fff7ed";
-                        }
-                        const tipoOcorrencia = dia.tipoOcorrencia ?? "NORMAL";
-                        const isFalta = tipoOcorrencia !== "NORMAL";
-                        const motivoDescricao =
-                          isFalta && dia.idMotivoFalta
-                            ? motivosFalta.find((m) => m.ID_MOTIVO === dia.idMotivoFalta)?.DESCRICAO
-                            : "";
-                        const falta = isFalta
-                          ? {
+                          if (ehFeriado) {
+                            estiloLinha.backgroundColor = "#fff7ed";
+                          }
+                          const tipoOcorrencia = dia.tipoOcorrencia ?? "NORMAL";
+                          const isFalta = tipoOcorrencia !== "NORMAL";
+                          const motivoDescricao =
+                            isFalta && dia.idMotivoFalta
+                              ? motivosFalta.find((m) => m.ID_MOTIVO === dia.idMotivoFalta)?.DESCRICAO
+                              : "";
+                          const falta = isFalta
+                            ? {
                               tipo:
-                                tipoOcorrencia === "FALTA_JUSTIFICADA"
-                                  ? "JUSTIFICADA"
-                                  : "NAO_JUSTIFICADA",
+                                tipoOcorrencia === "FERIAS"
+                                  ? "FERIAS"
+                                  : tipoOcorrencia === "FALTA_JUSTIFICADA"
+                                    ? "JUSTIFICADA"
+                                    : "NAO_JUSTIFICADA",
                               motivoDescricao,
                               observacao: dia.obsFalta,
                             }
-                          : null;
+                            : null;
 
-                        return (
-                          <tr
-                            key={dia.dataReferencia}
-                            style={Object.keys(estiloLinha).length ? estiloLinha : undefined}
-                          >
-                            <td className="w-32 px-4 py-2 text-left whitespace-nowrap">
-                              {formatarDia(dia.dataReferencia)}
-                            </td>
-                            <td className="px-4 py-2 text-center">
-                              {falta ? (
-                                <div className="inline-flex flex-col gap-1">
-                                  <span
-                                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-                                      falta.tipo === "JUSTIFICADA"
-                                        ? "bg-amber-100 text-amber-800"
-                                        : "bg-red-100 text-red-800"
-                                    }`}
-                                  >
-                                    {falta.tipo === "JUSTIFICADA"
-                                      ? "FALTA JUSTIFICADA"
-                                      : "FALTA NÃO JUSTIFICADA"}
-                                  </span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center justify-center gap-2 whitespace-nowrap">
-                                  <TimeInput
-                                    value={dia.entradaManha ?? ""}
-                                    onChange={(e) => handleChangeHora(index, "entradaManha", e.target.value)}
-                                    disabled={isFalta}
-                                  />
-                                  <span> - </span>
-                                  <TimeInput
-                                    value={dia.saidaManha ?? ""}
-                                    onChange={(e) => handleChangeHora(index, "saidaManha", e.target.value)}
-                                    disabled={isFalta}
-                                  />
-                                  <span> / </span>
-                                  <TimeInput
-                                    value={dia.entradaTarde ?? ""}
-                                    onChange={(e) => handleChangeHora(index, "entradaTarde", e.target.value)}
-                                    disabled={isFalta}
-                                  />
-                                  <span> - </span>
-                                  <TimeInput
-                                    value={dia.saidaTarde ?? ""}
-                                    onChange={(e) => handleChangeHora(index, "saidaTarde", e.target.value)}
-                                    disabled={isFalta}
-                                  />
-                                </div>
-                              )}
-                            </td>
-                            <td className="w-40 px-4 py-2 align-top">
-                              {falta ? (
-                                <div className="flex flex-col gap-1 text-sm text-gray-700">
-                                  <div className="font-medium">
-                                    {falta.motivoDescricao ?? "SEM MOTIVO CADASTRADO"}
+                          return (
+                            <tr
+                              key={dia.dataReferencia}
+                              style={Object.keys(estiloLinha).length ? estiloLinha : undefined}
+                            >
+                              <td className="w-32 px-4 py-2 text-left whitespace-nowrap">
+                                {formatarDia(dia.dataReferencia)}
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                {falta ? (
+                                  <div className="inline-flex flex-col gap-1">
+                                    <span
+                                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${falta.tipo === "FERIAS"
+                                        ? "bg-blue-100 text-blue-800"
+                                        : falta.tipo === "JUSTIFICADA"
+                                          ? "bg-amber-100 text-amber-800"
+                                          : "bg-red-100 text-red-800"
+                                        }`}
+                                    >
+                                      {falta.tipo === "FERIAS"
+                                        ? "FÉRIAS"
+                                        : falta.tipo === "JUSTIFICADA"
+                                          ? "FALTA JUSTIFICADA"
+                                          : "FALTA NÃO JUSTIFICADA"}
+                                    </span>
                                   </div>
-                                  {falta.observacao && (
-                                    <div className="text-xs text-gray-600">Obs.: {falta.observacao}</div>
-                                  )}
+                                ) : (
+                                  <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+                                    <TimeInput
+                                      value={dia.entradaManha ?? ""}
+                                      onChange={(e) => handleChangeHora(index, "entradaManha", e.target.value)}
+                                      disabled={isFalta}
+                                    />
+                                    <span> - </span>
+                                    <TimeInput
+                                      value={dia.saidaManha ?? ""}
+                                      onChange={(e) => handleChangeHora(index, "saidaManha", e.target.value)}
+                                      disabled={isFalta}
+                                    />
+                                    <span> / </span>
+                                    <TimeInput
+                                      value={dia.entradaTarde ?? ""}
+                                      onChange={(e) => handleChangeHora(index, "entradaTarde", e.target.value)}
+                                      disabled={isFalta}
+                                    />
+                                    <span> - </span>
+                                    <TimeInput
+                                      value={dia.saidaTarde ?? ""}
+                                      onChange={(e) => handleChangeHora(index, "saidaTarde", e.target.value)}
+                                      disabled={isFalta}
+                                    />
+                                  </div>
+                                )}
+                              </td>
+                              <td className="w-40 px-4 py-2 align-top">
+                                {falta ? (
+                                  <div className="flex flex-col gap-1 text-sm text-gray-700">
+                                    <div className="font-medium">
+                                      {falta.motivoDescricao ?? "SEM MOTIVO CADASTRADO"}
+                                    </div>
+                                    {falta.observacao && (
+                                      <div className="text-xs text-gray-600">Obs.: {falta.observacao}</div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+                                    <TimeInput
+                                      value={dia.entradaExtra ?? ""}
+                                      onChange={(e) => handleChangeHora(index, "entradaExtra", e.target.value)}
+                                      disabled={isFalta}
+                                    />
+                                    <span> - </span>
+                                    <TimeInput
+                                      value={dia.saidaExtra ?? ""}
+                                      onChange={(e) => handleChangeHora(index, "saidaExtra", e.target.value)}
+                                      disabled={isFalta}
+                                    />
+                                  </div>
+                                )}
+                              </td>
+                              <td className="w-32 px-4 py-2 text-center text-sm">
+                                {dia.minutosTrabalhados != null
+                                  ? minutosParaHora(dia.minutosTrabalhados)
+                                  : "--:--"}
+                              </td>
+                              <td className="w-32 px-4 py-2 text-center text-sm">
+                                {dia.minutosExtras != null ? minutosParaHora(dia.minutosExtras) : "--:--"}
+                              </td>
+                              <td className="w-40 px-4 py-2 text-center whitespace-nowrap">
+                                <div className="acoes-dia flex flex-row justify-center gap-2 whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    className="button button-secondary button-compact"
+                                    onClick={() => aplicarJornadaNoDia(index)}
+                                    disabled={!jornadaFuncionario || isFalta}
+                                  >
+                                    Jornada
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="button button-secondary button-compact"
+                                    onClick={() => aplicarIntervaloNoDia(index)}
+                                    disabled={!jornadaFuncionario || isFalta}
+                                  >
+                                    Intervalo
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={`button button-compact ${ehFeriado ? "button-primary" : "button-secondary"
+                                      }`}
+                                    onClick={() => alternarFeriado(index)}
+                                  >
+                                    {ehFeriado ? "Feriado Ativo" : "Feriado"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="button button-secondary button-compact"
+                                    onClick={() => abrirFaltaParaDia(index)}
+                                  >
+                                    Falta
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="button button-secondary button-compact"
+                                    onClick={() => limparDia(index)}
+                                  >
+                                    Limpar
+                                  </button>
                                 </div>
-                              ) : (
-                                <div className="flex items-center justify-center gap-2 whitespace-nowrap">
-                                  <TimeInput
-                                    value={dia.entradaExtra ?? ""}
-                                    onChange={(e) => handleChangeHora(index, "entradaExtra", e.target.value)}
-                                    disabled={isFalta}
-                                  />
-                                  <span> - </span>
-                                  <TimeInput
-                                    value={dia.saidaExtra ?? ""}
-                                    onChange={(e) => handleChangeHora(index, "saidaExtra", e.target.value)}
-                                    disabled={isFalta}
-                                  />
-                                </div>
-                              )}
-                            </td>
-                            <td className="w-32 px-4 py-2 text-center text-sm">
-                              {dia.minutosTrabalhados != null
-                                ? minutosParaHora(dia.minutosTrabalhados)
-                                : "--:--"}
-                            </td>
-                            <td className="w-32 px-4 py-2 text-center text-sm">
-                              {dia.minutosExtras != null ? minutosParaHora(dia.minutosExtras) : "--:--"}
-                            </td>
-                            <td className="w-40 px-4 py-2 text-center whitespace-nowrap">
-                              <div className="acoes-dia flex flex-row justify-center gap-2 whitespace-nowrap">
-                                <button
-                                  type="button"
-                                  className="button button-secondary button-compact"
-                                  onClick={() => aplicarJornadaNoDia(index)}
-                                  disabled={!jornadaFuncionario || isFalta}
-                                >
-                                  Jornada
-                                </button>
-                                <button
-                                  type="button"
-                                  className="button button-secondary button-compact"
-                                  onClick={() => aplicarIntervaloNoDia(index)}
-                                  disabled={!jornadaFuncionario || isFalta}
-                                >
-                                  Intervalo
-                                </button>
-                                <button
-                                  type="button"
-                                  className={`button button-compact ${
-                                    ehFeriado ? "button-primary" : "button-secondary"
-                                  }`}
-                                  onClick={() => alternarFeriado(index)}
-                                >
-                                  {ehFeriado ? "Feriado Ativo" : "Feriado"}
-                                </button>
-                                <button
-                                  type="button"
-                                  className="button button-secondary button-compact"
-                                  onClick={() => abrirFaltaParaDia(index)}
-                                >
-                                  Falta
-                                </button>
-                                <button
-                                  type="button"
-                                  className="button button-secondary button-compact"
-                                  onClick={() => limparDia(index)}
-                                >
-                                  Limpar
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-              <div className="form-actions departamentos-actions ponto-actions">
-                <div className="button-row">
-                  <button
-                    type="button"
-                    className="button button-primary"
-                    onClick={salvarPonto}
-                    disabled={salvando || !diasPonto.length}
-                  >
-                    {salvando ? "Salvando..." : "Salvar ponto"}
-                  </button>
-                  <button type="button" className="button button-secondary" onClick={cancelar}>
-                    Cancelar
-                  </button>
+                <div className="form-actions departamentos-actions ponto-actions">
+                  <div className="button-row">
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      onClick={salvarPonto}
+                      disabled={salvando || !diasPonto.length}
+                    >
+                      {salvando ? "Salvando..." : "Salvar ponto"}
+                    </button>
+                    <button type="button" className="button button-secondary" onClick={cancelar}>
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </section>
-          </div>
-        </main>
-      </div>
-    </LayoutShell>
+              </section>
+            </div>
+          </main>
+        </div >
+      </LayoutShell >
 
       {modalFaltaAberto && diaSelecionadoParaFalta && (
         <div className="modal-overlay">
@@ -1099,7 +1204,8 @@ export default function PontoPage() {
             </div>
           </div>
         </div>
-      )}
+      )
+      }
     </>
   );
 }
