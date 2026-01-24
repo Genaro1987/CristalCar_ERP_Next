@@ -37,137 +37,144 @@ export function exportarPDF(dados: DadosExportacao) {
   // Configurações de Layout
   const pageWidth = 210;
   const pageHeight = 297;
-  const margin = 15;
+  const margin = 10; // Reduzido para 10mm para aproveitar espaço
   const contentWidth = pageWidth - (margin * 2);
-  let yPos = 0; // Cursor vertical
+  let yPos = 0;
 
-  // Cores
+  // Cores Premium
   const colors = {
-    primary: "#0f172a",    // Dark Slate
-    accent: "#f97316",     // Orange Brand
-    text: "#1e293b",       // Slate 800
-    textLight: "#64748b",  // Slate 500
-    bgLight: "#f8fafc",    // Slate 50
-    border: "#e2e8f0",     // Slate 200
-    success: "#059669",    // Emerald 600
-    danger: "#dc2626",     // Red 600
+    primary: "#1e293b",    // Slate 800 - Cabeçalhos
+    secondary: "#334155",  // Slate 700 - Subtítulos
+    accent: "#0f766e",     // Teal 700 - Destaques
+    text: "#0f172a",       // Slate 900 - Texto Principal
+    textLight: "#64748b",  // Slate 500 - Texto Secundário
+    bgLight: "#f8fafc",    // Slate 50 - Fundos Alternados
+    border: "#e2e8f0",     // Slate 200 - Bordas
+    success: "#166534",    // Green 700
+    danger: "#991b1b",     // Red 800
+    warning: "#b45309",    // Amber 700
     tableHeader: "#f1f5f9" // Slate 100
   };
 
-  // --- HEADER PREMIUM ---
-  // Faixa escura no topo
+  // --- HEADER EXECUTIVO ---
+  // Barra Superior Escura
   doc.setFillColor(colors.primary);
-  doc.rect(0, 0, pageWidth, 24, "F");
+  doc.rect(0, 0, pageWidth, 20, "F");
 
-  // Título e Logo
-  yPos = 16;
+  // Título
+  yPos = 13;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setTextColor("#ffffff");
   doc.text("EXTRATO DE BANCO DE HORAS", margin, yPos);
 
-  // Nome da Empresa no Header (direita)
-  doc.setFontSize(10);
+  // Nome da Empresa (Direita)
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor("#cbd5e1"); // Slate 300
   const empresaNome = (empresa.nome || "Empresa").toUpperCase();
-  const empresaWidth = doc.getTextWidth(empresaNome);
-  doc.text(empresaNome, pageWidth - margin - empresaWidth, yPos);
+  const cnpjTexto = empresa.cnpj ? `CNPJ: ${empresa.cnpj}` : "";
+  const headerRightText = empresaNome;
 
-  yPos = 36;
+  const empresaWidth = doc.getTextWidth(headerRightText);
+  doc.text(headerRightText, pageWidth - margin - empresaWidth, yPos);
 
-  // --- INFO DO COLABORADOR E PERÍODO ---
-  // Box de fundo suave
-  doc.setFillColor(colors.bgLight);
-  doc.setDrawColor(colors.border);
-  doc.roundedRect(margin, yPos, contentWidth, 24, 2, 2, "FD");
+  if (cnpjTexto) {
+    const cnpjWidth = doc.getTextWidth(cnpjTexto);
+    doc.setFontSize(7);
+    doc.text(cnpjTexto, pageWidth - margin - cnpjWidth, yPos + 4);
+  }
 
-  const infoY = yPos + 8;
+  yPos = 28;
 
-  // Coluna 1: Funcionário
+  // --- INFORMAÇÕES DO COLABORADOR E PERÍODO ---
+  // Layout em duas colunas implícitas
+  const col1X = margin;
+  const col2X = pageWidth / 2 + 5;
+
+  // Linha 1: Nome e Competência
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setTextColor(colors.textLight);
-  doc.text("COLABORADOR", margin + 5, infoY);
+  doc.text("COLABORADOR", col1X, yPos);
+  doc.text("COMPETÊNCIA", col2X, yPos);
+
+  yPos += 5;
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setTextColor(colors.text);
-  doc.text(resumo.funcionario.nome.toUpperCase(), margin + 5, infoY + 6);
-
-  // Coluna 2: Cargo/Departamento (Simulado ou vazio se não tiver)
-  // ...
-
-  // Coluna 3: Competência (Alinhado à direita)
-  const compLabel = "COMPETÊNCIA";
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.setTextColor(colors.textLight);
-  const compLabelWidth = doc.getTextWidth(compLabel);
-  doc.text(compLabel, pageWidth - margin - 5 - compLabelWidth, infoY);
+  doc.text(resumo.funcionario.nome.toUpperCase(), col1X, yPos);
 
   const meses = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
   const nomeMes = meses[resumo.competencia.mes - 1];
-  const compTexto = `${nomeMes} ${resumo.competencia.ano}`;
+  const compTexto = `${nomeMes} / ${resumo.competencia.ano}`;
+  doc.setTextColor(colors.accent);
+  doc.text(compTexto, col2X, yPos);
 
+  yPos += 8;
+
+  // Linha 2: Departamento e Data Emissão
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.setTextColor(colors.accent); // Destaque na cor da marca
-  const compTextoWidth = doc.getTextWidth(compTexto);
-  doc.text(compTexto, pageWidth - margin - 5 - compTextoWidth, infoY + 6);
+  doc.setFontSize(7);
+  doc.setTextColor(colors.textLight);
+  doc.text("DEPARTAMENTO", col1X, yPos);
+  doc.text("EMISSÃO", col2X, yPos);
 
-  yPos += 32;
+  yPos += 5;
 
-  // --- JORNADA DE TRABALHO (NOVO) ---
-  if (resumo.jornada) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(colors.primary);
-    doc.text("JORNADA DE TRABALHO PREVISTA", margin, yPos);
-    yPos += 5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(colors.text);
+  doc.text((resumo.funcionario.nomeDepartamento || "Não informado").toUpperCase(), col1X, yPos);
 
-    // Box da jornada
-    doc.setDrawColor(colors.border);
-    doc.setFillColor("#ffffff");
-    doc.roundedRect(margin, yPos, contentWidth, 14, 1, 1, "S");
+  const now = new Date().toLocaleDateString("pt-BR") + " " + new Date().toLocaleTimeString("pt-BR").substring(0, 5);
+  doc.text(now, col2X, yPos);
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(colors.text);
+  yPos += 8;
 
-    // Formatar horários
-    const j = resumo.jornada;
+  // --- JORNADA DE TRABALHO (SEMPRE EXIBIR) ---
+  // Box Dedicado
+  const boxHeight = 14;
+  doc.setDrawColor(colors.accent);
+  doc.setLineWidth(0.3);
+  doc.setFillColor("#f0fdfa"); // Teal 50 bem suave
+  doc.roundedRect(margin, yPos, contentWidth, boxHeight, 1, 1, "FD");
+
+  const j = resumo.jornada;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(colors.accent);
+  doc.text("JORNADA DE TRABALHO", margin + 3, yPos + 5);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(colors.text);
+
+  const jornadaY = yPos + 10;
+
+  if (j) {
     const entrada1 = j.entradaManha || "--:--";
     const saida1 = j.saidaManha || "--:--";
     const entrada2 = j.entradaTarde || "--:--";
     const saida2 = j.saidaTarde || "--:--";
+    const horario = `${entrada1} - ${saida1} | ${entrada2} - ${saida2}`;
 
-    const textoJornada = `${entrada1} - ${saida1} | ${entrada2} - ${saida2}`;
-    const textoCarga = `Carga Diária: ${minutosParaHora(j.minutosPrevistos)}`;
-    const textoTolerancia = `Tolerância: ${j.toleranciaMinutos} min`;
+    doc.text(`Horário: ${horario}`, margin + 3, jornadaY);
 
-    // Ícones simulados com texto (•)
-    const paddingJornada = 5;
-    const jornadaY = yPos + 9;
-
-    doc.text(`Horário: ${textoJornada}`, margin + paddingJornada, jornadaY);
-
-    // Calcular posições para distribuir
-    const textCargaWidth = doc.getTextWidth(textoCarga);
-    const textTolWidth = doc.getTextWidth(textoTolerancia);
-
-    // Centralizado visualmente no espaço restante ou fixo
-    doc.text(textoCarga, pageWidth / 2 - (textCargaWidth / 2), jornadaY);
-    doc.text(textoTolerancia, pageWidth - margin - paddingJornada - textTolWidth, jornadaY);
-
-    yPos += 22;
+    // Distribuir Carga e Tolerância
+    doc.text(`Carga Diária: ${minutosParaHora(j.minutosPrevistos)}`, margin + 60, jornadaY);
+    doc.text(`Tolerância: ${j.toleranciaMinutos} min`, margin + 110, jornadaY);
   } else {
-    // Se não tiver jornada, avança menos
-    yPos += 6;
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(colors.textLight);
+    doc.text("Jornada não configurada ou não informada para este período.", margin + 3, jornadaY);
   }
 
+  yPos += boxHeight + 6;
+
   // --- RESUMO FINANCEIRO E DE HORAS ---
-  // Layout de Cards
+  // Layout Horizontal Compacto
 
   const totaisDias = resumirTotaisDias(resumo.dias);
   const extrasUteisMin = totaisDias.extras50Min;
@@ -183,146 +190,126 @@ export function exportarPDF(dados: DadosExportacao) {
 
   const saldoFinalBancoMin = dados.zerarBanco ? 0 : saldoTecnicoMin;
 
-  // Título da seção
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(colors.primary);
-  doc.text("RESUMO DE SALDOS", margin, yPos);
-  yPos += 5;
-
-  const cardGap = 4;
+  // Cards simplificados (apenas borda inferior colorida)
+  const cardGap = 3;
   const cardWidth = (contentWidth - (cardGap * 3)) / 4;
-  const cardHeight = 24;
+  const cardHeight = 16;
 
-  // Função helper para desenhar card
-  const drawCard = (x: number, title: string, value: string, subValue: string | null, type: 'neutral' | 'success' | 'danger' | 'highlight') => {
-    let bgColor = "#ffffff";
-    let borderColor = colors.border;
-    let textColor = colors.text;
+  const drawCompactCard = (x: number, title: string, value: string, subValue: string | null, color: string) => {
+    // Fundo
+    doc.setFillColor("#ffffff");
+    doc.setDrawColor(colors.border);
+    doc.setLineWidth(0.1);
+    doc.roundedRect(x, yPos, cardWidth, cardHeight, 1, 1, "FD");
 
-    if (type === 'success') {
-      bgColor = "#f0fdf4"; borderColor = "#86efac"; textColor = "#166534";
-    } else if (type === 'danger') {
-      bgColor = "#fef2f2"; borderColor = "#fca5a5"; textColor = "#991b1b";
-    } else if (type === 'highlight') {
-      bgColor = "#fff7ed"; borderColor = "#fdba74";
-    }
+    // Borda inferior colorida
+    doc.setFillColor(color);
+    doc.rect(x, yPos + cardHeight - 1, cardWidth, 1, "F");
 
-    doc.setFillColor(bgColor);
-    doc.setDrawColor(borderColor);
-    doc.roundedRect(x, yPos, cardWidth, cardHeight, 2, 2, "FD");
-
-    // Title
-    doc.setFontSize(7);
+    // Título
+    doc.setFontSize(6);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(colors.textLight);
-    doc.text(title.toUpperCase(), x + 3, yPos + 6);
+    doc.text(title.toUpperCase(), x + 2, yPos + 5);
 
-    // Value
-    doc.setFontSize(11);
+    // Valor
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(textColor);
-    doc.text(value, x + 3, yPos + 14);
+    doc.setTextColor(colors.text);
+    doc.text(value, x + 2, yPos + 10);
 
-    // SubValue
+    // SubValor
     if (subValue) {
-      doc.setFontSize(6);
+      doc.setFontSize(5);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(colors.textLight);
-      doc.text(subValue, x + 3, yPos + 20);
+      doc.text(subValue, x + 2, yPos + 13);
     }
   };
 
-  // Card 1: Saldo Anterior
-  drawCard(margin, "Saldo Anterior", minutosParaHora(resumo.saldoAnteriorMin), null, 'neutral');
+  drawCompactCard(margin, "SALDO ANTERIOR", minutosParaHora(resumo.saldoAnteriorMin), null, colors.textLight);
 
-  // Card 2: Créditos (Extras)
   const totalExtras = extrasUteisMin + extras100Min;
-  drawCard(margin + cardWidth + cardGap, "Créditos", minutosParaHora(totalExtras), `50%: ${minutosParaHora(extrasUteisMin)} | 100%: ${minutosParaHora(extras100Min)}`, 'success');
+  drawCompactCard(margin + cardWidth + cardGap, "CRÉDITOS (EXTRAS)", minutosParaHora(totalExtras), `50%: ${minutosParaHora(extrasUteisMin)} | 100%: ${minutosParaHora(extras100Min)}`, colors.success);
 
-  // Card 3: Débitos (Atrasos/Faltas)
-  drawCard(margin + (cardWidth + cardGap) * 2, "Débitos", minutosParaHora(devidasMin), null, 'danger');
+  drawCompactCard(margin + (cardWidth + cardGap) * 2, "DÉBITOS (ATRASOS)", minutosParaHora(devidasMin), null, colors.danger);
 
-  // Card 4: Saldo Final
-  drawCard(margin + (cardWidth + cardGap) * 3, "Saldo Final", minutosParaHora(saldoFinalBancoMin), "Após ajustes", 'highlight');
+  drawCompactCard(margin + (cardWidth + cardGap) * 3, "SALDO FINAL", minutosParaHora(saldoFinalBancoMin), "Após ajustes", colors.accent);
 
-  yPos += cardHeight + 10;
+  yPos += cardHeight + 8;
 
   // --- TABELA DE DETALHAMENTO ---
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(colors.primary);
-  doc.text("EXTRATO DIÁRIO", margin, yPos);
-  yPos += 5;
 
-  // Definição de colunas
+  // Headers
   const cols = [
-    { name: "DATA", width: 15, align: "left" },
+    { name: "DATA", width: 14, align: "left" },
     { name: "DIA", width: 10, align: "left" },
-    { name: "TIPO", width: 30, align: "left" },
-    { name: "TRABALHADO", width: 25, align: "center" },
-    { name: "SALDO", width: 20, align: "center" },
-    { name: "CLASSIFICAÇÃO", width: 30, align: "left" },
-    { name: "OBSERVAÇÃO", width: 50, align: "left" } // O restante
+    { name: "TIPO", width: 28, align: "left" },
+    { name: "TRAB", width: 18, align: "center" },
+    { name: "SALDO", width: 18, align: "center" },
+    { name: "CLASSE", width: 28, align: "left" },
+    { name: "OBSERVAÇÃO", width: 70, align: "left" }
   ];
 
   const colX = [
     margin,
-    margin + 18,
+    margin + 16,
     margin + 28,
-    margin + 60,
-    margin + 85,
-    margin + 105,
-    margin + 140
+    margin + 58,
+    margin + 78,
+    margin + 98,
+    margin + 128
   ];
 
-  // Header da Tabela
-  doc.setFillColor(colors.tableHeader);
-  doc.rect(margin, yPos, contentWidth, 8, "F");
+  // Header Background
+  doc.setFillColor(colors.primary);
+  doc.rect(margin, yPos, contentWidth, 6, "F");
 
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(colors.text);
+  doc.setTextColor("#ffffff");
 
   cols.forEach((col, i) => {
-    // Ajuste fino para alinhar center se precisar
     let x = colX[i];
-    if (col.align === "center") x += (col.width / 2) - 3; // Aproximação grosseira
-    doc.text(col.name, x, yPos + 5);
+    if (col.align === "center") x += (col.width / 2) - 3;
+    doc.text(col.name, x, yPos + 4);
   });
 
-  yPos += 8;
+  yPos += 7; // Espaço após header
 
-  // Linhas da Tabela
+  // Rows
+  const rowHeight = 4.8; // Bem compacto
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
+  doc.setFontSize(7);
 
   resumo.dias.forEach((dia, index) => {
-    // Verificar quebra de página
-    if (yPos > pageHeight - 30) {
+    // Quebra de página
+    if (yPos > pageHeight - 25) { // Deixa 25mm para rodapé/assinaturas na última página
       doc.addPage();
-      yPos = 20; // Margem topo nova página
+      yPos = 15;
 
-      // Redesenhar header tabela
+      // Reprint Header Tabela
+      doc.setFillColor(colors.primary);
+      doc.rect(margin, yPos, contentWidth, 6, "F");
+      doc.setTextColor("#ffffff");
       doc.setFont("helvetica", "bold");
-      doc.setFillColor(colors.tableHeader);
-      doc.rect(margin, yPos, contentWidth, 8, "F");
-      doc.setTextColor(colors.text);
       cols.forEach((col, i) => {
         let x = colX[i];
         if (col.align === "center") x += (col.width / 2) - 3;
-        doc.text(col.name, x, yPos + 5);
+        doc.text(col.name, x, yPos + 4);
       });
-      yPos += 8;
+      yPos += 7;
       doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
     }
 
-    // Zebra striping opcional
-    if (index % 2 !== 0) {
-      doc.setFillColor("#f8fafc");
-      doc.rect(margin, yPos, contentWidth, 6, "F");
+    // Zebra Striping
+    if (index % 2 === 0) {
+      doc.setFillColor(colors.bgLight);
+      doc.rect(margin, yPos - 1, contentWidth, rowHeight, "F");
     }
 
+    // Dados
     const dataF = dia.data.substring(8, 10) + "/" + dia.data.substring(5, 7);
     const diaSemana = dia.diaSemana.substring(0, 3);
     const tipo = formatarTipoDiaParaExibicao(dia.tipoDia);
@@ -330,58 +317,57 @@ export function exportarPDF(dados: DadosExportacao) {
     const saldo = minutosParaHora(dia.diferencaMin);
     const classif = mapearClassificacaoParaExibicao(dia.classificacao);
 
-    // Cor do texto
+    // Estilos condicionais
     doc.setTextColor(colors.text);
 
-    // Data e Sem
-    doc.text(dataF, colX[0], yPos + 4);
+    // Data/Dia
+    doc.text(dataF, colX[0], yPos + 2.5);
     doc.setTextColor(colors.textLight);
-    doc.text(diaSemana, colX[1], yPos + 4);
+    doc.text(diaSemana, colX[1], yPos + 2.5);
 
     // Tipo
     doc.setTextColor(colors.text);
-    if (dia.tipoDia === "FERIADO") doc.setTextColor(colors.accent);
+    if (dia.tipoDia === "FERIADO") doc.setTextColor(colors.warning);
     if (dia.tipoDia === "DOMINGO") doc.setTextColor(colors.danger);
-    doc.text(tipo.substr(0, 15), colX[2], yPos + 4);
+    doc.text(tipo.substr(0, 16), colX[2], yPos + 2.5);
 
     // Trabalhado
     doc.setTextColor(colors.text);
-    doc.text(trab, colX[3] + 8, yPos + 4, { align: "center" });
+    doc.text(trab, colX[3] + 8, yPos + 2.5, { align: "center" });
 
     // Saldo
     if (dia.diferencaMin > 0) doc.setTextColor(colors.success);
     else if (dia.diferencaMin < 0) doc.setTextColor(colors.danger);
     else doc.setTextColor(colors.textLight);
+    doc.text(saldo, colX[4] + 8, yPos + 2.5, { align: "center" });
 
-    doc.text(saldo, colX[4] + 6, yPos + 4, { align: "center" });
-
-    // Classificação
+    // Classe
     doc.setTextColor(colors.text);
-    doc.text(classif.substr(0, 18), colX[5], yPos + 4);
+    doc.text(classif.substr(0, 20), colX[5], yPos + 2.5);
 
-    // Observação (Truncada)
+    // Obs
     if (dia.observacao === "FERIAS") {
-      doc.setTextColor(colors.accent);
-      doc.text("FÉRIAS", colX[6], yPos + 4);
+      doc.setTextColor(colors.warning);
+      doc.text("FÉRIAS", colX[6], yPos + 2.5);
     } else if (dia.observacao) {
       doc.setTextColor(colors.textLight);
-      const obs = dia.observacao.length > 35 ? dia.observacao.substring(0, 35) + "..." : dia.observacao;
-      doc.text(obs, colX[6], yPos + 4);
+      const obs = dia.observacao.length > 50 ? dia.observacao.substring(0, 50) + "..." : dia.observacao;
+      doc.text(obs, colX[6], yPos + 2.5);
     }
 
-    yPos += 6;
+    yPos += rowHeight;
   });
 
-  // --- FOOTER / ASSINATURAS ---
-  // Garantir espaço
-  if (yPos > pageHeight - 50) {
+  // --- ASSINATURAS ---
+  // Tenta manter na mesma página se sobrar espaço razoável, senão quebra
+  if (yPos > pageHeight - 35) {
     doc.addPage();
-    yPos = 40;
+    yPos = 30;
   } else {
-    yPos = Math.max(yPos + 15, pageHeight - 50); // Empurra para baixo se tiver espaço
+    yPos = Math.max(yPos + 10, pageHeight - 35);
   }
 
-  const sigY = yPos + 15;
+  const sigY = yPos + 10;
   const sigWidth = 70;
 
   doc.setDrawColor(colors.textLight);
@@ -389,22 +375,31 @@ export function exportarPDF(dados: DadosExportacao) {
 
   // Linha Funcionario
   doc.line(margin + 10, sigY, margin + 10 + sigWidth, sigY);
-
   // Linha Empresa
   doc.line(pageWidth - margin - 10 - sigWidth, sigY, pageWidth - margin - 10, sigY);
 
-  doc.setFontSize(7);
-  doc.setTextColor(colors.textLight);
-  doc.text("ASSINATURA DO COLABORADOR", margin + 10 + (sigWidth / 2), sigY + 4, { align: "center" });
-  doc.text("ASSINATURA DA EMPRESA", pageWidth - margin - 10 - (sigWidth / 2), sigY + 4, { align: "center" });
-
-  // Rodapé da página
-  const footerY = pageHeight - 10;
   doc.setFontSize(6);
-  doc.setTextColor("#94a3b8");
-  const now = new Date().toLocaleDateString("pt-BR") + " " + new Date().toLocaleTimeString("pt-BR");
-  doc.text(`Gerado em ${now} via CristalCar ERP`, margin, footerY);
-  doc.text("Página 1 de 1", pageWidth - margin, footerY, { align: "right" });
+  doc.setTextColor(colors.textLight);
+  doc.text("COLABORADOR", margin + 10 + (sigWidth / 2), sigY + 4, { align: "center" });
+  doc.text("EMPRESA", pageWidth - margin - 10 - (sigWidth / 2), sigY + 4, { align: "center" });
+
+  // Disclaimer Legal
+  doc.setFontSize(5);
+  doc.setTextColor("#cbd5e1");
+  doc.text("Este documento é um extrato conferido de banco de horas, sujeito às normas da CLT e acordos vigentes.", pageWidth / 2, pageHeight - 8, { align: "center" });
+
+  // Numeração de Páginas
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(6);
+    doc.setTextColor(colors.textLight);
+    doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, pageHeight - 8, { align: "right" });
+
+    // Timestamp em todas as páginas
+    const now = new Date().toLocaleDateString("pt-BR") + " " + new Date().toLocaleTimeString("pt-BR").substring(0, 5);
+    doc.text(`Gerado em ${now}`, margin, pageHeight - 8);
+  }
 
   // Download
   const nomeArquivo = `banco_horas_${resumo.funcionario.nome.replace(/\s+/g, "_")}_${resumo.competencia.ano}_${String(resumo.competencia.mes).padStart(2, "0")}.pdf`;
