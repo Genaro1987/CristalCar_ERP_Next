@@ -19,6 +19,10 @@ interface DashboardData {
   carteira: ResumoCarteira[];
   indicadores: Indicador[];
   alertas: Alertas;
+  rh: {
+    funcionariosAtivos: number;
+    departamentos: number;
+  };
 }
 
 interface Alertas {
@@ -149,10 +153,28 @@ export async function GET(request: NextRequest) {
       vencidos: Number((resultadoAlertas.rows[0] as any)?.vencidos ?? 0),
     };
 
+    // Dados RH (Funcionários Ativos)
+    const rhResult = await db.execute({
+      sql: `
+        SELECT
+          COUNT(CASE WHEN ATIVO = 1 THEN 1 END) as ativos,
+          COUNT(DISTINCT ID_DEPARTAMENTO) as departamentos
+        FROM RH_FUNCIONARIO
+        WHERE ID_EMPRESA = ?
+      `,
+      args: [empresaId],
+    });
+
+    const rhDados = {
+      funcionariosAtivos: Number(rhResult.rows[0]?.ativos ?? 0),
+      departamentos: Number(rhResult.rows[0]?.departamentos ?? 0),
+    };
+
     const dashboardData: DashboardData = {
       carteira,
       indicadores,
       alertas,
+      rh: rhDados,
     };
 
     return NextResponse.json({ success: true, data: dashboardData });

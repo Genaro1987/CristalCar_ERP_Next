@@ -9,7 +9,7 @@ import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 import {
   BarraFiltros,
   FiltroPadrao,
-  DreSplitView,
+  SplitView,
   ModalOverlay,
 } from "../_components/financeiro-layout";
 
@@ -233,8 +233,8 @@ export default function EstruturaDrePage() {
           </section>
 
           <section className="panel">
-            <DreSplitView
-              esquerda={
+            <SplitView
+              left={
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
@@ -258,107 +258,99 @@ export default function EstruturaDrePage() {
                   )}
                 </div>
               }
-              centro={
-                <div className="flex h-full flex-col gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Detalhes</p>
-                    <h3 className="text-lg font-bold text-gray-900">Linha selecionada</h3>
-                    <p className="text-sm text-gray-600">
-                      Consulte a descrição da linha, natureza e comportamento antes de conectar ao plano de contas.
-                    </p>
-                  </div>
-                  {selecionada ? (
-                    <div className="space-y-4 rounded-lg bg-gray-50 p-4">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
-                          <p className="text-lg font-bold text-gray-900">{selecionada.codigo}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</p>
-                          <p className="text-sm font-semibold text-gray-900">{selecionada.status === "ativo" ? "Ativo" : "Inativo"}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Natureza</p>
-                          <p className="text-sm font-semibold text-gray-900">{selecionada.natureza}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipo</p>
-                          <p className="text-sm font-semibold text-gray-900">{selecionada.tipo ?? "Livre"}</p>
-                        </div>
-                        <div className="md:col-span-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Título</p>
-                          <p className="text-base font-semibold text-gray-800">{selecionada.nome}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-xs uppercase tracking-wide text-gray-500">Regras e comentários</p>
-                        <p className="rounded-lg border border-dashed border-gray-200 bg-white p-3 text-sm text-gray-700">
-                          {selecionada.descricao || "Sem descrição cadastrada para esta linha."}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="button button-secondary"
-                          onClick={() => setModalLinha(true)}
-                        >
-                          Editar linha
-                        </button>
-                        <button
-                          type="button"
-                          className="button button-primary"
-                          onClick={() => setModalConta(true)}
-                        >
-                          Vincular contas
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
-                      <p className="font-semibold text-gray-800">Selecione uma linha para visualizar detalhes</p>
-                      <p>A navegação pela árvore do DRE está na coluna esquerda.</p>
-                    </div>
-                  )}
-                </div>
-              }
-              direita={
-                <div className="flex h-full flex-col gap-3">
-                  <div className="flex items-center justify-between">
+              right={
+                <div className="flex h-full flex-col gap-6">
+                  <div className="space-y-3">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Contas vinculadas</p>
-                      <h3 className="text-lg font-bold text-gray-900">Plano de contas no DRE</h3>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Detalhes</p>
+                      <h3 className="text-lg font-bold text-gray-900">Linha selecionada</h3>
+                      <p className="text-sm text-gray-600">
+                        Consulte a descrição da linha, natureza e comportamento antes de conectar ao plano de contas.
+                      </p>
                     </div>
-                    <button
-                      type="button"
-                      className="button button-primary"
-                      onClick={() => setModalConta(true)}
-                      disabled={!selecionada}
-                    >
-                      Vincular conta
-                    </button>
+                    {selecionada ? (
+                      <div className="space-y-4 rounded-lg bg-gray-50 p-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Código</p>
+                            <p className="text-lg font-bold text-gray-900">{selecionada.codigo}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</p>
+                            <p className="text-sm font-semibold text-gray-900">{selecionada.status === "ativo" ? "Ativo" : "Inativo"}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Natureza</p>
+                            <p className="text-sm font-semibold text-gray-900">{selecionada.natureza}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipo</p>
+                            <p className="text-sm font-semibold text-gray-900">{selecionada.tipo ?? "Livre"}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Título</p>
+                            <p className="text-base font-semibold text-gray-800">{selecionada.nome}</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xs uppercase tracking-wide text-gray-500">Regras e comentários</p>
+                          <p className="rounded-lg border border-dashed border-gray-200 bg-white p-3 text-sm text-gray-700">
+                            {selecionada.descricao || "Sem descrição cadastrada para esta linha."}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            className="button button-secondary"
+                            onClick={() => setModalLinha(true)}
+                          >
+                            Editar linha
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
+                        <p className="font-semibold text-gray-800">Selecione uma linha para visualizar detalhes</p>
+                      </div>
+                    )}
                   </div>
-                  {selecionada ? (
-                    <div className="space-y-3 rounded-lg bg-gray-50 p-4">
-                      {contasSelecionadas.length > 0 ? (
-                        <ul className="space-y-2">
-                          {contasSelecionadas.map((conta) => (
-                            <li key={conta} className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800">
-                              <span>{conta}</span>
-                              <button className="text-xs font-semibold text-orange-600 hover:underline">Remover</button>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-gray-600">Nenhuma conta associada a esta linha.</p>
-                      )}
+
+                  <div className="space-y-3 border-t border-gray-200 pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Contas vinculadas</p>
+                        <h3 className="text-lg font-bold text-gray-900">Plano de contas no DRE</h3>
+                      </div>
+                      <button
+                        type="button"
+                        className="button button-primary"
+                        onClick={() => setModalConta(true)}
+                        disabled={!selecionada}
+                      >
+                        Vincular conta
+                      </button>
                     </div>
-                  ) : (
-                    <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
-                      <p className="font-semibold text-gray-800">Selecione uma linha</p>
-                      <p>Escolha um item do DRE para listar as contas vinculadas.</p>
-                    </div>
-                  )}
+                    {selecionada ? (
+                      <div className="space-y-3 rounded-lg bg-gray-50 p-4">
+                        {contasSelecionadas.length > 0 ? (
+                          <ul className="space-y-2">
+                            {contasSelecionadas.map((conta) => (
+                              <li key={conta} className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800">
+                                <span>{conta}</span>
+                                <button className="text-xs font-semibold text-orange-600 hover:underline">Remover</button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-sm text-gray-600">Nenhuma conta associada a esta linha.</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
+                        <p className="font-semibold text-gray-800">Selecione uma linha</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               }
             />
