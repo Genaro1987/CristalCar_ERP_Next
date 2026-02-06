@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     // Calcular resumo de carteira (entradas, saídas e saldo)
     let sqlResumo = `
       SELECT
-        e.NOME_EMPRESA as empresa,
+        e.NOME_FANTASIA as empresa,
         COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR >= 0 THEN l.FIN_LANCAMENTO_VALOR ELSE 0 END), 0) as entradas,
         COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR < 0 THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as saidas,
         COALESCE(SUM(l.FIN_LANCAMENTO_VALOR), 0) as saldo
@@ -80,13 +80,13 @@ export async function GET(request: NextRequest) {
     // Se não houver dados, retornar empresa com valores zerados
     if (carteira.length === 0) {
       const empresaResult = await db.execute({
-        sql: `SELECT NOME_EMPRESA FROM EMP_EMPRESA WHERE ID_EMPRESA = ?`,
+        sql: `SELECT NOME_FANTASIA FROM EMP_EMPRESA WHERE ID_EMPRESA = ?`,
         args: [empresaId],
       });
 
       if (empresaResult.rows.length > 0) {
         carteira.push({
-          empresa: (empresaResult.rows[0] as any).NOME_EMPRESA,
+          empresa: (empresaResult.rows[0] as any).NOME_FANTASIA,
           saldo: 0,
           entradas: 0,
           saidas: 0,
