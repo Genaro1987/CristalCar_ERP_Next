@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
     // 6) Organizar lançamentos por semana
     const lancamentos = lancRes.rows as any[];
 
-    function somaPorSemana(inicio: string, fim: string) {
+    const somaPorSemana = (inicio: string, fim: string) => {
       let receitas = 0;
       let despesasProlabore = 0;
 
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
       }
 
       return { receitas, despesasProlabore };
-    }
+    };
 
     // 7) Calcular extrato com saldo acumulado
     const extrato: Array<{
