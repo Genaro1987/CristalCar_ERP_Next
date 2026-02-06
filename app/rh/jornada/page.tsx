@@ -614,30 +614,28 @@ export default function JornadaPage() {
               )}
 
               {!carregandoLista && !erroLista && jornadas.length > 0 && (
-                <div className="departamento-tabela-wrapper">
-                  <table className="data-table">
+                <div>
+                  <table className="data-table" style={{ tableLayout: "auto" }}>
                     <thead>
                       <tr>
-                        <th className="col-codigo">CÓDIGO</th>
-                        <th className="col-nome">NOME</th>
-                        <th className="col-descricao">DESCRIÇÃO</th>
-                        <th className="col-carga">CARGA (H)</th>
-                        <th className="col-horarios">HORÁRIOS</th>
-                        <th className="col-horarios">INTERVALO</th>
-                        <th className="col-status">STATUS</th>
-                        <th className="col-acoes">AÇÕES</th>
+                        <th>CÓDIGO</th>
+                        <th>NOME</th>
+                        <th>CARGA (H)</th>
+                        <th>HORÁRIOS</th>
+                        <th>INTERVALO</th>
+                        <th>STATUS</th>
+                        <th style={{ textAlign: "right" }}>AÇÕES</th>
                       </tr>
                     </thead>
                     <tbody>
                       {jornadas.map((jornada) => (
                         <tr key={jornada.ID_JORNADA}>
-                          <td className="col-codigo">{formatarCodigoJornada(jornada.ID_JORNADA)}</td>
-                          <td className="col-nome">{jornada.NOME_JORNADA}</td>
-                          <td className="col-descricao">{jornada.DESCRICAO || "-"}</td>
-                          <td className="col-carga">{jornada.CARGA_SEMANAL_HORAS}</td>
-                          <td className="col-horarios">{montarResumoHorariosTrabalho(jornada)}</td>
-                          <td className="col-horarios">{montarResumoIntervalo(jornada)}</td>
-                          <td className="col-status">
+                          <td style={{ whiteSpace: "nowrap" }}>{formatarCodigoJornada(jornada.ID_JORNADA)}</td>
+                          <td>{jornada.NOME_JORNADA}</td>
+                          <td>{jornada.CARGA_SEMANAL_HORAS}</td>
+                          <td style={{ whiteSpace: "nowrap" }}>{montarResumoHorariosTrabalho(jornada)}</td>
+                          <td style={{ whiteSpace: "nowrap" }}>{montarResumoIntervalo(jornada)}</td>
+                          <td>
                             <span
                               className={
                                 jornada.ATIVO === 1 ? "badge badge-success" : "badge badge-danger"
@@ -646,10 +644,10 @@ export default function JornadaPage() {
                               {jornada.ATIVO === 1 ? "ATIVO" : "INATIVO"}
                             </span>
                           </td>
-                          <td className="col-acoes">
+                          <td style={{ textAlign: "right" }}>
                             <button
                               type="button"
-                              className="button button-secondary"
+                              className="button button-secondary button-compact"
                               onClick={() => preencherParaEdicao(jornada)}
                             >
                               Editar
@@ -668,7 +666,7 @@ export default function JornadaPage() {
       {/* Modal de Feriados */}
       {modalFeriados && (
         <div className="modal-overlay" onClick={() => setModalFeriados(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 800, maxHeight: "none" }}>
             <div className="form-actions" style={{ marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700 }}>Feriados Cadastrados</h3>
               <button

@@ -168,16 +168,23 @@ export default function BancoHorasPage() {
 
   const horasMovimentacao = parseHoraParaMinutos(horasBancoQuantidade) ?? 0;
 
+  // Saldo do período (apenas este mês, sem saldo anterior do banco)
+  const saldoPeriodoHoras = extras50Horas + extras100Horas + horasDevidas;
+
   const { saldoFinalParaPagarHoras, saldoBancoFinalHoras } = useMemo(() => {
-    let saldoFinal = saldoMesHoras;
+    // saldoPeriodo = apenas os impactos deste mês (extras - devidas)
+    // saldoAnterior = o que já estava no banco de meses anteriores
+    let saldoFinal = saldoPeriodoHoras;
     let saldoBanco = saldoAnteriorHoras;
 
     if (tipoOperacaoBanco && horasMovimentacao > 0) {
       if (tipoOperacaoBanco === "ENVIAR_HORAS_PARA_BANCO") {
-        saldoFinal = saldoMesHoras - horasMovimentacao;
+        // Envia horas do período para o banco (credita no banco, reduz pagável)
+        saldoFinal = saldoPeriodoHoras - horasMovimentacao;
         saldoBanco = saldoAnteriorHoras + horasMovimentacao;
       } else {
-        saldoFinal = saldoMesHoras + horasMovimentacao;
+        // Usa horas do banco para abater (debita do banco, aumenta pagável)
+        saldoFinal = saldoPeriodoHoras + horasMovimentacao;
         saldoBanco = saldoAnteriorHoras - horasMovimentacao;
       }
     }
@@ -188,7 +195,7 @@ export default function BancoHorasPage() {
     }
 
     return { saldoFinalParaPagarHoras: saldoFinal, saldoBancoFinalHoras: saldoBanco };
-  }, [horasMovimentacao, saldoAnteriorHoras, saldoMesHoras, tipoOperacaoBanco, zerarBancoAoFinal]);
+  }, [horasMovimentacao, saldoAnteriorHoras, saldoPeriodoHoras, tipoOperacaoBanco, zerarBancoAoFinal]);
 
   const carregarResumo = async () => {
     if (!idFuncionario) {
@@ -632,9 +639,9 @@ export default function BancoHorasPage() {
                   <div className="form" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
                     <div className="banco-horas-card-grid">
                       <div className="form-group">
-                        <label>SALDO MES HORAS</label>
+                        <label>SALDO DO PERÍODO</label>
                         <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
-                          {minutosParaHora(saldoMesHoras)}
+                          {minutosParaHora(saldoPeriodoHoras)}
                         </div>
                       </div>
                       <div className="form-group">
@@ -644,7 +651,7 @@ export default function BancoHorasPage() {
                         </div>
                       </div>
                       <div className="form-group">
-                        <label>TIPO DE OPERACAO</label>
+                        <label>TIPO DE OPERAÇÃO</label>
                         <select
                           value={tipoOperacaoBanco}
                           onChange={(e) =>
