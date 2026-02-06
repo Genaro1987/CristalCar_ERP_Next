@@ -313,6 +313,9 @@ export async function listarResumoBancoHorasPorFuncionario(
               saidaExtra: (registro?.SAIDA_EXTRA as string | null | undefined) ?? null,
             });
 
+      // Férias: ignorar dia (sem débito no banco de horas)
+      if (tipoOcorrencia === "FERIAS") return;
+
       const { saldoBancoMinutos, minutosPagosFeriadoFds } = calcularSaldoDia(
         tipoDia,
         minutosTrabalhados,
@@ -610,7 +613,9 @@ export async function calcularBancoHorasMes(
             saidaExtra: registro?.saidaExtra,
           });
 
-    const jornadaPrevistaMin = tipoDia === "UTIL" ? minutosJornadaDia ?? 0 : 0;
+    // Férias: dia não conta como jornada prevista (sem débito no banco)
+    const isFerias = tipoOcorrencia === "FERIAS";
+    const jornadaPrevistaMin = (tipoDia === "UTIL" && !isFerias) ? minutosJornadaDia ?? 0 : 0;
     const diferencaBruta = minutosTrabalhados - jornadaPrevistaMin;
     const diferencaMin = Math.abs(diferencaBruta) <= toleranciaMinutos ? 0 : diferencaBruta;
 
@@ -620,7 +625,11 @@ export async function calcularBancoHorasMes(
     const faltaJustificada = tipoOcorrencia === "FALTA_JUSTIFICADA";
     const faltaNaoJustificada = tipoOcorrencia === "FALTA_NAO_JUSTIFICADA";
 
-    if (faltaJustificada || faltaNaoJustificada) {
+    if (isFerias) {
+      // Férias: sem impacto no banco de horas
+      classificacao = "NORMAL";
+      impactoBancoMin = 0;
+    } else if (faltaJustificada || faltaNaoJustificada) {
       classificacao = faltaJustificada ? "FALTA_JUSTIFICADA" : "FALTA_NAO_JUSTIFICADA";
       impactoBancoMin = diferencaMin < 0 ? diferencaMin : -Math.abs(jornadaPrevistaMin);
     } else if (tipoDia === "FERIADO" || tipoDia === "DOMINGO" || tipoDia === "SABADO") {

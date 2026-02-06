@@ -87,6 +87,7 @@ export default function BancoHorasPage() {
   const [ajusteObs, setAjusteObs] = useState("");
   const [situacaoPeriodo, setSituacaoPeriodo] = useState<string | null>(null);
   const [atualizandoPeriodo, setAtualizandoPeriodo] = useState(false);
+  const [confirmarExclusao, setConfirmarExclusao] = useState<number | null>(null);
 
   const empresaId = empresa?.id ?? null;
 
@@ -269,7 +270,7 @@ export default function BancoHorasPage() {
   };
 
   const excluirAjuste = async (idAjuste: number) => {
-    if (!confirm("Tem certeza que deseja excluir este ajuste?")) return;
+    setConfirmarExclusao(null);
 
     try {
       setLoading(true);
@@ -799,7 +800,7 @@ export default function BancoHorasPage() {
                               <td>
                                 {mov.tipo === "AJUSTE_MANUAL" && (
                                   <button
-                                    onClick={() => excluirAjuste(mov.id)}
+                                    onClick={() => setConfirmarExclusao(mov.id)}
                                     className="button-icon-only"
                                     style={{ color: "#dc2626" }}
                                     title="Excluir ajuste"
@@ -888,6 +889,35 @@ export default function BancoHorasPage() {
           </div>
         </main>
       </div>
+
+      {/* Modal de confirmação de exclusão de ajuste */}
+      {confirmarExclusao !== null && (
+        <div className="modal-overlay" onClick={() => setConfirmarExclusao(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
+            <h3 style={{ margin: "0 0 16px", fontSize: "1.05rem", fontWeight: 700 }}>Excluir ajuste</h3>
+            <p style={{ margin: "0 0 24px", fontSize: "0.95rem", color: "#374151" }}>
+              Tem certeza que deseja excluir este ajuste? Esta ação não pode ser desfeita.
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setConfirmarExclusao(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="button button-primary"
+                style={{ backgroundColor: "#dc2626" }}
+                onClick={() => excluirAjuste(confirmarExclusao)}
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </LayoutShell>
   );
 }

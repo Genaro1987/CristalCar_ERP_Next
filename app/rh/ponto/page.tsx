@@ -864,7 +864,12 @@ export default function PontoPage() {
                     <label htmlFor="chkFerias" style={{ margin: 0, fontWeight: 600 }}>Registrar Férias</label>
                   </div>
 
-                  {feriasHabilitado && (
+                  {feriasHabilitado && (() => {
+                    const [anoC, mesC] = competencia.split("-");
+                    const minData = `${anoC}-${mesC}-01`;
+                    const ultimoDia = new Date(Number(anoC), Number(mesC), 0).getDate();
+                    const maxData = `${anoC}-${mesC}-${String(ultimoDia).padStart(2, "0")}`;
+                    return (
                     <div className="form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", alignItems: "flex-end" }}>
                       <div className="form-group">
                         <label htmlFor="feriasInicio">Início</label>
@@ -873,6 +878,8 @@ export default function PontoPage() {
                           id="feriasInicio"
                           value={feriasInicio}
                           onChange={(e) => setFeriasInicio(e.target.value)}
+                          min={minData}
+                          max={maxData}
                           className="form-input"
                         />
                       </div>
@@ -883,6 +890,8 @@ export default function PontoPage() {
                           id="feriasFim"
                           value={feriasFim}
                           onChange={(e) => setFeriasFim(e.target.value)}
+                          min={minData}
+                          max={maxData}
                           className="form-input"
                         />
                       </div>
@@ -897,7 +906,8 @@ export default function PontoPage() {
                         </button>
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               </section>
 
