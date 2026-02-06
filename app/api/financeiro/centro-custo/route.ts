@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
             FIN_CENTRO_CUSTO_ORDEM,
             FIN_CENTRO_CUSTO_DESCRICAO
           FROM FIN_CENTRO_CUSTO
-          WHERE FIN_CENTRO_CUSTO_ID = ? AND ID_EMPRESA = ?
+          WHERE FIN_CENTRO_CUSTO_ID = ? AND EMPRESA_ID = ?
         `,
         args: [id, empresaId],
       });
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
           FIN_CENTRO_CUSTO_ORDEM,
           FIN_CENTRO_CUSTO_DESCRICAO
         FROM FIN_CENTRO_CUSTO
-        WHERE ID_EMPRESA = ?
+        WHERE EMPRESA_ID = ?
         ORDER BY FIN_CENTRO_CUSTO_ORDEM ASC
       `,
       args: [empresaId],
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
 
     // Verificar se o código já existe
     const verificacao = await db.execute({
-      sql: `SELECT COUNT(*) as total FROM FIN_CENTRO_CUSTO WHERE FIN_CENTRO_CUSTO_CODIGO = ? AND ID_EMPRESA = ?`,
+      sql: `SELECT COUNT(*) as total FROM FIN_CENTRO_CUSTO WHERE FIN_CENTRO_CUSTO_CODIGO = ? AND EMPRESA_ID = ?`,
       args: [codigo, empresaId],
     });
 
@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
           FIN_CENTRO_CUSTO_ATIVO,
           FIN_CENTRO_CUSTO_ORDEM,
           FIN_CENTRO_CUSTO_DESCRICAO,
-          ID_EMPRESA
+          EMPRESA_ID
         ) VALUES (?, ?, ?, 1, ?, ?, ?)
       `,
       args: [paiId || null, nome, codigo, ordem || 0, descricao || null, empresaId],
@@ -239,7 +239,7 @@ export async function PUT(request: NextRequest) {
 
     // Verificar se o centro existe
     const verificacao = await db.execute({
-      sql: `SELECT COUNT(*) as total FROM FIN_CENTRO_CUSTO WHERE FIN_CENTRO_CUSTO_ID = ? AND ID_EMPRESA = ?`,
+      sql: `SELECT COUNT(*) as total FROM FIN_CENTRO_CUSTO WHERE FIN_CENTRO_CUSTO_ID = ? AND EMPRESA_ID = ?`,
       args: [id, empresaId],
     });
 
@@ -260,7 +260,7 @@ export async function PUT(request: NextRequest) {
           FIN_CENTRO_CUSTO_DESCRICAO = COALESCE(?, FIN_CENTRO_CUSTO_DESCRICAO),
           FIN_CENTRO_CUSTO_ATIVO = COALESCE(?, FIN_CENTRO_CUSTO_ATIVO),
           FIN_CENTRO_CUSTO_ORDEM = COALESCE(?, FIN_CENTRO_CUSTO_ORDEM)
-        WHERE FIN_CENTRO_CUSTO_ID = ? AND ID_EMPRESA = ?
+        WHERE FIN_CENTRO_CUSTO_ID = ? AND EMPRESA_ID = ?
       `,
       args: [nome, codigo, descricao, ativo, ordem, id, empresaId],
     });

@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR < 0 THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as saidas,
         COALESCE(SUM(l.FIN_LANCAMENTO_VALOR), 0) as saldo
       FROM EMP_EMPRESA e
-      LEFT JOIN FIN_LANCAMENTO l ON l.ID_EMPRESA = e.ID_EMPRESA
+      LEFT JOIN FIN_LANCAMENTO l ON l.EMPRESA_ID = e.ID_EMPRESA
     `;
 
     const args: any[] = [];
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     sqlResumo += `
       WHERE e.ID_EMPRESA = ?
-      GROUP BY e.ID_EMPRESA, e.NOME_EMPRESA
+      GROUP BY e.ID_EMPRESA, e.NOME_FANTASIA
     `;
 
     args.push(empresaId);
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
         COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR < 0 THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as saidasPeriodo,
         COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_DATA < ? THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as vencidos
       FROM FIN_LANCAMENTO l
-      WHERE l.ID_EMPRESA = ?
+      WHERE l.EMPRESA_ID = ?
     `;
 
     const alertasArgs: any[] = [dataHoje, empresaId];

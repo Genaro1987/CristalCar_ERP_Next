@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
           FIN_ESTRUTURA_DRE_NATUREZA,
           COALESCE(FIN_ESTRUTURA_DRE_ORDEM, 0) as FIN_ESTRUTURA_DRE_ORDEM
         FROM FIN_ESTRUTURA_DRE
-        WHERE ID_EMPRESA = ?
+        WHERE EMPRESA_ID = ?
         ORDER BY FIN_ESTRUTURA_DRE_ORDEM ASC
       `,
       args: [empresaId],
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       sql: `
         SELECT FIN_ESTRUTURA_DRE_ID, FIN_PLANO_CONTA_ID
         FROM FIN_ESTRUTURA_DRE_CONTA
-        WHERE ID_EMPRESA = ?
+        WHERE EMPRESA_ID = ?
       `,
       args: [empresaId],
     });
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     let sqlLancamentos = `
       SELECT FIN_PLANO_CONTA_ID, COALESCE(SUM(FIN_LANCAMENTO_VALOR), 0) as total
       FROM FIN_LANCAMENTO
-      WHERE ID_EMPRESA = ?
+      WHERE EMPRESA_ID = ?
     `;
     const lancArgs: any[] = [empresaId];
 
