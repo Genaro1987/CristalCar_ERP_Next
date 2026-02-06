@@ -828,6 +828,8 @@ export default function BancoHorasPage() {
                         type="date"
                         value={ajusteData}
                         onChange={(e) => setAjusteData(e.target.value)}
+                        min={mes ? `${ano}-${mes.padStart(2, "0")}-01` : undefined}
+                        max={mes ? `${ano}-${mes.padStart(2, "0")}-${String(new Date(ano, Number(mes), 0).getDate()).padStart(2, "0")}` : undefined}
                         className="form-input"
                       />
                     </div>
