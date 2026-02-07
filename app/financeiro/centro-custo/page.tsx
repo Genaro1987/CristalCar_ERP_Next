@@ -196,41 +196,77 @@ export default function CentroCustoPage() {
     }
   };
 
-  const renderNo = (item: CentroCustoItem) => {
+  const [colapsados, setColapsados] = useState<Set<string>>(new Set());
+
+  const toggleColapso = (id: string) => {
+    setColapsados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const renderNo = (item: CentroCustoItem, nivel: number, parentLines: boolean[], isLast: boolean) => {
     const estaSelecionado = selecionado?.id === item.id;
+    const temFilhos = (item.filhos?.length ?? 0) > 0;
+    const estaColapsado = colapsados.has(item.id);
 
     return (
-      <div key={item.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div
-          className={`tree-node${estaSelecionado ? " selected" : ""}`}
-          onClick={() => handleEditar(item)}
-          style={{ cursor: "pointer" }}
-        >
-          <div className="tree-node-header">
-            <div>
-              <p className="tree-node-code">{item.codigo}</p>
-              <p className="tree-node-name">{item.nome}</p>
-              {item.descricao && <p className="tree-node-meta">{item.descricao}</p>}
-            </div>
-            <span className={item.status === "ativo" ? "badge badge-success" : "badge badge-danger"}>
-              {item.status === "ativo" ? "Ativo" : "Inativo"}
-            </span>
+      <div key={item.id}>
+        <div className="tree-row">
+          <div className="tree-indent">
+            {parentLines.map((showLine, i) => (
+              <div key={i} className={`tree-indent-segment${showLine ? " line" : ""}`} />
+            ))}
+            {nivel > 0 && (
+              <div className={`tree-indent-segment ${isLast ? "branch-last" : "branch"}`} />
+            )}
           </div>
-          <div className="tree-node-actions">
-            <button
-              type="button"
-              className="button button-secondary button-compact"
-              onClick={(e) => { e.stopPropagation(); handleEditar(item); }}
-            >
-              Editar
-            </button>
+          <div
+            className={`tree-node tree-level-${Math.min(nivel, 3)}${estaSelecionado ? " selected" : ""}`}
+            onClick={() => handleEditar(item)}
+            style={{ cursor: "pointer" }}
+          >
+            <div className="tree-node-header">
+              <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                {temFilhos && (
+                  <button
+                    type="button"
+                    className="tree-toggle"
+                    onClick={(e) => { e.stopPropagation(); toggleColapso(item.id); }}
+                  >
+                    {estaColapsado ? "+" : "-"}
+                  </button>
+                )}
+                <div style={{ minWidth: 0 }}>
+                  <p className="tree-node-code">{item.codigo}</p>
+                  <p className="tree-node-name">{item.nome}</p>
+                  {item.descricao && <p className="tree-node-meta">{item.descricao}</p>}
+                  {temFilhos && <p className="tree-node-meta">{item.filhos!.length} sub-centro(s)</p>}
+                </div>
+              </div>
+              <span className={item.status === "ativo" ? "badge badge-success" : "badge badge-danger"}>
+                {item.status === "ativo" ? "Ativo" : "Inativo"}
+              </span>
+            </div>
+            <div className="tree-node-actions">
+              <button
+                type="button"
+                className="button button-secondary button-compact"
+                onClick={(e) => { e.stopPropagation(); handleEditar(item); }}
+              >
+                Editar
+              </button>
+            </div>
           </div>
         </div>
-        {item.filhos && item.filhos.length > 0 ? (
+        {temFilhos && !estaColapsado && (
           <div className="tree-children">
-            {item.filhos.map((filho) => renderNo(filho))}
+            {item.filhos!.map((filho, idx) =>
+              renderNo(filho, nivel + 1, [...parentLines, ...(nivel > 0 ? [!isLast] : [])], idx === item.filhos!.length - 1)
+            )}
           </div>
-        ) : null}
+        )}
       </div>
     );
   };
@@ -265,7 +301,7 @@ export default function CentroCustoPage() {
 
                 <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
 
-                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="tree-container" style={{ marginTop: 12 }}>
                   {carregando ? (
                     <div className="empty-state"><p>Carregando centros de custo...</p></div>
                   ) : arvoreFiltrada.length === 0 ? (
@@ -274,7 +310,7 @@ export default function CentroCustoPage() {
                       <p>Ajuste os filtros ou cadastre um novo centro.</p>
                     </div>
                   ) : (
-                    arvoreFiltrada.map((item) => renderNo(item))
+                    arvoreFiltrada.map((item, idx) => renderNo(item, 0, [], idx === arvoreFiltrada.length - 1))
                   )}
                 </div>
               </section>

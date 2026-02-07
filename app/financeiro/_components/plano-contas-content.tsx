@@ -266,43 +266,80 @@ export function PlanoContasContent() {
     }
   };
 
-  const renderNo = (item: PlanoContaNode) => {
+  const [colapsados, setColapsados] = useState<Set<number>>(new Set());
+
+  const toggleColapso = (id: number) => {
+    setColapsados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const renderNo = (item: PlanoContaNode, nivel: number, parentLines: boolean[], isLast: boolean) => {
     const estaSelecionado = selecionado?.id === item.id;
+    const temFilhos = item.filhos.length > 0;
+    const estaColapsado = colapsados.has(item.id);
+    const tipoLabel = temFilhos ? "SINTETICA" : "ANALITICA";
 
     return (
-      <div key={item.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div
-          className={`tree-node${estaSelecionado ? " selected" : ""}`}
-          onClick={() => handleEditar(item)}
-          style={{ cursor: "pointer" }}
-        >
-          <div className="tree-node-header">
-            <div>
-              <p className="tree-node-code">{item.codigo}</p>
-              <p className="tree-node-name">{item.nome}</p>
-              <p className="tree-node-meta">
-                {item.natureza} | Centro custo: {item.obrigatorioCentroCusto ? "Sim" : "Nao"} | DRE: {item.visivelDre ? "Sim" : "Nao"}
-              </p>
-            </div>
-            <span className={item.ativo ? "badge badge-success" : "badge badge-danger"}>
-              {item.ativo ? "Ativo" : "Inativo"}
-            </span>
+      <div key={item.id}>
+        <div className="tree-row">
+          <div className="tree-indent">
+            {parentLines.map((showLine, i) => (
+              <div key={i} className={`tree-indent-segment${showLine ? " line" : ""}`} />
+            ))}
+            {nivel > 0 && (
+              <div className={`tree-indent-segment ${isLast ? "branch-last" : "branch"}`} />
+            )}
           </div>
-          <div className="tree-node-actions">
-            <button
-              type="button"
-              className="button button-secondary button-compact"
-              onClick={(e) => { e.stopPropagation(); handleEditar(item); }}
-            >
-              Editar
-            </button>
+          <div
+            className={`tree-node tree-level-${Math.min(nivel, 3)}${estaSelecionado ? " selected" : ""}`}
+            onClick={() => handleEditar(item)}
+            style={{ cursor: "pointer" }}
+          >
+            <div className="tree-node-header">
+              <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                {temFilhos && (
+                  <button
+                    type="button"
+                    className="tree-toggle"
+                    onClick={(e) => { e.stopPropagation(); toggleColapso(item.id); }}
+                  >
+                    {estaColapsado ? "+" : "-"}
+                  </button>
+                )}
+                <div style={{ minWidth: 0 }}>
+                  <p className="tree-node-code">{item.codigo} ({tipoLabel})</p>
+                  <p className="tree-node-name">{item.nome}</p>
+                  <p className="tree-node-meta">
+                    {item.natureza} | Centro custo: {item.obrigatorioCentroCusto ? "Sim" : "Nao"} | DRE: {item.visivelDre ? "Sim" : "Nao"}
+                    {temFilhos ? ` | ${item.filhos.length} sub-conta(s)` : ""}
+                  </p>
+                </div>
+              </div>
+              <span className={item.ativo ? "badge badge-success" : "badge badge-danger"}>
+                {item.ativo ? "Ativo" : "Inativo"}
+              </span>
+            </div>
+            <div className="tree-node-actions">
+              <button
+                type="button"
+                className="button button-secondary button-compact"
+                onClick={(e) => { e.stopPropagation(); handleEditar(item); }}
+              >
+                Editar
+              </button>
+            </div>
           </div>
         </div>
-        {item.filhos.length > 0 ? (
+        {temFilhos && !estaColapsado && (
           <div className="tree-children">
-            {item.filhos.map((filho) => renderNo(filho))}
+            {item.filhos.map((filho, idx) =>
+              renderNo(filho, nivel + 1, [...parentLines, ...(nivel > 0 ? [!isLast] : [])], idx === item.filhos.length - 1)
+            )}
           </div>
-        ) : null}
+        )}
       </div>
     );
   };
@@ -342,11 +379,11 @@ export function PlanoContasContent() {
                   exibirNatureza
                 />
 
-                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="tree-container" style={{ marginTop: 12 }}>
                   {carregandoLista ? (
                     <div className="empty-state"><p>Buscando contas financeiras...</p></div>
                   ) : arvoreFiltrada.length > 0 ? (
-                    arvoreFiltrada.map((item) => renderNo(item))
+                    arvoreFiltrada.map((item, idx) => renderNo(item, 0, [], idx === arvoreFiltrada.length - 1))
                   ) : (
                     <div className="empty-state">
                       <strong>Nenhuma conta encontrada</strong>

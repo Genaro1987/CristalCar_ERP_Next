@@ -1197,17 +1197,96 @@ a {
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
-/* ── Tree node cards ── */
+/* ── Tree hierarchy view ── */
+.tree-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tree-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.tree-indent {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.tree-indent-segment {
+  width: 28px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* vertical line for continuing parent levels */
+.tree-indent-segment.line::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #d1d5db;
+}
+
+/* branch connector: vertical line + horizontal arm */
+.tree-indent-segment.branch::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 0;
+  height: 50%;
+  width: 2px;
+  background-color: #d1d5db;
+}
+
+.tree-indent-segment.branch::after {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  width: 14px;
+  height: 2px;
+  background-color: #d1d5db;
+}
+
+/* last child: just the corner */
+.tree-indent-segment.branch-last::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 0;
+  height: 50%;
+  width: 2px;
+  background-color: #d1d5db;
+}
+
+.tree-indent-segment.branch-last::after {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  width: 14px;
+  height: 2px;
+  background-color: #d1d5db;
+}
+
 .tree-node {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 12px 14px;
+  border-radius: 8px;
+  padding: 10px 14px;
   background-color: #ffffff;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  flex: 1;
+  min-width: 0;
+  margin: 3px 0;
 }
 
 .tree-node:hover {
@@ -1217,6 +1296,24 @@ a {
 .tree-node.selected {
   border-color: #f97316;
   background-color: #fff7ed;
+}
+
+/* level-based styling */
+.tree-node.tree-level-0 {
+  border-left: 4px solid #f97316;
+  font-size: 1rem;
+}
+
+.tree-node.tree-level-1 {
+  border-left: 3px solid #fb923c;
+}
+
+.tree-node.tree-level-2 {
+  border-left: 3px solid #fdba74;
+}
+
+.tree-node.tree-level-3 {
+  border-left: 2px solid #fed7aa;
 }
 
 .tree-node-header {
@@ -1241,6 +1338,10 @@ a {
   color: #111827;
 }
 
+.tree-level-0 .tree-node-name {
+  font-size: 0.95rem;
+}
+
 .tree-node-meta {
   font-size: 0.78rem;
   color: #6b7280;
@@ -1253,13 +1354,33 @@ a {
   gap: 6px;
 }
 
+.tree-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #6b7280;
+  flex-shrink: 0;
+  margin-right: 6px;
+  transition: background 0.15s;
+}
+
+.tree-toggle:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
 .tree-children {
-  margin-left: 20px;
-  padding-left: 16px;
-  border-left: 2px dashed #e5e7eb;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
 
 /* ── Detail panel ── */
@@ -2597,9 +2718,17 @@ a {
   }
 
   /* ── Tree nodes ── */
-  .tree-children {
-    margin-left: 12px;
-    padding-left: 10px;
+  .tree-indent-segment {
+    width: 18px;
+  }
+
+  .tree-indent-segment.branch::after,
+  .tree-indent-segment.branch-last::after {
+    width: 8px;
+  }
+
+  .tree-node {
+    padding: 8px 10px;
   }
 
   /* ── Help body ── */
