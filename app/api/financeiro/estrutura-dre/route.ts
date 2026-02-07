@@ -6,12 +6,20 @@ import { db } from "@/db/client";
 let _schemaReady = false;
 async function ensureSchema() {
   if (_schemaReady) return;
+  // Check if columns exist by trying a simple SELECT
   try {
-    await db.execute("ALTER TABLE FIN_ESTRUTURA_DRE ADD COLUMN FIN_ESTRUTURA_DRE_FORMULA TEXT");
-  } catch { /* column already exists */ }
+    await db.execute({ sql: "SELECT FIN_ESTRUTURA_DRE_FORMULA, FIN_ESTRUTURA_DRE_REFERENCIA_100 FROM FIN_ESTRUTURA_DRE LIMIT 1", args: [] });
+    _schemaReady = true;
+    return;
+  } catch (_e) {
+    // Columns don't exist, add them
+  }
   try {
-    await db.execute("ALTER TABLE FIN_ESTRUTURA_DRE ADD COLUMN FIN_ESTRUTURA_DRE_REFERENCIA_100 INTEGER NOT NULL DEFAULT 0");
-  } catch { /* column already exists */ }
+    await db.execute({ sql: "ALTER TABLE FIN_ESTRUTURA_DRE ADD COLUMN FIN_ESTRUTURA_DRE_FORMULA TEXT", args: [] });
+  } catch (_e) { /* column already exists */ }
+  try {
+    await db.execute({ sql: "ALTER TABLE FIN_ESTRUTURA_DRE ADD COLUMN FIN_ESTRUTURA_DRE_REFERENCIA_100 INTEGER DEFAULT 0", args: [] });
+  } catch (_e) { /* column already exists */ }
   _schemaReady = true;
 }
 
@@ -219,10 +227,10 @@ export async function GET(request: NextRequest) {
     const hierarquia = converterParaHierarquia(registros, contasMap);
 
     return NextResponse.json({ success: true, data: hierarquia });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro ao buscar estrutura do DRE:", error);
     return NextResponse.json(
-      { success: false, error: "Erro ao buscar estrutura do DRE" },
+      { success: false, error: "Erro ao buscar estrutura do DRE: " + (error?.message || String(error)) },
       { status: 500 }
     );
   }
@@ -303,10 +311,10 @@ export async function POST(request: NextRequest) {
       { success: true, data: novaLinha },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro ao criar linha do DRE:", error);
     return NextResponse.json(
-      { success: false, error: "Erro ao criar linha do DRE" },
+      { success: false, error: "Erro ao criar linha do DRE: " + (error?.message || String(error)) },
       { status: 500 }
     );
   }
@@ -372,10 +380,10 @@ export async function PUT(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, message: "Linha do DRE atualizada" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro ao atualizar linha do DRE:", error);
     return NextResponse.json(
-      { success: false, error: "Erro ao atualizar linha do DRE" },
+      { success: false, error: "Erro ao atualizar linha do DRE: " + (error?.message || String(error)) },
       { status: 500 }
     );
   }
@@ -467,10 +475,10 @@ export async function DELETE(request: NextRequest) {
       inativada: false,
       message: `${ids.length} linha(s) do DRE excluida(s) com sucesso.`,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro ao excluir linha do DRE:", error);
     return NextResponse.json(
-      { success: false, error: "Erro ao excluir linha do DRE" },
+      { success: false, error: "Erro ao excluir linha do DRE: " + (error?.message || String(error)) },
       { status: 500 }
     );
   }

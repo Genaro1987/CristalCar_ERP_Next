@@ -238,7 +238,8 @@ export default function EstruturaDrePage() {
             paiId: form.paiId ? Number(form.paiId) : null,
           }),
         });
-        const json = await resp.json();
+        let json: any;
+        try { json = await resp.json(); } catch { json = { success: false, error: `Erro HTTP ${resp.status}` }; }
         if (json.success) {
           setNotification({ type: "success", message: "Linha do DRE criada com sucesso!" });
           handleLimpar();
@@ -248,7 +249,7 @@ export default function EstruturaDrePage() {
         }
       }
     } catch (err) {
-      setNotification({ type: "error", message: "Erro de conexao." });
+      setNotification({ type: "error", message: "Erro de conexao: " + (err instanceof Error ? err.message : String(err)) });
     } finally {
       setSalvando(false);
     }
