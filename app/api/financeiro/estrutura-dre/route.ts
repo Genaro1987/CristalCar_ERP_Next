@@ -12,6 +12,8 @@ interface EstruturaDreDB {
   FIN_ESTRUTURA_DRE_ORDEM: number;
   FIN_ESTRUTURA_DRE_TIPO: string | null;
   FIN_ESTRUTURA_DRE_DESCRICAO: string | null;
+  FIN_ESTRUTURA_DRE_FORMULA: string | null;
+  FIN_ESTRUTURA_DRE_REFERENCIA_100: 0 | 1;
 }
 
 interface LinhaDre {
@@ -22,6 +24,8 @@ interface LinhaDre {
   status: "ativo" | "inativo";
   tipo?: string;
   descricao?: string;
+  formula?: string;
+  referencia100?: boolean;
   contasVinculadas?: string[];
   filhos?: LinhaDre[];
 }
@@ -39,6 +43,8 @@ function converterParaHierarquia(registros: EstruturaDreDB[], contasMap: Map<num
       status: reg.FIN_ESTRUTURA_DRE_ATIVO === 1 ? "ativo" : "inativo",
       tipo: reg.FIN_ESTRUTURA_DRE_TIPO || undefined,
       descricao: reg.FIN_ESTRUTURA_DRE_DESCRICAO || undefined,
+      formula: reg.FIN_ESTRUTURA_DRE_FORMULA || undefined,
+      referencia100: reg.FIN_ESTRUTURA_DRE_REFERENCIA_100 === 1,
       contasVinculadas: contasMap.get(reg.FIN_ESTRUTURA_DRE_ID) || [],
       filhos: [],
     });
@@ -102,7 +108,9 @@ export async function GET(request: NextRequest) {
             FIN_ESTRUTURA_DRE_ATIVO,
             FIN_ESTRUTURA_DRE_ORDEM,
             FIN_ESTRUTURA_DRE_TIPO,
-            FIN_ESTRUTURA_DRE_DESCRICAO
+            FIN_ESTRUTURA_DRE_DESCRICAO,
+            FIN_ESTRUTURA_DRE_FORMULA,
+            FIN_ESTRUTURA_DRE_REFERENCIA_100
           FROM FIN_ESTRUTURA_DRE
           WHERE FIN_ESTRUTURA_DRE_ID = ? AND EMPRESA_ID = ?
         `,
@@ -139,6 +147,8 @@ export async function GET(request: NextRequest) {
         status: registro.FIN_ESTRUTURA_DRE_ATIVO === 1 ? "ativo" : "inativo",
         tipo: registro.FIN_ESTRUTURA_DRE_TIPO || undefined,
         descricao: registro.FIN_ESTRUTURA_DRE_DESCRICAO || undefined,
+        formula: registro.FIN_ESTRUTURA_DRE_FORMULA || undefined,
+        referencia100: registro.FIN_ESTRUTURA_DRE_REFERENCIA_100 === 1,
         contasVinculadas: contas,
       };
 
@@ -157,7 +167,9 @@ export async function GET(request: NextRequest) {
           FIN_ESTRUTURA_DRE_ATIVO,
           FIN_ESTRUTURA_DRE_ORDEM,
           FIN_ESTRUTURA_DRE_TIPO,
-          FIN_ESTRUTURA_DRE_DESCRICAO
+          FIN_ESTRUTURA_DRE_DESCRICAO,
+          FIN_ESTRUTURA_DRE_FORMULA,
+          FIN_ESTRUTURA_DRE_REFERENCIA_100
         FROM FIN_ESTRUTURA_DRE
         WHERE EMPRESA_ID = ?
         ORDER BY FIN_ESTRUTURA_DRE_ORDEM ASC
@@ -209,7 +221,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { nome, codigo, natureza, paiId, tipo, descricao, ordem } = body;
+  const { nome, codigo, natureza, paiId, tipo, descricao, ordem, formula, referencia100 } = body;
 
   if (!nome || !codigo || !natureza) {
     return NextResponse.json(
@@ -233,6 +245,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // If marking as ref100, clear any existing ref100 for this empresa
+    if (referencia100) {
+      await db.execute({
+        sql: `UPDATE FIN_ESTRUTURA_DRE SET FIN_ESTRUTURA_DRE_REFERENCIA_100 = 0 WHERE EMPRESA_ID = ? AND FIN_ESTRUTURA_DRE_REFERENCIA_100 = 1`,
+        args: [empresaId],
+      });
+    }
+
     const resultado = await db.execute({
       sql: `
         INSERT INTO FIN_ESTRUTURA_DRE (
@@ -244,10 +264,12 @@ export async function POST(request: NextRequest) {
           FIN_ESTRUTURA_DRE_ORDEM,
           FIN_ESTRUTURA_DRE_TIPO,
           FIN_ESTRUTURA_DRE_DESCRICAO,
+          FIN_ESTRUTURA_DRE_FORMULA,
+          FIN_ESTRUTURA_DRE_REFERENCIA_100,
           EMPRESA_ID
-        ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
       `,
-      args: [paiId || null, nome, codigo, natureza, ordem || 0, tipo || null, descricao || null, empresaId],
+      args: [paiId || null, nome, codigo, natureza, ordem || 0, tipo || null, descricao || null, formula || null, referencia100 ? 1 : 0, empresaId],
     });
 
     const novaLinha: LinhaDre = {
@@ -258,6 +280,8 @@ export async function POST(request: NextRequest) {
       status: "ativo",
       tipo,
       descricao,
+      formula,
+      referencia100: !!referencia100,
     };
 
     return NextResponse.json(
@@ -288,7 +312,7 @@ export async function PUT(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { nome, codigo, natureza, tipo, descricao, ativo, ordem } = body;
+  const { nome, codigo, natureza, tipo, descricao, ativo, ordem, formula, referencia100 } = body;
 
   try {
     // Verificar se a linha existe
@@ -305,6 +329,14 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // If marking as ref100, clear any existing ref100 for this empresa
+    if (referencia100 !== undefined && referencia100) {
+      await db.execute({
+        sql: `UPDATE FIN_ESTRUTURA_DRE SET FIN_ESTRUTURA_DRE_REFERENCIA_100 = 0 WHERE EMPRESA_ID = ? AND FIN_ESTRUTURA_DRE_REFERENCIA_100 = 1 AND FIN_ESTRUTURA_DRE_ID != ?`,
+        args: [empresaId, id],
+      });
+    }
+
     await db.execute({
       sql: `
         UPDATE FIN_ESTRUTURA_DRE
@@ -315,10 +347,12 @@ export async function PUT(request: NextRequest) {
           FIN_ESTRUTURA_DRE_TIPO = COALESCE(?, FIN_ESTRUTURA_DRE_TIPO),
           FIN_ESTRUTURA_DRE_DESCRICAO = COALESCE(?, FIN_ESTRUTURA_DRE_DESCRICAO),
           FIN_ESTRUTURA_DRE_ATIVO = COALESCE(?, FIN_ESTRUTURA_DRE_ATIVO),
-          FIN_ESTRUTURA_DRE_ORDEM = COALESCE(?, FIN_ESTRUTURA_DRE_ORDEM)
+          FIN_ESTRUTURA_DRE_ORDEM = COALESCE(?, FIN_ESTRUTURA_DRE_ORDEM),
+          FIN_ESTRUTURA_DRE_FORMULA = ?,
+          FIN_ESTRUTURA_DRE_REFERENCIA_100 = COALESCE(?, FIN_ESTRUTURA_DRE_REFERENCIA_100)
         WHERE FIN_ESTRUTURA_DRE_ID = ? AND EMPRESA_ID = ?
       `,
-      args: [nome ?? null, codigo ?? null, natureza ?? null, tipo ?? null, descricao ?? null, ativo ?? null, ordem ?? null, id, empresaId],
+      args: [nome ?? null, codigo ?? null, natureza ?? null, tipo ?? null, descricao ?? null, ativo ?? null, ordem ?? null, formula !== undefined ? (formula || null) : null, referencia100 !== undefined ? (referencia100 ? 1 : 0) : null, id, empresaId],
     });
 
     return NextResponse.json({ success: true, message: "Linha do DRE atualizada" });

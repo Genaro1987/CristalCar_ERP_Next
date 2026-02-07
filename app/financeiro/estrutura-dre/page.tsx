@@ -19,6 +19,8 @@ interface LinhaDre {
   status: "ativo" | "inativo";
   tipo?: string;
   descricao?: string;
+  formula?: string;
+  referencia100?: boolean;
   contasVinculadas?: string[];
   filhos?: LinhaDre[];
 }
@@ -35,6 +37,8 @@ interface FormDre {
   natureza: "RECEITA" | "DESPESA" | "OUTROS";
   tipo: string;
   descricao: string;
+  formula: string;
+  referencia100: number;
   ativo: number;
   paiId: string | null;
 }
@@ -45,6 +49,8 @@ const FORM_VAZIO: FormDre = {
   natureza: "RECEITA",
   tipo: "Fixo",
   descricao: "",
+  formula: "",
+  referencia100: 0,
   ativo: 1,
   paiId: null,
 };
@@ -173,6 +179,8 @@ export default function EstruturaDrePage() {
       natureza: item.natureza,
       tipo: item.tipo || "Fixo",
       descricao: item.descricao || "",
+      formula: item.formula || "",
+      referencia100: item.referencia100 ? 1 : 0,
       ativo: item.status === "ativo" ? 1 : 0,
       paiId: null,
     });
@@ -202,6 +210,8 @@ export default function EstruturaDrePage() {
             natureza: form.natureza,
             tipo: form.tipo,
             descricao: form.descricao,
+            formula: form.tipo === "Calculado" ? form.formula : null,
+            referencia100: form.referencia100 === 1,
             ativo: form.ativo,
           }),
         });
@@ -223,6 +233,8 @@ export default function EstruturaDrePage() {
             natureza: form.natureza,
             tipo: form.tipo,
             descricao: form.descricao,
+            formula: form.tipo === "Calculado" ? form.formula : null,
+            referencia100: form.referencia100 === 1,
             paiId: form.paiId ? Number(form.paiId) : null,
           }),
         });
@@ -385,9 +397,14 @@ export default function EstruturaDrePage() {
               <div className="tree-node-info">
                 <span className="tree-node-code">{item.codigo}</span>
                 <span className="tree-node-name">{item.nome}</span>
-                <span className="tree-node-meta">{item.natureza}{item.tipo ? ` | ${item.tipo}` : ""}{temFilhos ? ` | ${item.filhos!.length}` : ""}</span>
+                <span className="tree-node-meta">
+                  {item.natureza}{item.tipo ? ` | ${item.tipo}` : ""}{item.formula ? ` | ${item.formula}` : ""}{temFilhos ? ` | ${item.filhos!.length}` : ""}
+                </span>
               </div>
               <div className="tree-node-right">
+                {item.referencia100 && (
+                  <span className="badge" style={{ backgroundColor: "#dbeafe", color: "#1e40af", fontSize: "0.65rem", padding: "2px 6px" }}>100%</span>
+                )}
                 <span className={item.status === "ativo" ? "badge badge-success" : "badge badge-danger"} style={{ fontSize: "0.65rem", padding: "2px 6px" }}>
                   {item.status === "ativo" ? "Ativo" : "Inativo"}
                 </span>
@@ -558,6 +575,36 @@ export default function EstruturaDrePage() {
                       <div className="form-group" />
                     </div>
                   )}
+                  {form.tipo === "Calculado" && (
+                    <div className="form-group">
+                      <label htmlFor="dre-linha-formula">Formula</label>
+                      <input
+                        id="dre-linha-formula"
+                        className="form-input"
+                        placeholder="Ex: 1 - 2 - 3 (use os codigos das linhas)"
+                        value={form.formula}
+                        onChange={(e) => setForm((f) => ({ ...f, formula: e.target.value }))}
+                      />
+                      <small style={{ color: "#6b7280", fontSize: "0.78rem", marginTop: 4, display: "block" }}>
+                        Use os codigos das linhas do DRE separados por operadores (+, -, *, /). Ex: 1 - 2 - 3
+                      </small>
+                    </div>
+                  )}
+                  <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="dre-linha-ref100">Referencia 100% (base para %)</label>
+                      <select
+                        id="dre-linha-ref100"
+                        className="form-input"
+                        value={form.referencia100}
+                        onChange={(e) => setForm((f) => ({ ...f, referencia100: Number(e.target.value) }))}
+                      >
+                        <option value={0}>Nao</option>
+                        <option value={1}>Sim - Esta linha sera 100% no DRE</option>
+                      </select>
+                    </div>
+                    <div className="form-group" />
+                  </div>
                   <div className="form-group">
                     <label htmlFor="dre-linha-descricao">Descricao</label>
                     <textarea
