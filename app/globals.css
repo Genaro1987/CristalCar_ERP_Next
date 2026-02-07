@@ -1823,3 +1823,491 @@ a {
   gap: 12px;
   justify-content: flex-end;
 }
+
+/* ═══════════════════════════════════════════
+   MOBILE LAYOUT  (max-width: 768px)
+   ═══════════════════════════════════════════ */
+
+/* ── Mobile Header ── */
+.mobile-header {
+  display: none;
+}
+
+/* ── Mobile Sidebar Backdrop ── */
+.mobile-sidebar-backdrop {
+  display: none;
+}
+
+/* ── Mobile Bottom Nav ── */
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+
+  /* ── Mobile Header Bar ── */
+  .mobile-header {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background-color: #050b18;
+    color: #f9fafb;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .mobile-header-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+    text-align: center;
+  }
+
+  .mobile-hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+  }
+
+  .hamburger-line {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background-color: #f9fafb;
+    border-radius: 2px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  .hamburger-line-x1 {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+
+  .hamburger-line-x2 {
+    opacity: 0;
+  }
+
+  .hamburger-line-x3 {
+    transform: rotate(-45deg) translate(5px, -5px);
+  }
+
+  /* ── Sidebar: hidden by default, slide-in overlay on mobile ── */
+  .sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    width: 280px;
+    height: calc(100vh - 56px);
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 90;
+    box-shadow: none;
+  }
+
+  .sidebar-mobile-open {
+    transform: translateX(0);
+    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .mobile-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    top: 56px;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 80;
+  }
+
+  /* ── Layout body: full width, top padding for mobile header ── */
+  .layout-body {
+    margin-left: 0;
+    width: 100%;
+    padding-bottom: 72px;
+  }
+
+  .layout-main {
+    padding: 8px 0;
+    margin-top: 56px;
+    flex-direction: column;
+  }
+
+  /* ── Page Container & Content ── */
+  .page-container {
+    padding: 12px 12px 24px;
+  }
+
+  .page-content-card {
+    border-radius: 12px;
+    padding: 14px 12px 20px;
+    margin: 8px 0 0;
+  }
+
+  /* ── Header Card ── */
+  .page-header-card {
+    border-radius: 12px;
+    padding: 10px 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .header-title {
+    font-size: 1.1rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .screen-search-container {
+    width: 100%;
+  }
+
+  .screen-search-input {
+    width: 100%;
+  }
+
+  .screen-search-results {
+    width: 100%;
+  }
+
+  /* ── Panels ── */
+  .panel {
+    padding: 16px 12px 20px;
+    border-radius: 10px;
+  }
+
+  .form-section-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* ── Forms ── */
+  .form-grid.two-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid.three-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .departamentos-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .jornadas-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .horarios-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ponto-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .button-row {
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+
+  .button-row .button {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+  }
+
+  /* ── Tables ── */
+  .data-table {
+    font-size: 0.82rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px 6px;
+  }
+
+  .data-table th {
+    font-size: 0.72rem;
+  }
+
+  /* ── Summary Cards ── */
+  .summary-cards {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .summary-card {
+    padding: 12px;
+  }
+
+  .summary-label,
+  .summary-card-label {
+    font-size: 0.68rem;
+  }
+
+  .summary-value,
+  .summary-card-value {
+    font-size: 1.1rem;
+  }
+
+  /* ── Split View → stacked ── */
+  .split-view {
+    grid-template-columns: 1fr;
+  }
+
+  .split-view-panel {
+    padding: 14px 12px;
+  }
+
+  /* ── Detail cards ── */
+  .detail-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  /* ── Banco de horas ── */
+  .banco-horas-resumo-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .banco-horas-card-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .banco-horas-card {
+    padding: 10px 12px;
+  }
+
+  .banco-horas-detalhamento-table {
+    table-layout: auto;
+  }
+
+  .dia-cell {
+    gap: 2px;
+  }
+
+  .dia-data {
+    font-size: 0.85rem;
+  }
+
+  .dia-semana {
+    font-size: 0.75rem;
+  }
+
+  /* ── Empresa card ── */
+  .empresa-card {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .empresa-card-actions {
+    justify-content: center;
+  }
+
+  /* ── Company card grid ── */
+  .company-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Tree nodes ── */
+  .tree-children {
+    margin-left: 12px;
+    padding-left: 10px;
+  }
+
+  /* ── Help body ── */
+  .help-body {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .help-sidebar {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .help-modulo-column {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 4px;
+    padding-bottom: 4px;
+  }
+
+  .help-modulo-tab {
+    writing-mode: horizontal-tb;
+    transform: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
+  .help-screen-list {
+    max-height: 200px;
+  }
+
+  .help-panel {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 60vh;
+    z-index: 60;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  /* ── Modal ── */
+  .modal-card {
+    width: 96%;
+    max-width: 96%;
+    max-height: 85vh;
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .modal-overlay {
+    padding: 8px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions .button {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* ── Permissões ── */
+  .permissoes-grid-template {
+    grid-template-columns: 1fr;
+  }
+
+  .permissoes-grid-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 10px 0;
+  }
+
+  .permissoes-grid-checkbox {
+    justify-content: flex-start;
+  }
+
+  .perfil-telas-lista {
+    overflow-x: auto;
+  }
+
+  /* ── Jornada info ── */
+  .jornada-info-line {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  /* ── Home header ── */
+  .home-header {
+    padding: 12px 12px 4px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  /* ── Mobile Bottom Navigation ── */
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
+    background-color: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+    z-index: 100;
+    align-items: flex-start;
+    justify-content: space-around;
+    padding: 6px 4px env(safe-area-inset-bottom, 0px);
+  }
+
+  .mobile-bottom-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    flex: 1;
+    padding: 6px 0;
+    text-decoration: none;
+    color: #6b7280;
+    transition: color 0.15s ease;
+  }
+
+  .mobile-bottom-tab-active {
+    color: #f97316;
+  }
+
+  .mobile-bottom-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f3f4f6;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .mobile-bottom-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .mobile-bottom-tab-active .mobile-bottom-icon {
+    background-color: #fff7ed;
+    color: #f97316;
+  }
+
+  .mobile-bottom-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Financeiro specific ── */
+  .financeiro-page .page-header-card {
+    flex-direction: column;
+  }
+}

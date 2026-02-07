@@ -65,7 +65,12 @@ function lerTelasPermitidas(): Set<string> {
   return new Set();
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileAberta?: boolean;
+  onNavegar?: () => void;
+}
+
+export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
   const pathname = usePathname();
   const { empresa } = useEmpresaSelecionada();
 
@@ -229,8 +234,10 @@ export function Sidebar() {
 
   const isAjuda = pathname.startsWith("/ajuda");
 
+  const sidebarClass = mobileAberta ? "sidebar sidebar-mobile-open" : "sidebar";
+
   return (
-    <aside className="sidebar">
+    <aside className={sidebarClass}>
       <div className="sidebar-top">
         <div className="sidebar-logo-block">
           {empresa?.logoUrl ? (
@@ -267,6 +274,7 @@ export function Sidebar() {
                       key={item.rota}
                       href={item.rota}
                       className={ativo ? "sidebar-nav-item active" : "sidebar-nav-item"}
+                      onClick={onNavegar}
                     >
                       {item.label}
                     </Link>
