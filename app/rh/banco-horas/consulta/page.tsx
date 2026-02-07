@@ -13,6 +13,7 @@ import { exportarPDF, exportarExcel } from "@/lib/exportarBancoHoras";
 import type { ResumoBancoHorasMes } from "@/db/rhBancoHoras";
 import {
   formatarTipoDiaParaExibicao,
+  formatarObservacaoParaExibicao,
   mapearClassificacaoParaExibicao,
   resumirTotaisDias,
 } from "@/lib/bancoHorasHelpers";
@@ -488,53 +489,72 @@ export default function BancoHorasConsultaPage() {
                 </div>
               )}
 
-              <div className="departamento-tabela-wrapper banco-horas-detalhamento-wrapper">
-                <table className="data-table banco-horas-detalhamento-table">
-                  <colgroup>
-                    <col style={{ width: "22%" }} />
-                    <col style={{ width: "18%" }} />
-                    <col style={{ width: "20%" }} />
-                    <col style={{ width: "20%" }} />
-                    <col style={{ width: "20%" }} />
-                  </colgroup>
+              <div style={{ overflowX: "auto" }}>
+                <table className="data-table banco-horas-detalhamento-table" style={{ tableLayout: "auto" }}>
                   <thead>
                     <tr>
                       <th>Dia</th>
                       <th>Tipo</th>
+                      <th>Ocorrência</th>
                       <th>Trabalhado</th>
                       <th>Diferença</th>
                       <th>Classificação</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {resumo.dias.map((dia) => (
-                      <tr key={dia.data}>
-                        <td>
-                          <div className="dia-cell">
-                            <span className="dia-data">{dia.data}</span>
-                            <span className="dia-semana">{dia.diaSemana}</span>
-                          </div>
-                        </td>
-                        <td>{formatarTipoDiaParaExibicao(dia.tipoDia)}</td>
-                        <td>{minutosParaHora(dia.trabalhadoMin)}</td>
-                        <td style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
-                          {minutosParaHora(dia.diferencaMin)}
-                        </td>
-                        <td>
-                          <span
-                            className={
-                              mapearClassificacaoParaExibicao(dia.classificacao) === "Hora Extra"
-                                ? "badge badge-success"
-                                : mapearClassificacaoParaExibicao(dia.classificacao) === "Devedor"
-                                ? "badge badge-danger"
-                                : "badge"
-                            }
-                          >
-                            {mapearClassificacaoParaExibicao(dia.classificacao)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {resumo.dias.map((dia) => {
+                      const obs = formatarObservacaoParaExibicao(dia.observacao);
+                      const isFeriado = dia.tipoDia === "FERIADO";
+                      const isFerias = (dia.observacao ?? "").toUpperCase() === "FERIAS";
+                      const rowStyle: React.CSSProperties = isFeriado
+                        ? { backgroundColor: "#fef3c7" }
+                        : isFerias
+                        ? { backgroundColor: "#dbeafe" }
+                        : {};
+                      return (
+                        <tr key={dia.data} style={rowStyle}>
+                          <td>
+                            <div className="dia-cell">
+                              <span className="dia-data">{dia.data}</span>
+                              <span className="dia-semana">{dia.diaSemana}</span>
+                            </div>
+                          </td>
+                          <td>
+                            {isFeriado ? (
+                              <span className="badge" style={{ backgroundColor: "#fbbf24", color: "#78350f" }}>FERIADO</span>
+                            ) : (
+                              formatarTipoDiaParaExibicao(dia.tipoDia)
+                            )}
+                          </td>
+                          <td>
+                            {isFerias ? (
+                              <span className="badge" style={{ backgroundColor: "#93c5fd", color: "#1e3a5f" }}>Férias</span>
+                            ) : obs ? (
+                              <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>{obs}</span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td>{minutosParaHora(dia.trabalhadoMin)}</td>
+                          <td style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
+                            {minutosParaHora(dia.diferencaMin)}
+                          </td>
+                          <td>
+                            <span
+                              className={
+                                mapearClassificacaoParaExibicao(dia.classificacao) === "Hora Extra"
+                                  ? "badge badge-success"
+                                  : mapearClassificacaoParaExibicao(dia.classificacao) === "Devedor"
+                                  ? "badge badge-danger"
+                                  : "badge"
+                              }
+                            >
+                              {mapearClassificacaoParaExibicao(dia.classificacao)}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

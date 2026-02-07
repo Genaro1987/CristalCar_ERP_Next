@@ -2,10 +2,12 @@
 
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
-import { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
+
+type TipoVisao = "mensal" | "trimestral" | "semestral" | "anual";
 
 interface DreLinha {
   id: number;
@@ -13,40 +15,98 @@ interface DreLinha {
   codigo: string;
   natureza: "RECEITA" | "DESPESA" | "OUTROS";
   valor: number;
+  colunas?: Record<string, number>;
   filhos?: DreLinha[];
 }
 
-function calcularValorPositivo(linha: DreLinha): number {
+interface PeriodoInfo {
+  chave: string;
+  label: string;
+}
+
+function formatarValor(valor: number): string {
+  return Math.abs(valor).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function calcularImpacto(linha: DreLinha): number {
   const valorAbsoluto = Math.abs(linha.valor);
   if (linha.natureza === "RECEITA") return valorAbsoluto;
   if (linha.natureza === "DESPESA") return -valorAbsoluto;
   return valorAbsoluto;
 }
 
-function TreeValores({ nodes }: { nodes: DreLinha[] }) {
+function calcularImpactoValor(natureza: string, valor: number): number {
+  const abs = Math.abs(valor);
+  if (natureza === "RECEITA") return abs;
+  if (natureza === "DESPESA") return -abs;
+  return abs;
+}
+
+function DreLinhaRow({
+  node,
+  periodos,
+  nivel,
+}: {
+  node: DreLinha;
+  periodos: PeriodoInfo[];
+  nivel: number;
+}) {
+  const [aberto, setAberto] = useState(true);
+  const temFilhos = (node.filhos?.length ?? 0) > 0;
+  const paddingLeft = nivel * 20 + 8;
+
   return (
-    <ul className="ml-4 space-y-2">
-      {nodes.map((node) => (
-        <li key={node.id} className="rounded border border-gray-200 bg-white p-3 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-gray-800">{node.nome}</p>
-              <p className="text-xs text-gray-600">Natureza: {node.natureza}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-semibold text-gray-800">
-                R$ {Math.abs(node.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-xs text-gray-600">
-                Impacto no resultado: {calcularValorPositivo(node) >= 0 ? "+" : "-"}
-                {Math.abs(calcularValorPositivo(node)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-          </div>
-          {node.filhos && node.filhos.length > 0 && <TreeValores nodes={node.filhos} />}
-        </li>
-      ))}
-    </ul>
+    <>
+      <tr
+        style={{
+          fontWeight: nivel === 0 ? 700 : 400,
+          backgroundColor: nivel === 0 ? "#f9fafb" : "transparent",
+        }}
+      >
+        <td
+          style={{ paddingLeft, cursor: temFilhos ? "pointer" : "default", whiteSpace: "nowrap" }}
+          onClick={() => temFilhos && setAberto((v) => !v)}
+        >
+          {temFilhos ? (aberto ? "- " : "+ ") : "  "}
+          {node.codigo ? `${node.codigo} - ` : ""}
+          {node.nome}
+          <span
+            style={{
+              marginLeft: 8,
+              fontSize: "0.7rem",
+              color: node.natureza === "RECEITA" ? "#059669" : node.natureza === "DESPESA" ? "#dc2626" : "#6b7280",
+            }}
+          >
+            {node.natureza}
+          </span>
+        </td>
+        {periodos.length > 0 ? (
+          <>
+            {periodos.map((p) => {
+              const val = node.colunas?.[p.chave] ?? 0;
+              return (
+                <td key={p.chave} style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                  <span style={{ color: val >= 0 ? "#059669" : "#dc2626" }}>
+                    {formatarValor(val)}
+                  </span>
+                </td>
+              );
+            })}
+            <td style={{ textAlign: "right", fontWeight: 700, whiteSpace: "nowrap" }}>
+              {formatarValor(node.valor)}
+            </td>
+          </>
+        ) : (
+          <td style={{ textAlign: "right", fontWeight: 700, whiteSpace: "nowrap" }}>
+            {formatarValor(node.valor)}
+          </td>
+        )}
+      </tr>
+      {aberto &&
+        node.filhos?.map((filho) => (
+          <DreLinhaRow key={filho.id} node={filho} periodos={periodos} nivel={nivel + 1} />
+        ))}
+    </>
   );
 }
 
@@ -60,9 +120,10 @@ export default function DrePage() {
   const moduloTela = tela?.MODULO ?? "FINANCEIRO";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
-  const [periodoInicial, setPeriodoInicial] = useState<string>("");
-  const [periodoFinal, setPeriodoFinal] = useState<string>("");
+  const [visao, setVisao] = useState<TipoVisao>("mensal");
+  const [ano, setAno] = useState(new Date().getFullYear());
   const [linhas, setLinhas] = useState<DreLinha[]>([]);
+  const [periodos, setPeriodos] = useState<PeriodoInfo[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
@@ -72,19 +133,18 @@ export default function DrePage() {
       try {
         setCarregando(true);
         const params = new URLSearchParams();
-        if (periodoInicial) params.set("dataInicio", periodoInicial);
-        if (periodoFinal) params.set("dataFim", periodoFinal);
+        params.set("visao", visao);
+        params.set("ano", String(ano));
 
         const resposta = await fetch(`/api/financeiro/dre?${params.toString()}`, {
-          headers: {
-            "x-empresa-id": String(empresa.id),
-          },
+          headers: { "x-empresa-id": String(empresa.id) },
         });
 
         if (resposta.ok) {
           const dados = await resposta.json();
           if (dados.success) {
             setLinhas(dados.data ?? []);
+            setPeriodos(dados.periodos ?? []);
           }
         }
       } catch (erro) {
@@ -95,11 +155,30 @@ export default function DrePage() {
     };
 
     carregarDre();
-  }, [empresa?.id, periodoInicial, periodoFinal]);
+  }, [empresa?.id, visao, ano]);
 
   const totalResultado = useMemo(() => {
-    return linhas.reduce((acc, linha) => acc + calcularValorPositivo(linha), 0);
+    return linhas.reduce((acc, linha) => acc + calcularImpacto(linha), 0);
   }, [linhas]);
+
+  const resultadoPorPeriodo = useMemo(() => {
+    if (periodos.length === 0) return {};
+    const resultado: Record<string, number> = {};
+    for (const p of periodos) {
+      resultado[p.chave] = linhas.reduce((acc, linha) => {
+        const val = linha.colunas?.[p.chave] ?? 0;
+        return acc + calcularImpactoValor(linha.natureza, val);
+      }, 0);
+    }
+    return resultado;
+  }, [linhas, periodos]);
+
+  const visaoOpcoes: { valor: TipoVisao; label: string }[] = [
+    { valor: "mensal", label: "Mensal" },
+    { valor: "trimestral", label: "Trimestral" },
+    { valor: "semestral", label: "Semestral" },
+    { valor: "anual", label: "Anual" },
+  ];
 
   return (
     <LayoutShell>
@@ -111,54 +190,86 @@ export default function DrePage() {
           modulo={moduloTela}
         />
 
-        <main className="page-content-card space-y-4">
+        <main className="page-content-card">
           <section className="panel">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <div className="form-group">
-                <label htmlFor="dre-inicial">Período inicial</label>
+            <div className="form-section-header">
+              <div>
+                <h2>DRE - Demonstrativo de Resultado</h2>
+                <p>Visualize receitas, despesas e resultado por período</p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap", marginTop: 16 }}>
+              <div className="form-group" style={{ flex: "0 0 120px" }}>
+                <label htmlFor="dre-ano">Ano</label>
                 <input
-                  id="dre-inicial"
-                  type="date"
+                  id="dre-ano"
+                  type="number"
                   className="form-input"
-                  value={periodoInicial}
-                  onChange={(e) => setPeriodoInicial(e.target.value)}
+                  value={ano}
+                  onChange={(e) => setAno(Number(e.target.value))}
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="dre-final">Período final</label>
-                <input
-                  id="dre-final"
-                  type="date"
-                  className="form-input"
-                  value={periodoFinal}
-                  onChange={(e) => setPeriodoFinal(e.target.value)}
-                />
+              <div className="form-group" style={{ flex: "0 0 auto" }}>
+                <label>Visão</label>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {visaoOpcoes.map((op) => (
+                    <button
+                      key={op.valor}
+                      type="button"
+                      className={visao === op.valor ? "button button-primary button-compact" : "button button-secondary button-compact"}
+                      onClick={() => setVisao(op.valor)}
+                    >
+                      {op.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-            <p className="text-xs text-gray-600">
-              Valores são exibidos como absolutos, mas receitas somam e despesas diminuem o resultado. Contas que exigem centro de custo devem ser lançadas com FIN_CENTRO_CUSTO_ID preenchido.
-            </p>
           </section>
 
-          <section className="panel">
-            <h2 className="text-base font-bold text-gray-800">DRE por linha</h2>
+          <section className="panel" style={{ marginTop: 16 }}>
             {carregando ? (
-              <div className="py-6 text-sm text-gray-600">Carregando dados do DRE...</div>
+              <div className="empty-state">Carregando dados do DRE...</div>
             ) : linhas.length === 0 ? (
-              <div className="py-6 text-sm text-gray-600">Nenhum dado disponível para o período selecionado.</div>
+              <div className="empty-state">Nenhum dado disponível. Cadastre a estrutura de DRE e vincule contas do plano.</div>
             ) : (
-              <TreeValores nodes={linhas} />
+              <div style={{ overflowX: "auto" }}>
+                <table className="data-table" style={{ tableLayout: "auto", minWidth: periodos.length > 4 ? "900px" : "auto" }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: "left" }}>Conta DRE</th>
+                      {periodos.map((p) => (
+                        <th key={p.chave} style={{ textAlign: "right", whiteSpace: "nowrap" }}>{p.label}</th>
+                      ))}
+                      <th style={{ textAlign: "right" }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {linhas.map((linha) => (
+                      <DreLinhaRow key={linha.id} node={linha} periodos={periodos} nivel={0} />
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ fontWeight: 700, borderTop: "2px solid #e5e7eb", backgroundColor: "#f3f4f6" }}>
+                      <td style={{ paddingLeft: 8 }}>RESULTADO DO EXERCÍCIO</td>
+                      {periodos.map((p) => {
+                        const val = resultadoPorPeriodo[p.chave] ?? 0;
+                        return (
+                          <td key={p.chave} style={{ textAlign: "right", color: val >= 0 ? "#059669" : "#dc2626" }}>
+                            {val >= 0 ? "+" : "-"}{formatarValor(val)}
+                          </td>
+                        );
+                      })}
+                      <td style={{ textAlign: "right", color: totalResultado >= 0 ? "#059669" : "#dc2626" }}>
+                        {totalResultado >= 0 ? "+" : "-"}{formatarValor(totalResultado)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             )}
-
-            <div className="mt-4 rounded border border-gray-300 bg-white p-3 text-right shadow-sm">
-              <p className="text-sm font-semibold text-gray-800">
-                Resultado do período: R$ {Math.abs(totalResultado).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-xs text-gray-600">
-                Impacto aplicado: {totalResultado >= 0 ? "+" : "-"}
-              </p>
-            </div>
           </section>
         </main>
       </div>
