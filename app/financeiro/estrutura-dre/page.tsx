@@ -8,6 +8,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
+import { ModalConfirmacao } from "@/components/ModalConfirmacao";
 import { BarraFiltros, FiltroPadrao } from "../_components/financeiro-layout";
 
 interface LinhaDre {
@@ -311,12 +312,20 @@ export default function EstruturaDrePage() {
     return planoContas.filter((c) => c.label.toLowerCase().includes(b)).slice(0, 10);
   }, [planoContas, contaBusca]);
 
-  const handleExcluir = async (item: LinhaDre) => {
+  const [confirmExcluir, setConfirmExcluir] = useState<{ item: LinhaDre; msg: string } | null>(null);
+
+  const pedirExcluir = (item: LinhaDre) => {
     const temFilhos = (item.filhos?.length ?? 0) > 0;
     const msg = temFilhos
       ? `Excluir "${item.codigo} - ${item.nome}" e todas as ${item.filhos!.length} sub-linha(s)? Se houver lancamentos vinculados, serao inativadas.`
       : `Excluir "${item.codigo} - ${item.nome}"? Se houver lancamentos vinculados, sera inativada.`;
-    if (!confirm(msg)) return;
+    setConfirmExcluir({ item, msg });
+  };
+
+  const executarExcluir = async () => {
+    if (!confirmExcluir) return;
+    const { item } = confirmExcluir;
+    setConfirmExcluir(null);
 
     try {
       const resp = await fetch(`/api/financeiro/estrutura-dre?id=${item.id}`, {
@@ -388,7 +397,7 @@ export default function EstruturaDrePage() {
                   <button type="button" className="button button-secondary button-compact" style={{ fontSize: "0.7rem", padding: "2px 8px" }}
                     onClick={(e) => { e.stopPropagation(); handleEditar(item); }}>Editar</button>
                   <button type="button" className="button button-danger button-compact" style={{ fontSize: "0.7rem", padding: "2px 8px" }}
-                    onClick={(e) => { e.stopPropagation(); handleExcluir(item); }}>Excluir</button>
+                    onClick={(e) => { e.stopPropagation(); pedirExcluir(item); }}>Excluir</button>
                 </div>
               </div>
             </div>
@@ -651,6 +660,16 @@ export default function EstruturaDrePage() {
           </div>
         </main>
         </PaginaProtegida>
+
+        <ModalConfirmacao
+          aberto={!!confirmExcluir}
+          titulo="Excluir linha do DRE"
+          mensagem={confirmExcluir?.msg ?? ""}
+          textoBotaoConfirmar="Excluir"
+          tipo="danger"
+          onConfirmar={executarExcluir}
+          onCancelar={() => setConfirmExcluir(null)}
+        />
       </div>
     </LayoutShell>
   );

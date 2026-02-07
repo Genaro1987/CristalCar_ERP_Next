@@ -8,6 +8,7 @@ import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
+import { ModalConfirmacao } from "@/components/ModalConfirmacao";
 import { BarraFiltros, type FiltroPadrao } from "./financeiro-layout";
 
 interface PlanoContaApiItem {
@@ -266,12 +267,20 @@ export function PlanoContasContent() {
     }
   };
 
-  const handleExcluir = async (item: PlanoContaNode) => {
+  const [confirmExcluir, setConfirmExcluir] = useState<{ item: PlanoContaNode; msg: string } | null>(null);
+
+  const pedirExcluir = (item: PlanoContaNode) => {
     const temFilhos = item.filhos.length > 0;
     const msg = temFilhos
       ? `Excluir "${item.codigo} - ${item.nome}" e todas as ${item.filhos.length} sub-conta(s)? Se houver lancamentos, serao inativadas.`
       : `Excluir "${item.codigo} - ${item.nome}"? Se houver lancamentos, sera inativada.`;
-    if (!confirm(msg)) return;
+    setConfirmExcluir({ item, msg });
+  };
+
+  const executarExcluir = async () => {
+    if (!confirmExcluir) return;
+    const { item } = confirmExcluir;
+    setConfirmExcluir(null);
 
     try {
       const resp = await fetch(`/api/financeiro/plano-contas?id=${item.id}`, {
@@ -355,7 +364,7 @@ export function PlanoContasContent() {
                   <button
                     type="button"
                     className="button button-danger button-compact"
-                    onClick={(e) => { e.stopPropagation(); handleExcluir(item); }}
+                    onClick={(e) => { e.stopPropagation(); pedirExcluir(item); }}
                   >
                     Excluir
                   </button>
@@ -551,6 +560,16 @@ export function PlanoContasContent() {
           </div>
         </main>
         </PaginaProtegida>
+
+        <ModalConfirmacao
+          aberto={!!confirmExcluir}
+          titulo="Excluir conta"
+          mensagem={confirmExcluir?.msg ?? ""}
+          textoBotaoConfirmar="Excluir"
+          tipo="danger"
+          onConfirmar={executarExcluir}
+          onCancelar={() => setConfirmExcluir(null)}
+        />
       </div>
     </LayoutShell>
   );

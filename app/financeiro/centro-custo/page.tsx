@@ -8,6 +8,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
+import { ModalConfirmacao } from "@/components/ModalConfirmacao";
 import { BarraFiltros, FiltroPadrao } from "../_components/financeiro-layout";
 
 interface CentroCustoItem {
@@ -196,12 +197,20 @@ export default function CentroCustoPage() {
     }
   };
 
-  const handleExcluir = async (item: CentroCustoItem) => {
+  const [confirmExcluir, setConfirmExcluir] = useState<{ item: CentroCustoItem; msg: string } | null>(null);
+
+  const pedirExcluir = (item: CentroCustoItem) => {
     const temFilhos = (item.filhos?.length ?? 0) > 0;
     const msg = temFilhos
       ? `Excluir "${item.codigo} - ${item.nome}" e todos os ${item.filhos!.length} sub-centro(s)? Se houver lancamentos, serao inativados.`
       : `Excluir "${item.codigo} - ${item.nome}"? Se houver lancamentos, sera inativado.`;
-    if (!confirm(msg)) return;
+    setConfirmExcluir({ item, msg });
+  };
+
+  const executarExcluir = async () => {
+    if (!confirmExcluir) return;
+    const { item } = confirmExcluir;
+    setConfirmExcluir(null);
 
     try {
       const resp = await fetch(`/api/financeiro/centro-custo?id=${item.id}`, {
@@ -284,7 +293,7 @@ export default function CentroCustoPage() {
                   <button
                     type="button"
                     className="button button-danger button-compact"
-                    onClick={(e) => { e.stopPropagation(); handleExcluir(item); }}
+                    onClick={(e) => { e.stopPropagation(); pedirExcluir(item); }}
                   >
                     Excluir
                   </button>
@@ -439,6 +448,16 @@ export default function CentroCustoPage() {
           </div>
         </main>
         </PaginaProtegida>
+
+        <ModalConfirmacao
+          aberto={!!confirmExcluir}
+          titulo="Excluir centro de custo"
+          mensagem={confirmExcluir?.msg ?? ""}
+          textoBotaoConfirmar="Excluir"
+          tipo="danger"
+          onConfirmar={executarExcluir}
+          onCancelar={() => setConfirmExcluir(null)}
+        />
       </div>
     </LayoutShell>
   );
