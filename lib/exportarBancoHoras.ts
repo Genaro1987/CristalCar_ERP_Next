@@ -240,7 +240,10 @@ export function exportarPDF(dados: DadosExportacao) {
 
   // --- TABELA DE DETALHAMENTO ---
 
-  // Headers
+  // Headers - centered table
+  const tableWidth = 188;
+  const tableStartX = (pageWidth - tableWidth) / 2;
+
   const cols = [
     { name: "DATA", width: 14, align: "left" },
     { name: "DIA", width: 10, align: "left" },
@@ -248,22 +251,22 @@ export function exportarPDF(dados: DadosExportacao) {
     { name: "TRAB", width: 18, align: "center" },
     { name: "SALDO", width: 18, align: "center" },
     { name: "CLASSE", width: 28, align: "left" },
-    { name: "OBSERVAÇÃO", width: 70, align: "left" }
+    { name: "OBSERVAÇÃO", width: 60, align: "left" }
   ];
 
   const colX = [
-    margin,
-    margin + 16,
-    margin + 28,
-    margin + 58,
-    margin + 78,
-    margin + 98,
-    margin + 128
+    tableStartX,
+    tableStartX + 16,
+    tableStartX + 28,
+    tableStartX + 58,
+    tableStartX + 78,
+    tableStartX + 98,
+    tableStartX + 128
   ];
 
   // Header Background
   doc.setFillColor(colors.primary);
-  doc.rect(margin, yPos, contentWidth, 6, "F");
+  doc.rect(tableStartX, yPos, tableWidth, 6, "F");
 
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
@@ -290,7 +293,7 @@ export function exportarPDF(dados: DadosExportacao) {
 
       // Reprint Header Tabela
       doc.setFillColor(colors.primary);
-      doc.rect(margin, yPos, contentWidth, 6, "F");
+      doc.rect(tableStartX, yPos, tableWidth, 6, "F");
       doc.setTextColor("#ffffff");
       doc.setFont("helvetica", "bold");
       cols.forEach((col, i) => {
@@ -306,7 +309,7 @@ export function exportarPDF(dados: DadosExportacao) {
     // Zebra Striping
     if (index % 2 === 0) {
       doc.setFillColor(colors.bgLight);
-      doc.rect(margin, yPos - 1, contentWidth, rowHeight, "F");
+      doc.rect(tableStartX, yPos - 1, tableWidth, rowHeight, "F");
     }
 
     // Dados

@@ -72,6 +72,7 @@ export default function BancoHorasPage() {
 
   const compAtual = useMemo(() => competenciaAtual(), []);
   const [idFuncionario, setIdFuncionario] = useState("");
+  const [anosDisponiveis, setAnosDisponiveis] = useState<number[]>([compAtual.ano]);
   const [ano, setAno] = useState(compAtual.ano);
   const [mes, setMes] = useState("");
   const [periodosDisponiveis, setPeriodosDisponiveis] = useState<PeriodoOption[]>([]);
@@ -105,6 +106,16 @@ export default function BancoHorasPage() {
       .then((r) => r.json())
       .then((json) => setFuncionarios(json?.data ?? []))
       .catch(() => setFuncionarios([]));
+
+    fetch("/api/rh/anos-disponiveis", { headers: headersPadrao })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data?.length > 0) {
+          setAnosDisponiveis(json.data);
+          if (!json.data.includes(ano)) setAno(json.data[0]);
+        }
+      })
+      .catch(() => {});
   }, [empresaId, headersPadrao]);
 
   useEffect(() => {
@@ -409,13 +420,16 @@ export default function BancoHorasPage() {
 
                   <div className="form-group">
                     <label htmlFor="ano">ANO</label>
-                    <input
+                    <select
                       id="ano"
-                      type="number"
                       value={ano}
                       onChange={(e) => setAno(Number(e.target.value))}
                       className="form-input"
-                    />
+                    >
+                      {anosDisponiveis.map((a) => (
+                        <option key={a} value={a}>{a}</option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="form-group">

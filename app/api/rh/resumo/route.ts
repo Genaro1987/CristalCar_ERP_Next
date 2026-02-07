@@ -122,6 +122,51 @@ export async function GET(request: NextRequest) {
 
     const diasTrabalhados = diasTrabalhadosResult.rows as any[];
 
+    // Get total ponto entries per employee (to detect who has entries)
+    const pontoCountResult = await db.execute({
+      sql: `
+        SELECT ID_FUNCIONARIO, COUNT(*) as TOTAL_PONTO
+        FROM RH_PONTO_LANCAMENTO
+        WHERE ID_EMPRESA = ?
+          AND DATA_REFERENCIA >= ?
+          AND DATA_REFERENCIA <= ?
+          AND ID_FUNCIONARIO IN (${funcPlaceholders})
+        GROUP BY ID_FUNCIONARIO
+      `,
+      args: [empresaId, dataInicio, dataFim, ...funcIds],
+    });
+
+    const pontoCountMap = new Map<string, number>();
+    for (const r of pontoCountResult.rows as any[]) {
+      pontoCountMap.set(r.ID_FUNCIONARIO, Number(r.TOTAL_PONTO));
+    }
+
+    // Get manual adjustments per employee in period
+    const ajustesResult = await db.execute({
+      sql: `
+        SELECT
+          ID_FUNCIONARIO,
+          COMPETENCIA,
+          SUM(MINUTOS) as TOTAL_AJUSTE_MIN
+        FROM RH_BANCO_HORAS_AJUSTE
+        WHERE ID_EMPRESA = ?
+          AND COMPETENCIA IN (${placeholders})
+          AND ID_FUNCIONARIO IN (${funcPlaceholders})
+        GROUP BY ID_FUNCIONARIO, COMPETENCIA
+      `,
+      args: [empresaId, ...competencias, ...funcIds],
+    });
+
+    const ajusteMap = new Map<string, { total: number; porMes: Map<string, number> }>();
+    for (const a of ajustesResult.rows as any[]) {
+      const key = a.ID_FUNCIONARIO;
+      if (!ajusteMap.has(key)) ajusteMap.set(key, { total: 0, porMes: new Map() });
+      const entry = ajusteMap.get(key)!;
+      const min = Number(a.TOTAL_AJUSTE_MIN ?? 0);
+      entry.total += min;
+      entry.porMes.set(a.COMPETENCIA, min);
+    }
+
     // Build lookup maps
     const fechamentoMap = new Map<string, any[]>();
     for (const f of fechamentos) {
@@ -169,8 +214,8 @@ export async function GET(request: NextRequest) {
         totalDescontar += Number(f.VALOR_DESCONTAR ?? 0);
       }
 
-      // Monthly evolution
-      const evolucao = mesesEvol.map((comp) => {
+      // Monthly evolution with adjustments
+      const evolucaoComAjustes = mesesEvol.map((comp) => {
         const fechMes = fech.find((f: any) => f.COMPETENCIA === comp);
         return {
           competencia: comp,
@@ -178,6 +223,7 @@ export async function GET(request: NextRequest) {
           extras100Min: Number(fechMes?.HORAS_EXTRAS_100_MINUTOS ?? 0),
           devidasMin: Number(fechMes?.HORAS_DEVIDAS_MINUTOS ?? 0),
           saldoMin: Number(fechMes?.SALDO_FINAL_MINUTOS ?? 0),
+          ajustesMin: ajusteMap.get(id)?.porMes.get(comp) ?? 0,
         };
       });
 
@@ -189,6 +235,8 @@ export async function GET(request: NextRequest) {
         dataAdmissao: func.DATA_ADMISSAO,
         salarioBase: Number(func.SALARIO_BASE ?? 0),
         diasTrabalhados: diasMap.get(id) ?? 0,
+        temPonto: (pontoCountMap.get(id) ?? 0) > 0,
+        ajustesMin: ajusteMap.get(id)?.total ?? 0,
         feriasCount: ocorr.get("FERIAS") ?? 0,
         faltasJustificadas: ocorr.get("FALTA_JUSTIFICADA") ?? 0,
         faltasNaoJustificadas: ocorr.get("FALTA_NAO_JUSTIFICADA") ?? 0,
@@ -198,7 +246,7 @@ export async function GET(request: NextRequest) {
         valorPagar: totalPagar,
         valorDescontar: totalDescontar,
         saldoUltimoMes: fech.length > 0 ? Number(fech[fech.length - 1].SALDO_FINAL_MINUTOS ?? 0) : 0,
-        evolucao,
+        evolucao: evolucaoComAjustes,
       };
     });
 

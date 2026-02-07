@@ -179,7 +179,7 @@ export default function ObjetivosPage() {
               </button>
             </div>
 
-            <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap", marginTop: 16 }}>
+            <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap", marginTop: 20, paddingTop: 16, borderTop: "1px solid #e5e7eb" }}>
               <div className="form-group" style={{ flex: "0 0 auto" }}>
                 <label>Base</label>
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
@@ -216,7 +216,7 @@ export default function ObjetivosPage() {
                 </div>
               </div>
 
-              <div className="form-group" style={{ flex: "0 0 100px" }}>
+              <div className="form-group" style={{ flex: "1 1 130px", minWidth: 130 }}>
                 <label htmlFor="obj-ano">Ano</label>
                 <input
                   id="obj-ano"
@@ -227,14 +227,14 @@ export default function ObjetivosPage() {
                 />
               </div>
 
-              <div className="form-group" style={{ flex: "0 0 auto" }}>
+              <div className="form-group" style={{ flex: "1 1 130px", minWidth: 130 }}>
                 <label htmlFor="obj-pct-global">% Global</label>
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   <input
                     id="obj-pct-global"
                     type="number"
                     className="form-input"
-                    style={{ width: 90, textAlign: "center", padding: "6px 8px" }}
+                    style={{ flex: 1, textAlign: "center" }}
                     placeholder="0"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -261,7 +261,7 @@ export default function ObjetivosPage() {
           </section>
 
           {/* Summary */}
-          <section className="summary-cards" style={{ marginTop: 16 }}>
+          <section className="summary-cards" style={{ marginTop: 20 }}>
             <div className="summary-card">
               <span className="summary-label">Média Mensal (período)</span>
               <strong className="summary-value">{formatMoney(totalMedia)}</strong>
@@ -279,7 +279,7 @@ export default function ObjetivosPage() {
           </section>
 
           {/* Table */}
-          <section className="panel" style={{ marginTop: 16 }}>
+          <section className="panel" style={{ marginTop: 20 }}>
             {carregando ? (
               <div className="empty-state">Carregando contas...</div>
             ) : contasComObjetivo.length === 0 ? (

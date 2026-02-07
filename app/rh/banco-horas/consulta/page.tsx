@@ -94,6 +94,7 @@ export default function BancoHorasConsultaPage() {
   const [notification, setNotification] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
   const compAtual = useMemo(() => competenciaAtual(), []);
   const [idFuncionario, setIdFuncionario] = useState("");
+  const [anosDisponiveis, setAnosDisponiveis] = useState<number[]>([compAtual.ano]);
   const [ano, setAno] = useState(compAtual.ano);
   const [mes, setMes] = useState(compAtual.mes.toString().padStart(2, "0"));
   const [loading, setLoading] = useState(false);
@@ -126,6 +127,16 @@ export default function BancoHorasConsultaPage() {
       .then((r) => r.json())
       .then((json) => setFuncionarios(json?.data ?? []))
       .catch(() => setFuncionarios([]));
+
+    fetch("/api/rh/anos-disponiveis", { headers: headersPadrao })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data?.length > 0) {
+          setAnosDisponiveis(json.data);
+          if (!json.data.includes(ano)) setAno(json.data[0]);
+        }
+      })
+      .catch(() => {});
   }, [empresaId, headersPadrao]);
 
   useEffect(() => {
@@ -363,13 +374,16 @@ export default function BancoHorasConsultaPage() {
 
                 <div className="form-group" style={{ flex: "0 0 120px" }}>
                   <label htmlFor="ano">Ano</label>
-                  <input
+                  <select
                     id="ano"
-                    type="number"
                     value={ano}
                     onChange={(e) => setAno(Number(e.target.value))}
                     className="form-input"
-                  />
+                  >
+                    {anosDisponiveis.map((a) => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="form-group" style={{ flex: "1", minWidth: "150px" }}>
