@@ -26,7 +26,17 @@ export function resumirTotaisDias(dias: ResumoBancoHorasDia[]): TotaisBancoHoras
   );
 }
 
-export function mapearClassificacaoParaExibicao(classificacao: ResumoBancoHorasDia["classificacao"]): string {
+export function mapearClassificacaoParaExibicao(
+  classificacao: ResumoBancoHorasDia["classificacao"],
+  observacao?: string | null,
+  tipoDia?: string | null
+): string {
+  // Férias e feriados devem mostrar classificação correspondente
+  const obs = (observacao ?? "").trim().toUpperCase();
+  if (obs === "FERIAS") return "Férias";
+  const tipo = (tipoDia ?? "").trim().toUpperCase();
+  if (tipo === "FERIADO") return "Feriado";
+
   if (classificacao === "EXTRA_UTIL" || classificacao === "EXTRA_100") {
     return "Hora Extra";
   }

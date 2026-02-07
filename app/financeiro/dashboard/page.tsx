@@ -185,8 +185,7 @@ export default function FinanceiroDashboardPage() {
                 <div className="form-section-header">
                   <h2>Movimentação por Empresa</h2>
                 </div>
-                <div style={{ overflowX: "auto" }}>
-                <table className="data-table" style={{ marginTop: 12, minWidth: 400 }}>
+                <table className="data-table mobile-cards" style={{ marginTop: 12 }}>
                   <thead>
                     <tr>
                       <th>Empresa</th>
@@ -198,22 +197,21 @@ export default function FinanceiroDashboardPage() {
                   <tbody>
                     {carteira.map((c, i) => (
                       <tr key={i}>
-                        <td>{c.empresa}</td>
-                        <td style={{ textAlign: "right", color: "#059669" }}>{formatMoney(c.entradas)}</td>
-                        <td style={{ textAlign: "right", color: "#dc2626" }}>{formatMoney(c.saidas)}</td>
-                        <td style={{ textAlign: "right", fontWeight: 700 }}>{formatMoney(c.entradas - c.saidas)}</td>
+                        <td data-label="Empresa" style={{ fontWeight: 600 }}>{c.empresa}</td>
+                        <td data-label="Entradas" style={{ color: "#059669" }}>{formatMoney(c.entradas)}</td>
+                        <td data-label="Saídas" style={{ color: "#dc2626" }}>{formatMoney(c.saidas)}</td>
+                        <td data-label="Resultado" style={{ fontWeight: 700 }}>{formatMoney(c.entradas - c.saidas)}</td>
                       </tr>
                     ))}
                     {carteira.length === 0 && !carregando && (
                       <tr>
-                        <td colSpan={4} style={{ textAlign: "center", padding: 24, color: "#6b7280" }}>
+                        <td colSpan={4} data-label="" style={{ textAlign: "center", padding: 24, color: "#6b7280" }}>
                           Nenhum movimento registrado no período.
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
-                </div>
               </div>
             </div>
 

@@ -2093,26 +2093,83 @@ a {
     flex-wrap: wrap !important;
   }
 
-  /* ── Tables ── */
-  .data-table,
-  .extrato-table {
+  /* ── Tables → Card layout on mobile ── */
+  .data-table.mobile-cards,
+  .extrato-table.mobile-cards {
+    display: block;
+  }
+
+  .data-table.mobile-cards thead,
+  .extrato-table.mobile-cards thead {
+    display: none;
+  }
+
+  .data-table.mobile-cards tbody,
+  .extrato-table.mobile-cards tbody,
+  .data-table.mobile-cards tfoot,
+  .extrato-table.mobile-cards tfoot {
+    display: block;
+  }
+
+  .data-table.mobile-cards tr,
+  .extrato-table.mobile-cards tr {
+    display: block;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  .data-table.mobile-cards td,
+  .extrato-table.mobile-cards td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 3px 0;
+    border: none;
+    font-size: 0.82rem;
+    gap: 8px;
+  }
+
+  .data-table.mobile-cards td::before,
+  .extrato-table.mobile-cards td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: 0.72rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+    min-width: 80px;
+  }
+
+  .data-table.mobile-cards td:empty,
+  .extrato-table.mobile-cards td:empty {
+    display: none;
+  }
+
+  /* Non-card tables still get compact sizing */
+  .data-table:not(.mobile-cards),
+  .extrato-table:not(.mobile-cards) {
     font-size: 0.78rem;
   }
 
-  .data-table th,
-  .data-table td,
-  .extrato-table th,
-  .extrato-table td {
+  .data-table:not(.mobile-cards) th,
+  .data-table:not(.mobile-cards) td,
+  .extrato-table:not(.mobile-cards) th,
+  .extrato-table:not(.mobile-cards) td {
     padding: 6px 5px;
   }
 
-  .data-table th,
-  .extrato-table th {
+  .data-table:not(.mobile-cards) th,
+  .extrato-table:not(.mobile-cards) th {
     font-size: 0.68rem;
     letter-spacing: 0.03em;
   }
 
-  /* Scroll wrapper for tables */
+  /* Scroll wrapper for non-card tables */
   .table-scroll-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;

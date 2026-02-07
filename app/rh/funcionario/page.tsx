@@ -825,8 +825,7 @@ export default function FuncionarioPage() {
               )}
 
               {!carregandoLista && !erroLista && funcionarios.length > 0 && (
-                <div style={{ overflowX: "auto" }}>
-                <table className="data-table" style={{ minWidth: 800 }}>
+                <table className="data-table mobile-cards">
                   <thead>
                     <tr>
                       <th>CÓDIGO</th>
@@ -843,13 +842,13 @@ export default function FuncionarioPage() {
                   <tbody>
                     {funcionarios.map((funcionario) => (
                       <tr key={funcionario.ID_FUNCIONARIO}>
-                        <td>{formatarCodigoFuncionario(funcionario.ID_FUNCIONARIO)}</td>
-                        <td>{funcionario.NOME_COMPLETO}</td>
-                        <td style={{ whiteSpace: "nowrap" }}>{formatarCpf(funcionario.CPF)}</td>
-                        <td>{funcionario.NOME_DEPARTAMENTO || "-"}</td>
-                        <td>{funcionario.NOME_JORNADA || "-"}</td>
-                        <td>{funcionario.NOME_PERFIL || "-"}</td>
-                        <td style={{ textAlign: "center" }}>
+                        <td data-label="Código">{formatarCodigoFuncionario(funcionario.ID_FUNCIONARIO)}</td>
+                        <td data-label="Nome" style={{ fontWeight: 600 }}>{funcionario.NOME_COMPLETO}</td>
+                        <td data-label="CPF">{formatarCpf(funcionario.CPF)}</td>
+                        <td data-label="Depto">{funcionario.NOME_DEPARTAMENTO || "-"}</td>
+                        <td data-label="Jornada">{funcionario.NOME_JORNADA || "-"}</td>
+                        <td data-label="Perfil">{funcionario.NOME_PERFIL || "-"}</td>
+                        <td data-label="Status">
                           <span
                             className={
                               funcionario.ATIVO === 1 && !funcionario.DATA_DEMISSAO
@@ -860,29 +859,28 @@ export default function FuncionarioPage() {
                             {funcionario.ATIVO === 1 && !funcionario.DATA_DEMISSAO ? "ATIVO" : "INATIVO"}
                           </span>
                         </td>
-                        <td style={{ textAlign: "center" }}>
-                          <button
-                            type="button"
-                            className="button button-secondary button-compact"
-                            onClick={() => abrirHistoricoSalarios(funcionario)}
-                          >
-                            Consultar
-                          </button>
-                        </td>
-                        <td style={{ textAlign: "center" }}>
-                          <button
-                            type="button"
-                            className="button button-secondary button-compact"
-                            onClick={() => preencherParaEdicao(funcionario)}
-                          >
-                            Editar
-                          </button>
+                        <td data-label="">
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                            <button
+                              type="button"
+                              className="button button-secondary button-compact"
+                              onClick={() => abrirHistoricoSalarios(funcionario)}
+                            >
+                              Salários
+                            </button>
+                            <button
+                              type="button"
+                              className="button button-secondary button-compact"
+                              onClick={() => preencherParaEdicao(funcionario)}
+                            >
+                              Editar
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                </div>
               )}
             </section>
           </div>

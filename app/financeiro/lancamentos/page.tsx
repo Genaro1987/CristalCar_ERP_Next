@@ -434,48 +434,50 @@ export default function LancamentosPage() {
                     <p>Ajuste o período ou adicione um novo lançamento.</p>
                   </div>
                 ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Data</th>
-                          <th>Histórico</th>
-                          <th>Conta</th>
-                          <th>Tipo</th>
-                          <th style={{ textAlign: "right" }}>Valor</th>
-                          <th style={{ textAlign: "center" }}>Status</th>
-                          <th style={{ textAlign: "center" }}>Ações</th>
+                  <table className="data-table mobile-cards">
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Histórico</th>
+                        <th>Conta</th>
+                        <th>Tipo</th>
+                        <th style={{ textAlign: "right" }}>Valor</th>
+                        <th style={{ textAlign: "center" }}>Status</th>
+                        <th style={{ textAlign: "center" }}>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dadosFiltrados.map((item) => (
+                        <tr key={item.id} onClick={() => preencherForm(item)} style={{ cursor: "pointer" }}>
+                          <td data-label="Data">{item.data}</td>
+                          <td data-label="Histórico">{item.historico}</td>
+                          <td data-label="Conta">{item.conta}</td>
+                          <td data-label="Tipo">
+                            <span className={item.tipo === "Entrada" ? "badge badge-success" : "badge badge-danger"}>
+                              {item.tipo}
+                            </span>
+                          </td>
+                          <td data-label="Valor" style={{ fontWeight: 600 }}>
+                            {formatadorMoeda.format(Math.abs(item.valor))}
+                          </td>
+                          <td data-label="Status">
+                            <span className={item.status === "confirmado" ? "badge badge-success" : "badge badge-danger"}>
+                              {item.status === "confirmado" ? "Confirmado" : "Pendente"}
+                            </span>
+                          </td>
+                          <td data-label="">
+                            <button
+                              type="button"
+                              className="button button-secondary button-compact"
+                              onClick={(e) => { e.stopPropagation(); preencherForm(item); }}
+                            >
+                              Editar
+                            </button>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {dadosFiltrados.map((item) => (
-                          <tr key={item.id}>
-                            <td>{item.data}</td>
-                            <td>{item.historico}</td>
-                            <td>{item.conta}</td>
-                            <td>{item.tipo}</td>
-                            <td style={{ textAlign: "right", fontWeight: 600 }}>
-                              {formatadorMoeda.format(Math.abs(item.valor))}
-                            </td>
-                            <td style={{ textAlign: "center" }}>
-                              <span className={item.status === "confirmado" ? "badge badge-success" : "badge badge-danger"}>
-                                {item.status === "confirmado" ? "Confirmado" : "Pendente"}
-                              </span>
-                            </td>
-                            <td style={{ textAlign: "center" }}>
-                              <button
-                                type="button"
-                                className="button button-secondary button-compact"
-                                onClick={() => preencherForm(item)}
-                              >
-                                Editar
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 )}
               </section>
             </div>

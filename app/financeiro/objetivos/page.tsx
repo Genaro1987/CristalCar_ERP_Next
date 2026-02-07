@@ -273,8 +273,7 @@ export default function ObjetivosPage() {
                 Nenhuma conta encontrada. Cadastre {tipoPlano === "PLANO_CONTAS" ? "o plano de contas" : "centros de custo"} primeiro.
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
-              <table className="data-table" style={{ tableLayout: "auto", minWidth: 580 }}>
+              <table className="data-table mobile-cards">
                 <thead>
                   <tr>
                     <th style={{ textAlign: "left" }}>Conta</th>
@@ -290,8 +289,8 @@ export default function ObjetivosPage() {
                     const variacao = conta.objetivoCalculado - conta.media;
                     return (
                       <tr key={conta.contaId}>
-                        <td>{conta.nome}</td>
-                        <td>
+                        <td data-label="Conta" style={{ fontWeight: 600 }}>{conta.nome}</td>
+                        <td data-label="Natureza">
                           <span
                             className="badge"
                             style={{
@@ -302,19 +301,19 @@ export default function ObjetivosPage() {
                             {conta.natureza}
                           </span>
                         </td>
-                        <td style={{ textAlign: "right" }}>{formatMoney(conta.media)}</td>
-                        <td style={{ textAlign: "center" }}>
+                        <td data-label="Média">{formatMoney(conta.media)}</td>
+                        <td data-label="Cresc. %">
                           <input
                             type="number"
                             className="form-input"
-                            style={{ width: 80, textAlign: "center", padding: "4px 8px", margin: "0 auto", display: "block" }}
+                            style={{ width: 70, textAlign: "center", padding: "4px 8px" }}
                             value={conta.percentualEditado}
                             onChange={(e) => handlePercentualChange(conta.contaId, e.target.value)}
                             step={1}
                           />
                         </td>
-                        <td style={{ textAlign: "right", fontWeight: 600 }}>{formatMoney(conta.objetivoCalculado)}</td>
-                        <td style={{ textAlign: "right", color: variacao >= 0 ? "#059669" : "#dc2626" }}>
+                        <td data-label="Objetivo" style={{ fontWeight: 600 }}>{formatMoney(conta.objetivoCalculado)}</td>
+                        <td data-label="Variação" style={{ color: variacao >= 0 ? "#059669" : "#dc2626" }}>
                           {variacao >= 0 ? "+" : ""}{formatMoney(variacao)}
                         </td>
                       </tr>
@@ -323,17 +322,16 @@ export default function ObjetivosPage() {
                 </tbody>
                 <tfoot>
                   <tr style={{ fontWeight: 700, borderTop: "2px solid #e5e7eb", backgroundColor: "#f3f4f6" }}>
-                    <td colSpan={2}>TOTAL</td>
-                    <td style={{ textAlign: "right" }}>{formatMoney(totalMedia)}</td>
-                    <td></td>
-                    <td style={{ textAlign: "right" }}>{formatMoney(totalObjetivo)}</td>
-                    <td style={{ textAlign: "right", color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}>
+                    <td data-label="" colSpan={2}>TOTAL</td>
+                    <td data-label="Média">{formatMoney(totalMedia)}</td>
+                    <td data-label=""></td>
+                    <td data-label="Objetivo">{formatMoney(totalObjetivo)}</td>
+                    <td data-label="Variação" style={{ color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}>
                       {totalObjetivo - totalMedia >= 0 ? "+" : ""}{formatMoney(totalObjetivo - totalMedia)}
                     </td>
                   </tr>
                 </tfoot>
               </table>
-              </div>
             )}
           </section>
         </main>

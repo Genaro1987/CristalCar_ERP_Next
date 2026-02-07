@@ -489,8 +489,7 @@ export default function BancoHorasConsultaPage() {
                 </div>
               )}
 
-              <div style={{ overflowX: "auto" }}>
-                <table className="data-table banco-horas-detalhamento-table" style={{ tableLayout: "auto" }}>
+                <table className="data-table mobile-cards banco-horas-detalhamento-table">
                   <thead>
                     <tr>
                       <th>Dia</th>
@@ -513,20 +512,20 @@ export default function BancoHorasConsultaPage() {
                         : {};
                       return (
                         <tr key={dia.data} style={rowStyle}>
-                          <td>
+                          <td data-label="Dia">
                             <div className="dia-cell">
                               <span className="dia-data">{dia.data}</span>
                               <span className="dia-semana">{dia.diaSemana}</span>
                             </div>
                           </td>
-                          <td>
+                          <td data-label="Tipo">
                             {isFeriado ? (
                               <span className="badge" style={{ backgroundColor: "#fbbf24", color: "#78350f" }}>FERIADO</span>
                             ) : (
                               formatarTipoDiaParaExibicao(dia.tipoDia)
                             )}
                           </td>
-                          <td>
+                          <td data-label="Ocorrência">
                             {isFerias ? (
                               <span className="badge" style={{ backgroundColor: "#93c5fd", color: "#1e3a5f" }}>Férias</span>
                             ) : obs ? (
@@ -535,21 +534,32 @@ export default function BancoHorasConsultaPage() {
                               "—"
                             )}
                           </td>
-                          <td>{minutosParaHora(dia.trabalhadoMin)}</td>
-                          <td style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
+                          <td data-label="Trabalhado">{minutosParaHora(dia.trabalhadoMin)}</td>
+                          <td data-label="Diferença" style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
                             {minutosParaHora(dia.diferencaMin)}
                           </td>
-                          <td>
+                          <td data-label="Classif.">
                             <span
                               className={
-                                mapearClassificacaoParaExibicao(dia.classificacao) === "Hora Extra"
-                                  ? "badge badge-success"
-                                  : mapearClassificacaoParaExibicao(dia.classificacao) === "Devedor"
-                                  ? "badge badge-danger"
-                                  : "badge"
+                                (() => {
+                                  const c = mapearClassificacaoParaExibicao(dia.classificacao, dia.observacao, dia.tipoDia);
+                                  if (c === "Hora Extra") return "badge badge-success";
+                                  if (c === "Devedor") return "badge badge-danger";
+                                  if (c === "Férias") return "badge";
+                                  if (c === "Feriado") return "badge";
+                                  return "badge";
+                                })()
+                              }
+                              style={
+                                (() => {
+                                  const c = mapearClassificacaoParaExibicao(dia.classificacao, dia.observacao, dia.tipoDia);
+                                  if (c === "Férias") return { backgroundColor: "#dbeafe", color: "#1e40af" };
+                                  if (c === "Feriado") return { backgroundColor: "#fef3c7", color: "#92400e" };
+                                  return undefined;
+                                })()
                               }
                             >
-                              {mapearClassificacaoParaExibicao(dia.classificacao)}
+                              {mapearClassificacaoParaExibicao(dia.classificacao, dia.observacao, dia.tipoDia)}
                             </span>
                           </td>
                         </tr>
@@ -557,7 +567,6 @@ export default function BancoHorasConsultaPage() {
                     })}
                   </tbody>
                 </table>
-              </div>
             </>
           )}
           </div>

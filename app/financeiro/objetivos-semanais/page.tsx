@@ -208,8 +208,7 @@ export default function ObjetivosSemanaisPage() {
                 {podeCriar ? "Nenhuma semana encontrada." : "Cadastre um objetivo financeiro antes de planejar semanas."}
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
-              <table className="data-table" style={{ tableLayout: "auto", minWidth: 560 }}>
+              <table className="data-table mobile-cards">
                 <thead>
                   <tr>
                     <th>Semana</th>
@@ -225,20 +224,20 @@ export default function ObjetivosSemanaisPage() {
                     const sc = statusColor(item.status);
                     return (
                       <tr key={item.id}>
-                        <td style={{ fontWeight: 600 }}>{item.semana}</td>
-                        <td>{item.objetivo}</td>
-                        <td>{item.responsavel}</td>
-                        <td style={{ textAlign: "right" }}>
+                        <td data-label="Semana" style={{ fontWeight: 600 }}>{item.semana}</td>
+                        <td data-label="Objetivo">{item.objetivo}</td>
+                        <td data-label="Responsável">{item.responsavel}</td>
+                        <td data-label="Meta">
                           {item.metaSemanal <= 100
                             ? `${item.metaSemanal}%`
                             : item.metaSemanal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                         </td>
-                        <td>
+                        <td data-label="Status">
                           <span className="badge" style={{ backgroundColor: sc.bg, color: sc.color }}>
                             {statusLabel(item.status)}
                           </span>
                         </td>
-                        <td>
+                        <td data-label="">
                           <button
                             type="button"
                             className="button button-secondary button-compact"
@@ -252,7 +251,6 @@ export default function ObjetivosSemanaisPage() {
                   })}
                 </tbody>
               </table>
-              </div>
             )}
           </section>
         </main>
