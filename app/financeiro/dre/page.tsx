@@ -2,6 +2,7 @@
 
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import React, { useMemo, useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
@@ -207,6 +208,7 @@ export default function DrePage() {
           modulo={moduloTela}
         />
 
+        <PaginaProtegida codigoTela={codigoTela}>
         <main className="page-content-card">
           <section className="panel">
             <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
@@ -285,6 +287,7 @@ export default function DrePage() {
             )}
           </section>
         </main>
+        </PaginaProtegida>
       </div>
     </LayoutShell>
   );

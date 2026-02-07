@@ -85,16 +85,43 @@ async function importarPlanoContas(
   let importados = 0;
   const erros: string[] = [];
 
+  // Build lookup map for conta pai by codigo
+  const contasPorCodigo = new Map<string, number>();
+  const contasExistentes = await db.execute({
+    sql: "SELECT FIN_PLANO_CONTA_ID, FIN_PLANO_CONTA_CODIGO FROM FIN_PLANO_CONTA WHERE EMPRESA_ID = ?",
+    args: [empresaId],
+  });
+  for (const row of contasExistentes.rows) {
+    const r = row as any;
+    contasPorCodigo.set(String(r.FIN_PLANO_CONTA_CODIGO).trim().toUpperCase(), Number(r.FIN_PLANO_CONTA_ID));
+  }
+
   for (let i = 0; i < dados.length; i++) {
     const linha = dados[i];
     const codigo = obterValor(linha, mapeamento, "codigo");
     const nome = obterValor(linha, mapeamento, "nome");
     const natureza = obterValor(linha, mapeamento, "natureza").toUpperCase() || "DESPESA";
+    const contaPaiCod = obterValor(linha, mapeamento, "contaPai");
+    const tipo = obterValor(linha, mapeamento, "tipo").toUpperCase();
+    const dataInclusao = obterValor(linha, mapeamento, "dataInclusao");
 
     if (!codigo || !nome) {
-      erros.push(`Linha ${i + 1}: código e nome são obrigatórios`);
+      erros.push(`Linha ${i + 1}: codigo e nome sao obrigatorios`);
       continue;
     }
+
+    // Resolve conta pai
+    let paiId: number | null = null;
+    if (contaPaiCod) {
+      paiId = contasPorCodigo.get(contaPaiCod.toUpperCase()) ?? null;
+      if (!paiId) {
+        erros.push(`Linha ${i + 1}: conta pai "${contaPaiCod}" nao encontrada (importando sem pai)`);
+      }
+    }
+
+    // Determine if sintetica (has children = no direct lancamentos)
+    // For import, we store tipo info but the main flag is visivelDre
+    const isSintetica = tipo === "SINTETICA" || tipo === "S";
 
     try {
       const existe = await db.execute({
@@ -103,18 +130,35 @@ async function importarPlanoContas(
       });
 
       if ((existe.rows[0] as any).total > 0) {
-        erros.push(`Linha ${i + 1}: código "${codigo}" já existe`);
+        erros.push(`Linha ${i + 1}: codigo "${codigo}" ja existe`);
         continue;
       }
 
       await db.execute({
         sql: `INSERT INTO FIN_PLANO_CONTA (
           FIN_PLANO_CONTA_CODIGO, FIN_PLANO_CONTA_NOME, FIN_PLANO_CONTA_NATUREZA,
+          FIN_PLANO_CONTA_PAI_ID,
           FIN_PLANO_CONTA_ATIVO, FIN_PLANO_CONTA_VISIVEL_DRE, FIN_PLANO_CONTA_OBRIGA_CENTRO_CUSTO,
           EMPRESA_ID
-        ) VALUES (?, ?, ?, 1, 1, 0, ?)`,
-        args: [codigo, nome, natureza, empresaId],
+        ) VALUES (?, ?, ?, ?, 1, ?, 0, ?)`,
+        args: [
+          codigo,
+          nome,
+          natureza,
+          paiId,
+          isSintetica ? 0 : 1,
+          empresaId,
+        ],
       });
+
+      // Add to lookup so subsequent lines can reference this as parent
+      const novoId = await db.execute({
+        sql: "SELECT FIN_PLANO_CONTA_ID FROM FIN_PLANO_CONTA WHERE FIN_PLANO_CONTA_CODIGO = ? AND EMPRESA_ID = ?",
+        args: [codigo, empresaId],
+      });
+      if (novoId.rows.length > 0) {
+        contasPorCodigo.set(codigo.toUpperCase(), Number((novoId.rows[0] as any).FIN_PLANO_CONTA_ID));
+      }
 
       importados++;
     } catch (err) {

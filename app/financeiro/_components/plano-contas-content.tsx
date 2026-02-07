@@ -3,12 +3,12 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
-
-import { BarraFiltros, type FiltroPadrao, type StatusFiltro } from "./financeiro-layout";
+import { BarraFiltros, type FiltroPadrao } from "./financeiro-layout";
 
 interface PlanoContaApiItem {
   FIN_PLANO_CONTA_ID: number;
@@ -33,6 +33,26 @@ interface PlanoContaNode {
   filhos: PlanoContaNode[];
 }
 
+interface FormPlano {
+  nome: string;
+  codigo: string;
+  natureza: "RECEITA" | "DESPESA";
+  paiId: string;
+  visivelDre: number;
+  obrigaCentroCusto: number;
+  ativo: number;
+}
+
+const FORM_VAZIO: FormPlano = {
+  nome: "",
+  codigo: "",
+  natureza: "DESPESA",
+  paiId: "",
+  visivelDre: 1,
+  obrigaCentroCusto: 0,
+  ativo: 1,
+};
+
 function construirArvore(nodes: PlanoContaNode[]): PlanoContaNode[] {
   const mapa = new Map<number, PlanoContaNode & { filhos: PlanoContaNode[] }>();
   const raizes: PlanoContaNode[] = [];
@@ -46,7 +66,6 @@ function construirArvore(nodes: PlanoContaNode[]): PlanoContaNode[] {
       mapa.get(node.paiId)?.filhos.push(node);
       return;
     }
-
     raizes.push(node);
   });
 
@@ -80,45 +99,50 @@ function filtrarArvore(dados: PlanoContaNode[], filtro: FiltroPadrao): PlanoCont
   }, []);
 }
 
+function coletarOpcoes(nodes: PlanoContaNode[]): { id: number; label: string }[] {
+  const result: { id: number; label: string }[] = [];
+  for (const node of nodes) {
+    result.push({ id: node.id, label: `${node.codigo} - ${node.nome}` });
+    if (node.filhos.length) result.push(...coletarOpcoes(node.filhos));
+  }
+  return result;
+}
+
 export function PlanoContasContent() {
   const { empresa, carregando } = useEmpresaSelecionada();
   useRequerEmpresaSelecionada();
   const caminhoRota = "/financeiro/plano-contas";
   const { tela } = useTelaFinanceira(caminhoRota);
-  const codigoTela = tela?.CODIGO_TELA ?? "FIN001_PLANO_CONTA";
+  const codigoTela = tela?.CODIGO_TELA ?? "FIN_PLANO_CONTA";
   const nomeTela = tela?.NOME_TELA ?? "PLANO DE CONTAS";
   const moduloTela = tela?.MODULO ?? "FINANCEIRO";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
-  const [filtro, setFiltro] = useState<FiltroPadrao>({
-    busca: "",
-    status: "ativos",
-    natureza: "",
-  });
+  const [filtro, setFiltro] = useState<FiltroPadrao>({ busca: "", status: "ativos", natureza: "" });
   const [planoContas, setPlanoContas] = useState<PlanoContaNode[]>([]);
   const [carregandoLista, setCarregandoLista] = useState(false);
   const [erroLista, setErroLista] = useState<string | null>(null);
   const [selecionado, setSelecionado] = useState<PlanoContaNode | null>(null);
-  const [consideraDre, setConsideraDre] = useState(false);
+  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  // Form state
+  const [form, setForm] = useState<FormPlano>({ ...FORM_VAZIO });
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [salvando, setSalvando] = useState(false);
 
   const headersPadrao = useMemo<HeadersInit>(() => {
     const headers: Record<string, string> = {};
-    if (empresa?.id) {
-      headers["x-empresa-id"] = String(empresa.id);
-    }
+    if (empresa?.id) headers["x-empresa-id"] = String(empresa.id);
     return headers;
   }, [empresa?.id]);
 
   const carregarPlanoContas = useCallback(async () => {
     if (!empresa?.id) return;
-
     setCarregandoLista(true);
     setErroLista(null);
 
     try {
-      const resposta = await fetch("/api/financeiro/plano-contas", {
-        headers: headersPadrao,
-      });
+      const resposta = await fetch("/api/financeiro/plano-contas", { headers: headersPadrao });
       const json = await resposta.json();
 
       if (resposta.ok && json?.success) {
@@ -134,10 +158,9 @@ export function PlanoContasContent() {
           obrigatorioCentroCusto: item.FIN_PLANO_CONTA_OBRIGA_CENTRO_CUSTO === 1,
           filhos: [],
         }));
-
         setPlanoContas(normalizados);
       } else {
-        setErroLista("Não foi possível carregar o plano de contas.");
+        setErroLista("Nao foi possivel carregar o plano de contas.");
       }
     } catch (error) {
       console.error(error);
@@ -154,6 +177,94 @@ export function PlanoContasContent() {
 
   const arvoreCompleta = useMemo(() => construirArvore(planoContas), [planoContas]);
   const arvoreFiltrada = useMemo(() => filtrarArvore(arvoreCompleta, filtro), [arvoreCompleta, filtro]);
+  const opcoesPai = useMemo(() => coletarOpcoes(arvoreCompleta), [arvoreCompleta]);
+
+  const handleEditar = (item: PlanoContaNode) => {
+    setEditandoId(item.id);
+    setSelecionado(item);
+    setForm({
+      nome: item.nome,
+      codigo: item.codigo,
+      natureza: item.natureza,
+      paiId: item.paiId ? String(item.paiId) : "",
+      visivelDre: item.visivelDre ? 1 : 0,
+      obrigaCentroCusto: item.obrigatorioCentroCusto ? 1 : 0,
+      ativo: item.ativo ? 1 : 0,
+    });
+  };
+
+  const handleNovo = () => {
+    setEditandoId(null);
+    setSelecionado(null);
+    setForm({ ...FORM_VAZIO });
+  };
+
+  const handleLimpar = () => {
+    setEditandoId(null);
+    setSelecionado(null);
+    setForm({ ...FORM_VAZIO });
+  };
+
+  const handleSalvar = async () => {
+    if (!empresa?.id) return;
+    if (!form.nome.trim() || !form.codigo.trim()) {
+      setNotification({ type: "error", message: "Nome e codigo sao obrigatorios." });
+      return;
+    }
+
+    setSalvando(true);
+    setNotification(null);
+
+    try {
+      if (editandoId) {
+        const resp = await fetch(`/api/financeiro/plano-contas?id=${editandoId}`, {
+          method: "PUT",
+          headers: { ...headersPadrao, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nome: form.nome,
+            codigo: form.codigo,
+            natureza: form.natureza,
+            paiId: form.paiId ? Number(form.paiId) : null,
+            visivelDre: form.visivelDre,
+            obrigaCentroCusto: form.obrigaCentroCusto,
+            ativo: form.ativo,
+          }),
+        });
+        const json = await resp.json();
+        if (json.success) {
+          setNotification({ type: "success", message: "Conta atualizada com sucesso!" });
+          await carregarPlanoContas();
+        } else {
+          setNotification({ type: "error", message: json.error || "Erro ao atualizar" });
+        }
+      } else {
+        const resp = await fetch("/api/financeiro/plano-contas", {
+          method: "POST",
+          headers: { ...headersPadrao, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nome: form.nome,
+            codigo: form.codigo,
+            natureza: form.natureza,
+            paiId: form.paiId ? Number(form.paiId) : null,
+            visivelDre: form.visivelDre,
+            obrigaCentroCusto: form.obrigaCentroCusto,
+          }),
+        });
+        const json = await resp.json();
+        if (json.success) {
+          setNotification({ type: "success", message: "Conta criada com sucesso!" });
+          handleLimpar();
+          await carregarPlanoContas();
+        } else {
+          setNotification({ type: "error", message: json.error || "Erro ao criar" });
+        }
+      }
+    } catch (err) {
+      setNotification({ type: "error", message: "Erro de conexao." });
+    } finally {
+      setSalvando(false);
+    }
+  };
 
   const renderNo = (item: PlanoContaNode) => {
     const estaSelecionado = selecionado?.id === item.id;
@@ -162,7 +273,7 @@ export function PlanoContasContent() {
       <div key={item.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div
           className={`tree-node${estaSelecionado ? " selected" : ""}`}
-          onClick={() => setSelecionado(item)}
+          onClick={() => handleEditar(item)}
           style={{ cursor: "pointer" }}
         >
           <div className="tree-node-header">
@@ -170,7 +281,7 @@ export function PlanoContasContent() {
               <p className="tree-node-code">{item.codigo}</p>
               <p className="tree-node-name">{item.nome}</p>
               <p className="tree-node-meta">
-                {item.natureza} | Centro custo: {item.obrigatorioCentroCusto ? "Sim" : "Não"} | DRE: {item.visivelDre ? "Sim" : "Não"}
+                {item.natureza} | Centro custo: {item.obrigatorioCentroCusto ? "Sim" : "Nao"} | DRE: {item.visivelDre ? "Sim" : "Nao"}
               </p>
             </div>
             <span className={item.ativo ? "badge badge-success" : "badge badge-danger"}>
@@ -178,7 +289,11 @@ export function PlanoContasContent() {
             </span>
           </div>
           <div className="tree-node-actions">
-            <button type="button" className="button button-secondary button-compact">
+            <button
+              type="button"
+              className="button button-secondary button-compact"
+              onClick={(e) => { e.stopPropagation(); handleEditar(item); }}
+            >
               Editar
             </button>
           </div>
@@ -202,17 +317,24 @@ export function PlanoContasContent() {
           modulo={moduloTela}
         />
 
+        <PaginaProtegida codigoTela={codigoTela}>
         <main className="page-content-card">
           {erroLista ? <NotificationBar type="error" message={erroLista} /> : null}
+          {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
           <div className="departamentos-page">
             <div className="split-view">
               {/* LEFT: Tree view */}
               <section className="split-view-panel">
-                <header className="form-section-header">
-                  <h2>Árvore do plano de contas</h2>
-                  <p>Navegue pela estrutura hierárquica. Clique para selecionar.</p>
-                </header>
+                <div className="section-header">
+                  <div>
+                    <h2>Arvore do plano de contas</h2>
+                    <p>Navegue pela estrutura hierarquica. Clique para editar.</p>
+                  </div>
+                  <button type="button" className="button button-primary" onClick={handleNovo}>
+                    Nova conta
+                  </button>
+                </div>
 
                 <BarraFiltros
                   filtro={filtro}
@@ -222,9 +344,7 @@ export function PlanoContasContent() {
 
                 <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                   {carregandoLista ? (
-                    <div className="empty-state">
-                      <p>Buscando contas financeiras...</p>
-                    </div>
+                    <div className="empty-state"><p>Buscando contas financeiras...</p></div>
                   ) : arvoreFiltrada.length > 0 ? (
                     arvoreFiltrada.map((item) => renderNo(item))
                   ) : (
@@ -239,67 +359,67 @@ export function PlanoContasContent() {
               {/* RIGHT: Form */}
               <section className="split-view-panel">
                 <header className="form-section-header">
-                  <h2>{selecionado ? "Detalhes da conta" : "Nova conta"}</h2>
+                  <h2>{editandoId ? "Editar conta" : "Nova conta"}</h2>
                   <p>
-                    {selecionado
-                      ? `${selecionado.codigo} - ${selecionado.nome}`
-                      : "Defina contas sintéticas e analíticas para organizar lançamentos e a DRE."}
+                    {editandoId
+                      ? `Editando: ${form.codigo} - ${form.nome}`
+                      : "Defina contas sinteticas e analiticas para organizar lancamentos e a DRE."}
                   </p>
                 </header>
 
-                {selecionado && (
-                  <div className="detail-card" style={{ marginBottom: 16 }}>
-                    <div className="detail-grid">
-                      <div>
-                        <p className="detail-label">Código</p>
-                        <p className="detail-value">{selecionado.codigo}</p>
-                      </div>
-                      <div>
-                        <p className="detail-label">Natureza</p>
-                        <p className="detail-value">{selecionado.natureza}</p>
-                      </div>
-                      <div>
-                        <p className="detail-label">Status</p>
-                        <p className="detail-value">{selecionado.ativo ? "Ativo" : "Inativo"}</p>
-                      </div>
-                      <div>
-                        <p className="detail-label">Visível no DRE</p>
-                        <p className="detail-value">{selecionado.visivelDre ? "Sim" : "Não"}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <form className="form">
+                <form className="form" onSubmit={(e) => { e.preventDefault(); handleSalvar(); }}>
                   <div className="form-grid two-columns">
                     <div className="form-group">
-                      <label htmlFor="plano-nivel">Nível</label>
-                      <input id="plano-nivel" type="number" min={1} className="form-input" placeholder="Ex.: 1" />
+                      <label htmlFor="plano-codigo">Codigo *</label>
+                      <input
+                        id="plano-codigo"
+                        type="text"
+                        className="form-input"
+                        placeholder="Ex: 1.01.001"
+                        value={form.codigo}
+                        onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))}
+                      />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="plano-descricao">Descrição *</label>
+                      <label htmlFor="plano-descricao">Nome *</label>
                       <input
                         id="plano-descricao"
                         type="text"
                         className="form-input"
                         placeholder="Nome oficial da conta"
+                        value={form.nome}
+                        onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
                       />
                     </div>
                   </div>
 
                   <div className="form-grid two-columns">
                     <div className="form-group">
-                      <label htmlFor="plano-tipo">Tipo de conta</label>
-                      <select id="plano-tipo" className="form-input">
-                        <option value="SINTETICA">Sintética</option>
-                        <option value="ANALITICA">Analítica</option>
+                      <label htmlFor="plano-natureza">Natureza *</label>
+                      <select
+                        id="plano-natureza"
+                        className="form-input"
+                        value={form.natureza}
+                        onChange={(e) => setForm((f) => ({ ...f, natureza: e.target.value as any }))}
+                      >
+                        <option value="RECEITA">Receita</option>
+                        <option value="DESPESA">Despesa</option>
                       </select>
                     </div>
                     <div className="form-group">
-                      <label htmlFor="plano-natureza">Natureza *</label>
-                      <select id="plano-natureza" className="form-input">
-                        <option value="RECEITA">Receita</option>
-                        <option value="DESPESA">Despesa</option>
+                      <label htmlFor="plano-pai">Conta pai</label>
+                      <select
+                        id="plano-pai"
+                        className="form-input"
+                        value={form.paiId}
+                        onChange={(e) => setForm((f) => ({ ...f, paiId: e.target.value }))}
+                      >
+                        <option value="">Raiz (sem pai)</option>
+                        {opcoesPai
+                          .filter((op) => op.id !== editandoId)
+                          .map((op) => (
+                            <option key={op.id} value={op.id}>{op.label}</option>
+                          ))}
                       </select>
                     </div>
                   </div>
@@ -307,47 +427,52 @@ export function PlanoContasContent() {
                   <div className="form-grid two-columns">
                     <div className="form-group">
                       <label htmlFor="plano-status">Status</label>
-                      <select id="plano-status" className="form-input">
-                        <option value="ATIVA">Ativa</option>
-                        <option value="INATIVA">Inativa</option>
+                      <select
+                        id="plano-status"
+                        className="form-input"
+                        value={form.ativo}
+                        onChange={(e) => setForm((f) => ({ ...f, ativo: Number(e.target.value) }))}
+                      >
+                        <option value={1}>Ativo</option>
+                        <option value={0}>Inativo</option>
                       </select>
                     </div>
                     <div className="form-group">
-                      <label htmlFor="plano-considera-dre">Considerar no DRE</label>
+                      <label htmlFor="plano-considera-dre">Visivel no DRE</label>
                       <select
                         id="plano-considera-dre"
                         className="form-input"
-                        value={consideraDre ? "SIM" : "NAO"}
-                        onChange={(event) => setConsideraDre(event.target.value === "SIM")}
+                        value={form.visivelDre}
+                        onChange={(e) => setForm((f) => ({ ...f, visivelDre: Number(e.target.value) }))}
                       >
-                        <option value="SIM">Sim</option>
-                        <option value="NAO">Não</option>
+                        <option value={1}>Sim</option>
+                        <option value={0}>Nao</option>
                       </select>
                     </div>
                   </div>
 
                   <div className="form-grid two-columns">
                     <div className="form-group">
-                      <label htmlFor="plano-conta-dre">Conta do DRE vinculada</label>
-                      <select id="plano-conta-dre" className="form-input">
-                        <option value="">Selecione</option>
-                        <option value="DRE_RECEITA_BRUTA">Receita bruta</option>
-                        <option value="DRE_CUSTOS">Custos</option>
-                        <option value="DRE_DESPESAS">Despesas operacionais</option>
+                      <label htmlFor="plano-centro-custo">Obriga centro de custo</label>
+                      <select
+                        id="plano-centro-custo"
+                        className="form-input"
+                        value={form.obrigaCentroCusto}
+                        onChange={(e) => setForm((f) => ({ ...f, obrigaCentroCusto: Number(e.target.value) }))}
+                      >
+                        <option value={0}>Nao</option>
+                        <option value={1}>Sim</option>
                       </select>
                     </div>
-                    <div className="form-group">
-                      <label htmlFor="plano-data-inclusao">Data de inclusão</label>
-                      <input id="plano-data-inclusao" type="date" className="form-input" />
-                    </div>
+                    <div className="form-group" />
                   </div>
 
                   <div className="form-actions departamentos-actions">
                     <div className="button-row">
-                      <button type="button" className="button button-primary">
-                        Salvar conta
+                      <button type="submit" className="button button-primary" disabled={salvando}>
+                        {salvando ? "Salvando..." : editandoId ? "Atualizar" : "Salvar conta"}
                       </button>
-                      <button type="button" className="button button-secondary">
+                      <button type="button" className="button button-secondary" onClick={handleLimpar}>
                         Limpar
                       </button>
                     </div>
@@ -357,6 +482,7 @@ export function PlanoContasContent() {
             </div>
           </div>
         </main>
+        </PaginaProtegida>
       </div>
     </LayoutShell>
   );

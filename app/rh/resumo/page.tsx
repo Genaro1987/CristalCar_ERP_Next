@@ -2,6 +2,7 @@
 
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import React, { useEffect, useMemo, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
@@ -178,6 +179,7 @@ export default function ResumoFuncionariosPage() {
           modulo={moduloTela}
         />
 
+        <PaginaProtegida codigoTela={codigoTela}>
         <main className="page-content-card" style={{ padding: 0 }}>
           {/* Filters - compact inline */}
           <div className="resumo-filtros">
@@ -432,6 +434,7 @@ export default function ResumoFuncionariosPage() {
             )}
           </div>
         </main>
+        </PaginaProtegida>
       </div>
     </LayoutShell>
   );

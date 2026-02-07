@@ -3,6 +3,7 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import React, { useState, useRef, useMemo } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
@@ -18,14 +19,17 @@ type CampoMapeamento = {
 
 const CAMPOS_POR_TIPO: Record<TipoImportacao, CampoMapeamento[]> = {
   plano_contas: [
-    { campo: "codigo", label: "Código", obrigatorio: true },
+    { campo: "codigo", label: "Codigo", obrigatorio: true },
     { campo: "nome", label: "Nome", obrigatorio: true },
     { campo: "natureza", label: "Natureza (RECEITA/DESPESA)", obrigatorio: false },
+    { campo: "contaPai", label: "Conta Pai (codigo)", obrigatorio: false },
+    { campo: "tipo", label: "Tipo (SINTETICA/ANALITICA)", obrigatorio: false },
+    { campo: "dataInclusao", label: "Data de Inclusao", obrigatorio: false },
   ],
   centro_custo: [
-    { campo: "codigo", label: "Código", obrigatorio: true },
+    { campo: "codigo", label: "Codigo", obrigatorio: true },
     { campo: "nome", label: "Nome", obrigatorio: true },
-    { campo: "descricao", label: "Descrição", obrigatorio: false },
+    { campo: "descricao", label: "Descricao", obrigatorio: false },
   ],
   lancamentos: [
     { campo: "data", label: "Data", obrigatorio: true },
@@ -235,6 +239,7 @@ export default function ImportarPage() {
           modulo={moduloTela}
         />
 
+        <PaginaProtegida codigoTela={codigoTela}>
         <main className="page-content-card">
           {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
@@ -433,6 +438,7 @@ export default function ImportarPage() {
             </section>
           )}
         </main>
+        </PaginaProtegida>
       </div>
     </LayoutShell>
   );

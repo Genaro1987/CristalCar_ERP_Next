@@ -2,6 +2,7 @@
 
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import React, { useEffect, useMemo, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
@@ -173,6 +174,7 @@ export default function ObjetivosSemanaisPage() {
           modulo={moduloTela}
         />
 
+        <PaginaProtegida codigoTela={codigoTela}>
         <main className="page-content-card">
           <section className="panel">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
@@ -269,6 +271,7 @@ export default function ObjetivosSemanaisPage() {
             )}
           </section>
         </main>
+        </PaginaProtegida>
       </div>
 
       <ModalOverlay

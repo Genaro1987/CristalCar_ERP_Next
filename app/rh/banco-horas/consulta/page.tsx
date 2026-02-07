@@ -7,6 +7,7 @@ import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSeleci
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import { ModalExportacao, type OpcoesExportacao } from "@/components/ModalExportacao";
 import { minutesToDecimal, minutosParaHora } from "@/lib/rhPontoCalculo";
 import { exportarPDF, exportarExcel } from "@/lib/exportarBancoHoras";
@@ -344,6 +345,7 @@ export default function BancoHorasConsultaPage() {
           modulo="RH"
         />
 
+        <PaginaProtegida codigoTela="CONS001_RH_BANCO_HORAS">
         <main className="page-content-card">
           {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
@@ -585,6 +587,7 @@ export default function BancoHorasConsultaPage() {
           )}
           </div>
         </main>
+        </PaginaProtegida>
 
         <ModalExportacao
           isOpen={modalExportacaoAberto}

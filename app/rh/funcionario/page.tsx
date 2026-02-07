@@ -3,6 +3,7 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
@@ -573,6 +574,7 @@ export default function FuncionarioPage() {
           modulo="RH"
         />
 
+        <PaginaProtegida codigoTela="CAD005_RH_FUNCIONARIO">
         <main className="page-content-card">
           {notification && (
             <NotificationBar type={notification.type} message={notification.message} />
@@ -885,6 +887,7 @@ export default function FuncionarioPage() {
             </section>
           </div>
         </main>
+        </PaginaProtegida>
       </div>
       </LayoutShell>
 

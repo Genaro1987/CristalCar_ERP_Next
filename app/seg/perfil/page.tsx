@@ -3,6 +3,7 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
@@ -402,6 +403,7 @@ export default function PerfilPage() {
           modulo="SEGURANCA"
         />
 
+        <PaginaProtegida codigoTela="CAD006_SEG_PERFIL">
         <main className="page-content-card">
           {notification && (
             <NotificationBar type={notification.type} message={notification.message} />
@@ -614,6 +616,7 @@ export default function PerfilPage() {
             </section>
           </div>
         </main>
+        </PaginaProtegida>
       </div>
     </LayoutShell>
   );

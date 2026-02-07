@@ -2,6 +2,7 @@
 
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
@@ -165,6 +166,7 @@ export default function ObjetivosPage() {
           modulo={moduloTela}
         />
 
+        <PaginaProtegida codigoTela={codigoTela}>
         <main className="page-content-card">
           {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
@@ -369,6 +371,7 @@ export default function ObjetivosPage() {
             )}
           </section>
         </main>
+        </PaginaProtegida>
       </div>
     </LayoutShell>
   );
