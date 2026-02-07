@@ -311,6 +311,34 @@ export default function EstruturaDrePage() {
     return planoContas.filter((c) => c.label.toLowerCase().includes(b)).slice(0, 10);
   }, [planoContas, contaBusca]);
 
+  const handleExcluir = async (item: LinhaDre) => {
+    const temFilhos = (item.filhos?.length ?? 0) > 0;
+    const msg = temFilhos
+      ? `Excluir "${item.codigo} - ${item.nome}" e todas as ${item.filhos!.length} sub-linha(s)? Se houver lancamentos vinculados, serao inativadas.`
+      : `Excluir "${item.codigo} - ${item.nome}"? Se houver lancamentos vinculados, sera inativada.`;
+    if (!confirm(msg)) return;
+
+    try {
+      const resp = await fetch(`/api/financeiro/estrutura-dre?id=${item.id}`, {
+        method: "DELETE",
+        headers,
+      });
+      const json = await resp.json();
+      if (json.success) {
+        setNotification({
+          type: json.inativada ? "error" : "success",
+          message: json.message,
+        });
+        if (selecionada?.id === item.id) handleLimpar();
+        await carregarDre();
+      } else {
+        setNotification({ type: "error", message: json.error || "Erro ao excluir" });
+      }
+    } catch {
+      setNotification({ type: "error", message: "Erro de conexao." });
+    }
+  };
+
   const [colapsados, setColapsados] = useState<Set<string>>(new Set());
 
   const toggleColapso = (id: string) => {
@@ -359,6 +387,8 @@ export default function EstruturaDrePage() {
                     onClick={(e) => { e.stopPropagation(); handleNovo(item.id); }}>+Filho</button>
                   <button type="button" className="button button-secondary button-compact" style={{ fontSize: "0.7rem", padding: "2px 8px" }}
                     onClick={(e) => { e.stopPropagation(); handleEditar(item); }}>Editar</button>
+                  <button type="button" className="button button-danger button-compact" style={{ fontSize: "0.7rem", padding: "2px 8px" }}
+                    onClick={(e) => { e.stopPropagation(); handleExcluir(item); }}>Excluir</button>
                 </div>
               </div>
             </div>

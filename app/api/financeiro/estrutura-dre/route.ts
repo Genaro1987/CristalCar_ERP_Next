@@ -318,7 +318,7 @@ export async function PUT(request: NextRequest) {
           FIN_ESTRUTURA_DRE_ORDEM = COALESCE(?, FIN_ESTRUTURA_DRE_ORDEM)
         WHERE FIN_ESTRUTURA_DRE_ID = ? AND EMPRESA_ID = ?
       `,
-      args: [nome, codigo, natureza, tipo, descricao, ativo, ordem, id, empresaId],
+      args: [nome ?? null, codigo ?? null, natureza ?? null, tipo ?? null, descricao ?? null, ativo ?? null, ordem ?? null, id, empresaId],
     });
 
     return NextResponse.json({ success: true, message: "Linha do DRE atualizada" });
@@ -326,6 +326,101 @@ export async function PUT(request: NextRequest) {
     console.error("Erro ao atualizar linha do DRE:", error);
     return NextResponse.json(
       { success: false, error: "Erro ao atualizar linha do DRE" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const empresaId = obterEmpresaIdDaRequest(request);
+  if (!empresaId) {
+    return respostaEmpresaNaoSelecionada();
+  }
+
+  const id = request.nextUrl.searchParams.get("id");
+  if (!id) {
+    return NextResponse.json(
+      { success: false, error: "ID e obrigatorio" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    // Collect this DRE line + all descendants recursively
+    const descResult = await db.execute({
+      sql: `
+        WITH RECURSIVE descendants AS (
+          SELECT FIN_ESTRUTURA_DRE_ID FROM FIN_ESTRUTURA_DRE WHERE FIN_ESTRUTURA_DRE_ID = ? AND EMPRESA_ID = ?
+          UNION ALL
+          SELECT d2.FIN_ESTRUTURA_DRE_ID FROM FIN_ESTRUTURA_DRE d2
+          INNER JOIN descendants dd ON d2.FIN_ESTRUTURA_DRE_PAI_ID = dd.FIN_ESTRUTURA_DRE_ID
+        )
+        SELECT FIN_ESTRUTURA_DRE_ID FROM descendants
+      `,
+      args: [id, empresaId],
+    });
+
+    if (descResult.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Linha do DRE nao encontrada" },
+        { status: 404 }
+      );
+    }
+
+    const ids = descResult.rows.map((r: any) => r.FIN_ESTRUTURA_DRE_ID);
+    const placeholders = ids.map(() => "?").join(",");
+
+    // Check for movements: linked plano_contas that have lancamentos
+    const movResult = await db.execute({
+      sql: `
+        SELECT COUNT(*) as total FROM FIN_LANCAMENTO fl
+        WHERE fl.FIN_PLANO_CONTA_ID IN (
+          SELECT dc.FIN_PLANO_CONTA_ID FROM FIN_ESTRUTURA_DRE_CONTA dc
+          WHERE dc.FIN_ESTRUTURA_DRE_ID IN (${placeholders})
+        ) AND fl.EMPRESA_ID = ?
+      `,
+      args: [...ids, empresaId],
+    });
+
+    const totalMov = Number((movResult.rows[0] as any).total);
+
+    if (totalMov > 0) {
+      // Has movements → inactivate all
+      const stmts = ids.map((dreId: number) => ({
+        sql: "UPDATE FIN_ESTRUTURA_DRE SET FIN_ESTRUTURA_DRE_ATIVO = 0 WHERE FIN_ESTRUTURA_DRE_ID = ?",
+        args: [dreId],
+      }));
+      await db.batch(stmts);
+
+      return NextResponse.json({
+        success: true,
+        inativada: true,
+        message: `Linha do DRE possui contas com lancamentos. ${ids.length} linha(s) inativada(s).`,
+      });
+    }
+
+    // No movements → remove linked accounts first, then delete DRE lines
+    const stmts = [
+      ...ids.map((dreId: number) => ({
+        sql: "DELETE FROM FIN_ESTRUTURA_DRE_CONTA WHERE FIN_ESTRUTURA_DRE_ID = ?",
+        args: [dreId],
+      })),
+      ...ids.reverse().map((dreId: number) => ({
+        sql: "DELETE FROM FIN_ESTRUTURA_DRE WHERE FIN_ESTRUTURA_DRE_ID = ?",
+        args: [dreId],
+      })),
+    ];
+    await db.batch(stmts);
+
+    return NextResponse.json({
+      success: true,
+      inativada: false,
+      message: `${ids.length} linha(s) do DRE excluida(s) com sucesso.`,
+    });
+  } catch (error) {
+    console.error("Erro ao excluir linha do DRE:", error);
+    return NextResponse.json(
+      { success: false, error: "Erro ao excluir linha do DRE" },
       { status: 500 }
     );
   }

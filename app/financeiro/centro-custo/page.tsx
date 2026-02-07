@@ -196,6 +196,34 @@ export default function CentroCustoPage() {
     }
   };
 
+  const handleExcluir = async (item: CentroCustoItem) => {
+    const temFilhos = (item.filhos?.length ?? 0) > 0;
+    const msg = temFilhos
+      ? `Excluir "${item.codigo} - ${item.nome}" e todos os ${item.filhos!.length} sub-centro(s)? Se houver lancamentos, serao inativados.`
+      : `Excluir "${item.codigo} - ${item.nome}"? Se houver lancamentos, sera inativado.`;
+    if (!confirm(msg)) return;
+
+    try {
+      const resp = await fetch(`/api/financeiro/centro-custo?id=${item.id}`, {
+        method: "DELETE",
+        headers,
+      });
+      const json = await resp.json();
+      if (json.success) {
+        setNotification({
+          type: json.inativada ? "error" : "success",
+          message: json.message,
+        });
+        if (selecionado?.id === item.id) handleLimpar();
+        await carregarCentros();
+      } else {
+        setNotification({ type: "error", message: json.error || "Erro ao excluir" });
+      }
+    } catch {
+      setNotification({ type: "error", message: "Erro de conexao." });
+    }
+  };
+
   const [colapsados, setColapsados] = useState<Set<string>>(new Set());
 
   const toggleColapso = (id: string) => {
@@ -252,6 +280,13 @@ export default function CentroCustoPage() {
                     onClick={(e) => { e.stopPropagation(); handleEditar(item); }}
                   >
                     Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="button button-danger button-compact"
+                    onClick={(e) => { e.stopPropagation(); handleExcluir(item); }}
+                  >
+                    Excluir
                   </button>
                 </div>
               </div>

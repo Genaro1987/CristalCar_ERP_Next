@@ -266,6 +266,34 @@ export function PlanoContasContent() {
     }
   };
 
+  const handleExcluir = async (item: PlanoContaNode) => {
+    const temFilhos = item.filhos.length > 0;
+    const msg = temFilhos
+      ? `Excluir "${item.codigo} - ${item.nome}" e todas as ${item.filhos.length} sub-conta(s)? Se houver lancamentos, serao inativadas.`
+      : `Excluir "${item.codigo} - ${item.nome}"? Se houver lancamentos, sera inativada.`;
+    if (!confirm(msg)) return;
+
+    try {
+      const resp = await fetch(`/api/financeiro/plano-contas?id=${item.id}`, {
+        method: "DELETE",
+        headers: headersPadrao,
+      });
+      const json = await resp.json();
+      if (json.success) {
+        setNotification({
+          type: json.inativada ? "error" : "success",
+          message: json.message,
+        });
+        if (selecionado?.id === item.id) handleLimpar();
+        await carregarPlanoContas();
+      } else {
+        setNotification({ type: "error", message: json.error || "Erro ao excluir" });
+      }
+    } catch {
+      setNotification({ type: "error", message: "Erro de conexao." });
+    }
+  };
+
   const [colapsados, setColapsados] = useState<Set<number>>(new Set());
 
   const toggleColapso = (id: number) => {
@@ -323,6 +351,13 @@ export function PlanoContasContent() {
                     onClick={(e) => { e.stopPropagation(); handleEditar(item); }}
                   >
                     Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="button button-danger button-compact"
+                    onClick={(e) => { e.stopPropagation(); handleExcluir(item); }}
+                  >
+                    Excluir
                   </button>
                 </div>
               </div>

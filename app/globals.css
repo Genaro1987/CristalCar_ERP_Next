@@ -898,6 +898,15 @@ a {
   border: 1px solid #d1d5db;
 }
 
+.button-danger {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+.button-danger:hover {
+  background-color: #fecaca;
+}
+
 .file-upload-wrapper {
   display: flex;
   align-items: center;
