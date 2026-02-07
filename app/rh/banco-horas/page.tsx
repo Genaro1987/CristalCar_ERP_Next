@@ -384,7 +384,7 @@ export default function BancoHorasPage() {
       <div className="page-container">
         <HeaderBar
           codigoTela="REL001_RH_BANCO_HORAS"
-          nomeTela="BANCO DE HORAS"
+          nomeTela="FECHAMENTO PONTO"
           caminhoRota="/rh/banco-horas"
           modulo="RH"
         />

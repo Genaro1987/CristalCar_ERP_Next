@@ -86,9 +86,9 @@ export function BarraFiltros({
 
   return (
     <div className="detail-card">
-      <div className="form-grid two-columns">
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
         {exibirBusca ? (
-          <div className="form-group">
+          <div className="form-group" style={{ flex: "2 1 180px", minWidth: 140 }}>
             <label htmlFor="financeiro-busca">Busca</label>
             <input
               id="financeiro-busca"
@@ -101,7 +101,7 @@ export function BarraFiltros({
           </div>
         ) : null}
 
-        <div className="form-group">
+        <div className="form-group" style={{ flex: "1 1 120px", minWidth: 100 }}>
           <label htmlFor="financeiro-status">Status</label>
           <select
             id="financeiro-status"
@@ -118,7 +118,7 @@ export function BarraFiltros({
         </div>
 
         {exibirNatureza ? (
-          <div className="form-group">
+          <div className="form-group" style={{ flex: "1 1 120px", minWidth: 100 }}>
             <label htmlFor="financeiro-natureza">Natureza</label>
             <select
               id="financeiro-natureza"

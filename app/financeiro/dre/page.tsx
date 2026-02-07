@@ -121,10 +121,27 @@ export default function DrePage() {
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const [visao, setVisao] = useState<TipoVisao>("mensal");
+  const [anosDisponiveis, setAnosDisponiveis] = useState<number[]>([new Date().getFullYear()]);
   const [ano, setAno] = useState(new Date().getFullYear());
   const [linhas, setLinhas] = useState<DreLinha[]>([]);
   const [periodos, setPeriodos] = useState<PeriodoInfo[]>([]);
   const [carregando, setCarregando] = useState(true);
+
+  // Fetch available years
+  useEffect(() => {
+    if (!empresa?.id) return;
+    fetch("/api/financeiro/anos-disponiveis", {
+      headers: { "x-empresa-id": String(empresa.id) },
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data?.length > 0) {
+          setAnosDisponiveis(json.data);
+          if (!json.data.includes(ano)) setAno(json.data[0]);
+        }
+      })
+      .catch(() => {});
+  }, [empresa?.id]);
 
   useEffect(() => {
     if (!empresa?.id) return;
@@ -192,23 +209,19 @@ export default function DrePage() {
 
         <main className="page-content-card">
           <section className="panel">
-            <div className="form-section-header">
-              <div>
-                <h2>DRE - Demonstrativo de Resultado</h2>
-                <p>Visualize receitas, despesas e resultado por período</p>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap", marginTop: 16 }}>
+            <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
               <div className="form-group" style={{ flex: "0 0 120px" }}>
                 <label htmlFor="dre-ano">Ano</label>
-                <input
+                <select
                   id="dre-ano"
-                  type="number"
                   className="form-input"
                   value={ano}
                   onChange={(e) => setAno(Number(e.target.value))}
-                />
+                >
+                  {anosDisponiveis.map((a) => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group" style={{ flex: "0 0 auto" }}>

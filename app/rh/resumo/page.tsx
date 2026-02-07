@@ -58,7 +58,7 @@ export default function ResumoFuncionariosPage() {
   const caminhoRota = "/rh/resumo";
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "RH_RESUMO";
-  const nomeTela = tela?.NOME_TELA ?? "Resumo de Funcionários";
+  const nomeTela = tela?.NOME_TELA ?? "Dashboard RH";
   const moduloTela = tela?.MODULO ?? "RH";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
@@ -66,7 +66,7 @@ export default function ResumoFuncionariosPage() {
 
   const [anosDisponiveis, setAnosDisponiveis] = useState<number[]>([]);
   const [ano, setAno] = useState(new Date().getFullYear());
-  const [mesInicio, setMesInicio] = useState(1);
+  const [mesInicio, setMesInicio] = useState(mesAtual);
   const [mesFim, setMesFim] = useState(mesAtual);
   const [dados, setDados] = useState<ResumoFuncionario[]>([]);
   const [carregando, setCarregando] = useState(true);

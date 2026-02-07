@@ -26,10 +26,14 @@ type Alertas = {
   vencidos: number;
 };
 
-type RhDados = {
-  funcionariosAtivos: number;
-  departamentos: number;
-};
+function defaultDataInicio() {
+  const hoje = new Date();
+  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function defaultDataFim() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export default function FinanceiroDashboardPage() {
   useRequerEmpresaSelecionada();
@@ -37,11 +41,12 @@ export default function FinanceiroDashboardPage() {
   const caminhoRota = "/financeiro/dashboard";
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "FIN_DASHBOARD";
-  const nomeTela = tela?.NOME_TELA ?? "Dashboard Executivo";
+  const nomeTela = tela?.NOME_TELA ?? "Dashboard Financeiro";
   const moduloTela = tela?.MODULO ?? "FINANCEIRO";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
-  const [periodo, setPeriodo] = useState("");
+  const [dataInicio, setDataInicio] = useState(defaultDataInicio);
+  const [dataFim, setDataFim] = useState(defaultDataFim);
   const [carteira, setCarteira] = useState<ResumoCarteira[]>([]);
   const [indicadores, setIndicadores] = useState<Indicador[]>([]);
   const [alertas, setAlertas] = useState<Alertas>({
@@ -49,7 +54,6 @@ export default function FinanceiroDashboardPage() {
     saidasPeriodo: 0,
     vencidos: 0,
   });
-  const [rhData, setRhData] = useState<RhDados>({ funcionariosAtivos: 0, departamentos: 0 });
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
@@ -58,12 +62,12 @@ export default function FinanceiroDashboardPage() {
     const buscarDashboard = async () => {
       try {
         setCarregando(true);
-        let url = "/api/financeiro/dashboard";
-        if (periodo) {
-          url += `?periodo=${periodo}`;
-        }
+        const params = new URLSearchParams({
+          dataInicio,
+          dataFim,
+        });
 
-        const resposta = await fetch(url, {
+        const resposta = await fetch(`/api/financeiro/dashboard?${params}`, {
           headers: { "x-empresa-id": String(empresa.id) },
         });
 
@@ -73,9 +77,6 @@ export default function FinanceiroDashboardPage() {
             setCarteira(dados.data.carteira);
             setIndicadores(dados.data.indicadores);
             setAlertas(dados.data.alertas);
-            if (dados.data.rh) {
-              setRhData(dados.data.rh);
-            }
           }
         }
       } catch (erro) {
@@ -86,17 +87,26 @@ export default function FinanceiroDashboardPage() {
     };
 
     buscarDashboard();
-  }, [empresa?.id, periodo]);
+  }, [empresa?.id, dataInicio, dataFim]);
 
   const carteiraSelecionada = useMemo(
     () => carteira[0] || { empresa: "", saldo: 0, entradas: 0, saidas: 0 },
     [carteira]
   );
-  const nomeEmpresa = empresa?.nomeFantasia || empresa?.cnpj || "Carregando...";
-  const periodoLabel = periodo ? periodo.replace("-", "/") : "Mês Atual";
 
   const formatMoney = (val: number) =>
     val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const periodoLabel = (() => {
+    try {
+      const di = new Date(dataInicio + "T00:00:00");
+      const df = new Date(dataFim + "T00:00:00");
+      const fmtD = (d: Date) => `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+      return `${fmtD(di)} a ${fmtD(df)}`;
+    } catch {
+      return "Período";
+    }
+  })();
 
   return (
     <LayoutShell>
@@ -109,50 +119,45 @@ export default function FinanceiroDashboardPage() {
         />
 
         <main className="page-content-card" style={{ background: "transparent", boxShadow: "none", padding: 0 }}>
-          {/* Header + Filtro */}
-          <section className="panel">
-            <div className="form-section-header">
-              <div>
-                <h2>Visão Geral</h2>
-                <p>Acompanhe os principais indicadores de {nomeEmpresa}</p>
-              </div>
-              <div className="form-group" style={{ minWidth: 160 }}>
-                <label htmlFor="dashboard-periodo">Competência</label>
-                <input
-                  id="dashboard-periodo"
-                  type="month"
-                  value={periodo}
-                  onChange={(e) => setPeriodo(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* KPI Cards */}
-          <section className="summary-cards" style={{ marginTop: 16 }}>
+          {/* KPI Cards + Period selector */}
+          <section className="summary-cards">
             <div className="summary-card" style={{ background: "linear-gradient(135deg, #1e293b, #0f172a)", color: "#fff" }}>
               <span className="summary-label" style={{ color: "#94a3b8" }}>Saldo em Caixa</span>
               <strong className="summary-value" style={{ color: "#fff" }}>{formatMoney(carteiraSelecionada.saldo)}</strong>
-              <span style={{ fontSize: "0.7rem", color: "#94a3b8", marginTop: 4 }}>Atualizado agora</span>
+              <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Atualizado agora</span>
             </div>
 
             <div className="summary-card">
               <span className="summary-label">Entradas</span>
               <strong className="summary-value" style={{ color: "#059669" }}>{formatMoney(carteiraSelecionada.entradas)}</strong>
-              <span style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: 4 }}>Receitas ({periodoLabel})</span>
+              <span style={{ fontSize: "0.7rem", color: "#9ca3af" }}>Receitas ({periodoLabel})</span>
             </div>
 
             <div className="summary-card">
               <span className="summary-label">Saídas</span>
               <strong className="summary-value" style={{ color: "#dc2626" }}>{formatMoney(carteiraSelecionada.saidas)}</strong>
-              <span style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: 4 }}>Despesas ({periodoLabel})</span>
+              <span style={{ fontSize: "0.7rem", color: "#9ca3af" }}>Despesas ({periodoLabel})</span>
             </div>
 
-            <div className="summary-card">
-              <span className="summary-label">Pessoal Ativo</span>
-              <strong className="summary-value">{rhData.funcionariosAtivos}</strong>
-              <span style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: 4 }}>{rhData.departamentos} departamentos</span>
+            <div className="summary-card" style={{ display: "flex", flexDirection: "column", gap: 8, justifyContent: "center" }}>
+              <span className="summary-label">Período</span>
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                <input
+                  type="date"
+                  value={dataInicio}
+                  onChange={(e) => setDataInicio(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: "0.8rem", padding: "4px 6px", flex: 1, minWidth: 110 }}
+                />
+                <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>a</span>
+                <input
+                  type="date"
+                  value={dataFim}
+                  onChange={(e) => setDataFim(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: "0.8rem", padding: "4px 6px", flex: 1, minWidth: 110 }}
+                />
+              </div>
             </div>
           </section>
 

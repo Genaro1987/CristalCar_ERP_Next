@@ -119,6 +119,12 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
         label: "RECURSOS HUMANOS",
         itens: [
           {
+            label: "Dashboard RH",
+            rota: "/rh/resumo",
+            requerEmpresa: true,
+            codigoTela: "RH_RESUMO",
+          },
+          {
             label: "Jornadas",
             rota: "/rh/jornada",
             requerEmpresa: true,
@@ -137,24 +143,18 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             codigoTela: "LAN001_RH_PONTO",
           },
           {
-            label: "Banco de Horas",
+            label: "Fechamento Ponto",
             rota: "/rh/banco-horas",
             requerEmpresa: true,
             codigoTela: "REL001_RH_BANCO_HORAS",
             matchExact: true,
           },
           {
-            label: "Consulta Banco de Horas",
+            label: "Consulta Ponto",
             rota: "/rh/banco-horas/consulta",
             requerEmpresa: true,
             codigoTela: "CONS001_RH_BANCO_HORAS",
             matchExact: true,
-          },
-          {
-            label: "Resumo Funcionários",
-            rota: "/rh/resumo",
-            requerEmpresa: true,
-            codigoTela: "RH_RESUMO",
           },
         ],
       },
@@ -200,7 +200,24 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             codigoTela: "FIN_DRE",
           },
           {
-            label: "Objetivos",
+            label: "Extrato Pró-labore",
+            rota: "/financeiro/extrato-prolabore",
+            requerEmpresa: true,
+            codigoTela: "FIN_PROLABORE",
+          },
+          {
+            label: "Importação de Dados",
+            rota: "/financeiro/importar",
+            requerEmpresa: true,
+            codigoTela: "FIN_IMPORTAR",
+          },
+        ],
+      },
+      {
+        label: "OBJETIVOS",
+        itens: [
+          {
+            label: "Objetivos Financeiros",
             rota: "/financeiro/objetivos",
             requerEmpresa: true,
             codigoTela: "FIN_OBJETIVOS",
@@ -210,18 +227,6 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             rota: "/financeiro/objetivos-semanais",
             requerEmpresa: true,
             codigoTela: "FIN_OBJETIVOS_SEMANAIS",
-          },
-          {
-            label: "Importação de Dados",
-            rota: "/financeiro/importar",
-            requerEmpresa: true,
-            codigoTela: "FIN_IMPORTAR",
-          },
-          {
-            label: "Extrato Pró-labore",
-            rota: "/financeiro/extrato-prolabore",
-            requerEmpresa: true,
-            codigoTela: "FIN_PROLABORE",
           },
         ],
       },

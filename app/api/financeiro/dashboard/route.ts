@@ -19,10 +19,6 @@ interface DashboardData {
   carteira: ResumoCarteira[];
   indicadores: Indicador[];
   alertas: Alertas;
-  rh: {
-    funcionariosAtivos: number;
-    departamentos: number;
-  };
 }
 
 interface Alertas {
@@ -37,7 +33,8 @@ export async function GET(request: NextRequest) {
     return respostaEmpresaNaoSelecionada();
   }
 
-  const periodo = request.nextUrl.searchParams.get("periodo"); // formato: YYYY-MM
+  const dataInicio = request.nextUrl.searchParams.get("dataInicio");
+  const dataFim = request.nextUrl.searchParams.get("dataFim");
 
   try {
     // Calcular resumo de carteira (entradas, saídas e saldo)
@@ -53,9 +50,9 @@ export async function GET(request: NextRequest) {
 
     const args: any[] = [];
 
-    if (periodo) {
-      sqlResumo += ` AND strftime('%Y-%m', l.FIN_LANCAMENTO_DATA) = ?`;
-      args.push(periodo);
+    if (dataInicio && dataFim) {
+      sqlResumo += ` AND l.FIN_LANCAMENTO_DATA >= ? AND l.FIN_LANCAMENTO_DATA <= ?`;
+      args.push(dataInicio, dataFim);
     }
 
     sqlResumo += `
@@ -97,7 +94,6 @@ export async function GET(request: NextRequest) {
     // Calcular indicadores
     const indicadores: Indicador[] = [];
 
-    // Margem (receitas - despesas / receitas)
     const totalEntradas = carteira.reduce((acc, c) => acc + c.entradas, 0);
     const totalSaidas = carteira.reduce((acc, c) => acc + c.saidas, 0);
     const margem = totalEntradas > 0 ? ((totalEntradas - totalSaidas) / totalEntradas) * 100 : 0;
@@ -108,14 +104,12 @@ export async function GET(request: NextRequest) {
       descricao: "Média do período selecionado",
     });
 
-    // Burn Rate (média de saídas por mês)
     indicadores.push({
       titulo: "Burn Rate",
       valor: `R$ ${(totalSaidas / 1000).toFixed(0)} mil`,
       descricao: "Saídas do período",
     });
 
-    // Fluxo Projetado (entradas - saídas)
     const fluxoProjetado = totalEntradas - totalSaidas;
     const sinalFluxo = fluxoProjetado >= 0 ? "+" : "-";
     indicadores.push({
@@ -137,9 +131,9 @@ export async function GET(request: NextRequest) {
 
     const alertasArgs: any[] = [dataHoje, empresaId];
 
-    if (periodo) {
-      sqlAlertas += ` AND strftime('%Y-%m', l.FIN_LANCAMENTO_DATA) = ?`;
-      alertasArgs.push(periodo);
+    if (dataInicio && dataFim) {
+      sqlAlertas += ` AND l.FIN_LANCAMENTO_DATA >= ? AND l.FIN_LANCAMENTO_DATA <= ?`;
+      alertasArgs.push(dataInicio, dataFim);
     }
 
     const resultadoAlertas = await db.execute({
@@ -153,28 +147,10 @@ export async function GET(request: NextRequest) {
       vencidos: Number((resultadoAlertas.rows[0] as any)?.vencidos ?? 0),
     };
 
-    // Dados RH (Funcionários Ativos)
-    const rhResult = await db.execute({
-      sql: `
-        SELECT
-          COUNT(CASE WHEN ATIVO = 1 THEN 1 END) as ativos,
-          COUNT(DISTINCT ID_DEPARTAMENTO) as departamentos
-        FROM RH_FUNCIONARIO
-        WHERE ID_EMPRESA = ?
-      `,
-      args: [empresaId],
-    });
-
-    const rhDados = {
-      funcionariosAtivos: Number(rhResult.rows[0]?.ativos ?? 0),
-      departamentos: Number(rhResult.rows[0]?.departamentos ?? 0),
-    };
-
     const dashboardData: DashboardData = {
       carteira,
       indicadores,
       alertas,
-      rh: rhDados,
     };
 
     return NextResponse.json({ success: true, data: dashboardData });
