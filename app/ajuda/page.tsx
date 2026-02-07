@@ -67,7 +67,7 @@ export default function CentralAjudaPage() {
         set.add(t.MODULO.toUpperCase());
       }
     });
-    return Array.from(set).sort();
+    return Array.from(set);
   }, [telas]);
 
   useEffect(() => {
