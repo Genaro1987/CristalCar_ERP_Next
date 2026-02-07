@@ -2,6 +2,7 @@
 
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
@@ -406,6 +407,7 @@ export default function FinanceiroDashboardPage() {
           modulo={moduloTela}
         />
 
+        <PaginaProtegida codigoTela={codigoTela}>
         <main className="page-content-card" style={{ background: "transparent", boxShadow: "none", padding: 0 }}>
           <section className="summary-cards">
             <div className="summary-card" style={{ background: "linear-gradient(135deg, #1e293b, #0f172a)", color: "#fff" }}>
@@ -680,6 +682,7 @@ export default function FinanceiroDashboardPage() {
             )}
           </div>
         </main>
+        </PaginaProtegida>
       </div>
     </LayoutShell>
   );

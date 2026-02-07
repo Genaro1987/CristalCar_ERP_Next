@@ -2877,3 +2877,188 @@ a {
     flex-direction: column;
   }
 }
+
+/* ════════════════════════════════════════════
+   PERMISSOES - SOMENTE CONSULTA + ACESSO NEGADO
+   ════════════════════════════════════════════ */
+
+.somente-consulta-banner {
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 8px 16px;
+  border-bottom: 2px solid #f59e0b;
+  letter-spacing: 0.05em;
+}
+
+.somente-consulta input,
+.somente-consulta select,
+.somente-consulta textarea {
+  pointer-events: none !important;
+  opacity: 0.65 !important;
+  background-color: #f1f5f9 !important;
+}
+
+.somente-consulta input[type="checkbox"],
+.somente-consulta input[type="radio"] {
+  pointer-events: none !important;
+  opacity: 0.5 !important;
+}
+
+.somente-consulta .button-primary,
+.somente-consulta .btn-salvar,
+.somente-consulta .btn-excluir,
+.somente-consulta button[type="submit"] {
+  display: none !important;
+}
+
+.somente-consulta .form-actions .button-row {
+  display: none !important;
+}
+
+.somente-consulta .section-actions {
+  display: none !important;
+}
+
+.acesso-negado-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  gap: 8px;
+}
+
+.acesso-negado-container .acesso-negado-icon {
+  font-size: 4rem;
+  line-height: 1;
+  opacity: 0.5;
+}
+
+.acesso-negado-container h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #991b1b;
+  letter-spacing: 0.05em;
+}
+
+.acesso-negado-container p {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.acesso-negado-container .acesso-negado-detalhe {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+/* Perfil selector on company selection page */
+.perfil-selector-overlay {
+  margin-top: 24px;
+  padding: 24px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.perfil-selector-overlay h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #1e293b;
+}
+
+.perfil-selector-overlay p {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+.perfil-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.perfil-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.perfil-card:hover {
+  border-color: #f97316;
+  background: #fff7ed;
+}
+
+.perfil-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.perfil-card-nome {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+
+.perfil-card-desc {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.perfil-card-btn {
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #f97316;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.perfil-card-btn:hover {
+  background: #ea580c;
+}
+
+.perfil-skip-btn {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.perfil-skip-btn button {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Sidebar perfil indicator */
+.sidebar-perfil-indicator {
+  padding: 8px 16px;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  text-align: center;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  margin-top: 4px;
+}
+
+.sidebar-perfil-indicator strong {
+  color: #cbd5e1;
+  display: block;
+  font-size: 0.75rem;
+}

@@ -2,6 +2,7 @@
 
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import { useMemo, useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
@@ -141,6 +142,7 @@ export default function CentroCustoPage() {
           modulo={moduloTela}
         />
 
+        <PaginaProtegida codigoTela={codigoTela}>
         <main className="page-content-card">
           <div className="departamentos-page">
             <div className="split-view">
@@ -227,6 +229,7 @@ export default function CentroCustoPage() {
             </div>
           </div>
         </main>
+        </PaginaProtegida>
       </div>
 
       <ModalOverlay
