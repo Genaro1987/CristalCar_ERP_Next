@@ -187,8 +187,8 @@ export function calcularSaldoDia(
     };
   }
 
-  const saldoBancoMinutos =
-    diferenca > 0 ? diferenca - tolerancia : diferenca + tolerancia;
+  // Ultrapassou a tolerância: conta o tempo integral (não subtrai a tolerância)
+  const saldoBancoMinutos = diferenca;
 
   return {
     saldoBancoMinutos,

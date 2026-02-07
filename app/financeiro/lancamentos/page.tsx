@@ -1,11 +1,11 @@
 "use client";
 
 import LayoutShell from "@/components/LayoutShell";
-import React, { useMemo, useState, useEffect } from "react";
+import { HeaderBar } from "@/components/HeaderBar";
+import { NotificationBar } from "@/components/NotificationBar";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
-import { BarraFiltros, FiltroPadrao, ModalOverlay } from "../_components/financeiro-layout";
-import { HeaderBar } from "@/components/HeaderBar";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 
 type Lancamento = {
@@ -22,15 +22,8 @@ type Lancamento = {
   documento?: string;
 };
 
-type PlanoContaOption = {
-  id: number;
-  label: string;
-};
-
-type CentroCustoOption = {
-  id: number;
-  label: string;
-};
+type PlanoContaOption = { id: number; label: string };
+type CentroCustoOption = { id: number; label: string };
 
 export default function LancamentosPage() {
   useRequerEmpresaSelecionada();
@@ -42,199 +35,179 @@ export default function LancamentosPage() {
   const moduloTela = tela?.MODULO ?? "FINANCEIRO";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
-  const [filtro, setFiltro] = useState<FiltroPadrao>({ busca: "", status: "todos" });
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
-  const [modalAberto, setModalAberto] = useState(false);
-  const [selecionado, setSelecionado] = useState<Lancamento | null>(null);
-  const [modo, setModo] = useState<"novo" | "editar">("novo");
   const [carregando, setCarregando] = useState(true);
-  const [periodo, setPeriodo] = useState<string>("");
-  const [planoContaSelecionado, setPlanoContaSelecionado] = useState<string>("");
-  const [centroCustoSelecionado, setCentroCustoSelecionado] = useState<string>("");
-  const [documentoFiltro, setDocumentoFiltro] = useState<string>("");
+  const [periodo, setPeriodo] = useState("");
+  const [busca, setBusca] = useState("");
   const [planoContas, setPlanoContas] = useState<PlanoContaOption[]>([]);
   const [centrosCusto, setCentrosCusto] = useState<CentroCustoOption[]>([]);
+  const [notification, setNotification] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
 
-  // Buscar lançamentos da API
-  useEffect(() => {
-    if (!empresa?.id) return;
+  // Form state
+  const [selecionado, setSelecionado] = useState<Lancamento | null>(null);
+  const [formData, setFormData] = useState("");
+  const [formHistorico, setFormHistorico] = useState("");
+  const [formContaId, setFormContaId] = useState("");
+  const [formCentroId, setFormCentroId] = useState("");
+  const [formValor, setFormValor] = useState("");
+  const [formTipo, setFormTipo] = useState<"Entrada" | "Saída">("Entrada");
+  const [formDocumento, setFormDocumento] = useState("");
+  const [formStatus, setFormStatus] = useState<"confirmado" | "pendente">("confirmado");
+  const [salvando, setSalvando] = useState(false);
 
-    const buscarLancamentos = async () => {
-      try {
-        setCarregando(true);
-        let url = "/api/financeiro/lancamentos";
-        if (periodo) {
-          url += `?periodo=${periodo}`;
-        }
-
-        const resposta = await fetch(url, {
-          headers: {
-            "x-empresa-id": String(empresa.id),
-          },
-        });
-
-        if (resposta.ok) {
-          const dados = await resposta.json();
-          if (dados.success) {
-            setLancamentos(dados.data);
-          }
-        }
-      } catch (erro) {
-        console.error("Erro ao buscar lançamentos:", erro);
-      } finally {
-        setCarregando(false);
-      }
-    };
-
-    buscarLancamentos();
-  }, [empresa?.id, periodo]);
-
-  useEffect(() => {
-    if (!empresa?.id) return;
-
-    const carregarOpcoes = async () => {
-      try {
-        const [planosResposta, centrosResposta] = await Promise.all([
-          fetch("/api/financeiro/plano-contas", {
-            headers: { "x-empresa-id": String(empresa.id) },
-          }),
-          fetch("/api/financeiro/centro-custo", {
-            headers: { "x-empresa-id": String(empresa.id) },
-          }),
-        ]);
-
-        if (planosResposta.ok) {
-          const planosJson = await planosResposta.json();
-          if (planosJson.success) {
-            const opcoes = (planosJson.data ?? []).map((item: any) => ({
-              id: item.FIN_PLANO_CONTA_ID,
-              label: `${item.FIN_PLANO_CONTA_CODIGO} ${item.FIN_PLANO_CONTA_NOME}`,
-            }));
-            setPlanoContas(opcoes);
-          }
-        }
-
-        if (centrosResposta.ok) {
-          const centrosJson = await centrosResposta.json();
-          if (centrosJson.success) {
-            const normalizar = (items: any[]): CentroCustoOption[] =>
-              items.flatMap((item) => [
-                { id: Number(item.id), label: `${item.codigo} ${item.nome}` },
-                ...(item.filhos ? normalizar(item.filhos) : []),
-              ]);
-
-            setCentrosCusto(normalizar(centrosJson.data ?? []));
-          }
-        }
-      } catch (erro) {
-        console.error("Erro ao carregar filtros:", erro);
-      }
-    };
-
-    carregarOpcoes();
+  const headersPadrao = useMemo<HeadersInit>(() => {
+    const h: Record<string, string> = {};
+    if (empresa?.id) h["x-empresa-id"] = String(empresa.id);
+    return h;
   }, [empresa?.id]);
 
-  const dadosFiltrados = useMemo(() => {
-    const busca = filtro.busca.trim().toLowerCase();
-    const documentoNormalizado = documentoFiltro.trim().toLowerCase();
-    return lancamentos.filter((item) => {
-      const statusOk =
-        filtro.status === "todos" ||
-        (filtro.status === "ativos" && item.status === "confirmado") ||
-        (filtro.status === "inativos" && item.status === "pendente");
-      const buscaOk =
-        !busca || `${item.historico} ${item.conta} ${item.centroCusto}`.toLowerCase().includes(busca);
-      const contaOk = !planoContaSelecionado || String(item.contaId) === planoContaSelecionado;
-      const centroOk =
-        !centroCustoSelecionado || String(item.centroCustoId ?? "") === centroCustoSelecionado;
-      const documentoOk = !documentoNormalizado || item.documento?.toLowerCase().includes(documentoNormalizado);
+  const limparForm = () => {
+    setSelecionado(null);
+    setFormData("");
+    setFormHistorico("");
+    setFormContaId("");
+    setFormCentroId("");
+    setFormValor("");
+    setFormTipo("Entrada");
+    setFormDocumento("");
+    setFormStatus("confirmado");
+  };
 
-      return statusOk && buscaOk && contaOk && centroOk && documentoOk;
+  const preencherForm = (item: Lancamento) => {
+    setSelecionado(item);
+    setFormData(item.data);
+    setFormHistorico(item.historico);
+    setFormContaId(String(item.contaId));
+    setFormCentroId(item.centroCustoId ? String(item.centroCustoId) : "");
+    setFormValor(String(Math.abs(item.valor)));
+    setFormTipo(item.tipo);
+    setFormDocumento(item.documento ?? "");
+    setFormStatus(item.status);
+  };
+
+  // Buscar lançamentos
+  const buscarLancamentos = useCallback(async () => {
+    if (!empresa?.id) return;
+    setCarregando(true);
+    try {
+      let url = "/api/financeiro/lancamentos";
+      if (periodo) url += `?periodo=${periodo}`;
+      const res = await fetch(url, { headers: headersPadrao });
+      const json = await res.json();
+      if (res.ok && json.success) setLancamentos(json.data);
+    } catch (e) {
+      console.error("Erro ao buscar lançamentos:", e);
+    } finally {
+      setCarregando(false);
+    }
+  }, [empresa?.id, periodo, headersPadrao]);
+
+  useEffect(() => {
+    buscarLancamentos();
+  }, [buscarLancamentos]);
+
+  // Carregar opções
+  useEffect(() => {
+    if (!empresa?.id) return;
+    const carregar = async () => {
+      try {
+        const [planosRes, centrosRes] = await Promise.all([
+          fetch("/api/financeiro/plano-contas", { headers: headersPadrao }),
+          fetch("/api/financeiro/centro-custo", { headers: headersPadrao }),
+        ]);
+        if (planosRes.ok) {
+          const json = await planosRes.json();
+          if (json.success)
+            setPlanoContas(
+              (json.data ?? []).map((i: any) => ({
+                id: i.FIN_PLANO_CONTA_ID,
+                label: `${i.FIN_PLANO_CONTA_CODIGO} ${i.FIN_PLANO_CONTA_NOME}`,
+              }))
+            );
+        }
+        if (centrosRes.ok) {
+          const json = await centrosRes.json();
+          if (json.success) {
+            const flatten = (items: any[]): CentroCustoOption[] =>
+              items.flatMap((i) => [
+                { id: Number(i.id), label: `${i.codigo} ${i.nome}` },
+                ...(i.filhos ? flatten(i.filhos) : []),
+              ]);
+            setCentrosCusto(flatten(json.data ?? []));
+          }
+        }
+      } catch (e) {
+        console.error("Erro ao carregar opções:", e);
+      }
+    };
+    carregar();
+  }, [empresa?.id, headersPadrao]);
+
+  // Filtro local
+  const dadosFiltrados = useMemo(() => {
+    const b = busca.trim().toLowerCase();
+    return lancamentos.filter((item) => {
+      if (b && !`${item.historico} ${item.conta} ${item.centroCusto}`.toLowerCase().includes(b))
+        return false;
+      return true;
     });
-  }, [filtro, lancamentos, planoContaSelecionado, centroCustoSelecionado, documentoFiltro]);
+  }, [busca, lancamentos]);
 
   const formatadorMoeda = useMemo(
     () => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }),
     []
   );
 
-  const resumoOperacional = useMemo(() => {
-    const entradas = dadosFiltrados.filter((item) => item.tipo === "Entrada");
-    const saidas = dadosFiltrados.filter((item) => item.tipo === "Saída");
-    const totalEntradas = entradas.reduce((total, item) => total + Math.abs(item.valor), 0);
-    const totalSaidas = saidas.reduce((total, item) => total + Math.abs(item.valor), 0);
-    const saldo = totalEntradas - totalSaidas;
-    const pendentes = dadosFiltrados.filter((item) => item.status === "pendente").length;
-    const confirmados = dadosFiltrados.filter((item) => item.status === "confirmado").length;
-
-    return {
-      totalEntradas,
-      totalSaidas,
-      saldo,
-      pendentes,
-      confirmados,
-      total: dadosFiltrados.length,
-    };
+  const resumo = useMemo(() => {
+    const entradas = dadosFiltrados.filter((i) => i.tipo === "Entrada").reduce((s, i) => s + Math.abs(i.valor), 0);
+    const saidas = dadosFiltrados.filter((i) => i.tipo === "Saída").reduce((s, i) => s + Math.abs(i.valor), 0);
+    return { entradas, saidas, saldo: entradas - saidas, total: dadosFiltrados.length };
   }, [dadosFiltrados]);
 
-  const handleNovo = () => {
-    setModo("novo");
-    setSelecionado(null);
-    setModalAberto(true);
-  };
-
-  const handleEditar = (item: Lancamento) => {
-    setSelecionado(item);
-    setModo("editar");
-    setModalAberto(true);
-  };
-
-  const handleSalvar = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const tipo = (form.get("tipo") as Lancamento["tipo"]) ?? "Entrada";
-    const valorInformado = Number(form.get("valor")) || 0;
-    const valorNormalizado =
-      tipo === "Saída" ? -Math.abs(valorInformado) : Math.abs(valorInformado);
-
+  // Salvar
+  const handleSalvar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!empresa?.id) return;
+    const valorNum = Number(formValor) || 0;
+    const valorFinal = formTipo === "Saída" ? -Math.abs(valorNum) : Math.abs(valorNum);
     const payload = {
       id: selecionado?.id,
-      data: (form.get("data") as string) ?? "",
-      historico: (form.get("historico") as string) ?? "",
-      contaId: Number(form.get("contaId")) || 0,
-      centroCustoId: Number(form.get("centroCustoId")) || null,
-      valor: valorNormalizado,
-      documento: (form.get("documento") as string) ?? "",
-      status: (form.get("status") as Lancamento["status"]) ?? "confirmado",
+      data: formData,
+      historico: formHistorico,
+      contaId: Number(formContaId) || 0,
+      centroCustoId: Number(formCentroId) || null,
+      valor: valorFinal,
+      documento: formDocumento,
+      status: formStatus,
     };
 
-    const salvar = async () => {
-      try {
-        const resposta = await fetch("/api/financeiro/lancamentos", {
-          method: modo === "novo" ? "POST" : "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "x-empresa-id": String(empresa?.id ?? ""),
-          },
-          body: JSON.stringify(payload),
-        });
-
-        const json = await resposta.json();
-        if (resposta.ok && json.success) {
-          const atualizado = json.data as Lancamento;
-          if (modo === "novo") {
-            setLancamentos((prev) => [atualizado, ...prev]);
-          } else {
-            setLancamentos((prev) => prev.map((item) => (item.id === atualizado.id ? atualizado : item)));
-          }
-          setModalAberto(false);
+    setSalvando(true);
+    try {
+      const res = await fetch("/api/financeiro/lancamentos", {
+        method: selecionado ? "PUT" : "POST",
+        headers: { ...headersPadrao, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        if (selecionado) {
+          setLancamentos((prev) => prev.map((i) => (i.id === json.data.id ? json.data : i)));
+        } else {
+          setLancamentos((prev) => [json.data, ...prev]);
         }
-      } catch (erro) {
-        console.error("Erro ao salvar lançamento:", erro);
+        limparForm();
+        setNotification({ type: "success", message: "Lançamento salvo com sucesso" });
+      } else {
+        setNotification({ type: "error", message: json.error || "Erro ao salvar" });
       }
-    };
-
-    salvar();
+    } catch (err) {
+      setNotification({ type: "error", message: "Erro de conexão" });
+    } finally {
+      setSalvando(false);
+    }
   };
 
   return (
@@ -247,343 +220,268 @@ export default function LancamentosPage() {
           modulo={moduloTela}
         />
 
-        <main className="page-content-card space-y-4">
-          <section className="panel space-y-4">
-            <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((prev) => ({ ...prev, ...novo }))} />
+        <main className="page-content-card">
+          {notification && (
+            <NotificationBar type={notification.type} message={notification.message} />
+          )}
 
-            <div>
-              <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="departamentos-page">
+            {/* Resumo cards */}
+            <section className="panel">
+              <div className="section-header">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Contexto</p>
-                  <h2 className="text-lg font-bold text-gray-900">Filtros principais</h2>
-                  <p className="text-sm text-gray-600">
-                    Cada lançamento respeita a empresa ativa, natureza e centro de custo. Utilize os filtros antes de incluir dados.
+                  <h2>Resumo operacional</h2>
+                  <p>Valores atualizados conforme empresa ativa e filtros aplicados.</p>
+                </div>
+                <span className="badge-count">{resumo.total} lançamentos</span>
+              </div>
+              <div className="summary-cards">
+                <div className="summary-card">
+                  <p className="summary-card-label">Entradas</p>
+                  <p className="summary-card-value positive">{formatadorMoeda.format(resumo.entradas)}</p>
+                </div>
+                <div className="summary-card">
+                  <p className="summary-card-label">Saídas</p>
+                  <p className="summary-card-value negative">{formatadorMoeda.format(resumo.saidas)}</p>
+                </div>
+                <div className="summary-card">
+                  <p className="summary-card-label">Saldo</p>
+                  <p className={`summary-card-value ${resumo.saldo >= 0 ? "positive" : "negative"}`}>
+                    {formatadorMoeda.format(resumo.saldo)}
                   </p>
-                </div>
-                <button
-                  type="button"
-                  className="button button-primary"
-                  onClick={handleNovo}
-                >
-                  Novo lançamento
-                </button>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <div className="form-group">
-                  <label htmlFor="filtro-periodo">Período</label>
-                  <input
-                    id="filtro-periodo"
-                    type="month"
-                    value={periodo}
-                    onChange={(e) => setPeriodo(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="filtro-plano-conta">Plano de Conta</label>
-                  <select
-                    id="filtro-plano-conta"
-                    value={planoContaSelecionado}
-                    onChange={(e) => setPlanoContaSelecionado(e.target.value)}
-                    className="form-input"
-                  >
-                    <option value="">Todas</option>
-                    {planoContas.map((conta) => (
-                      <option key={conta.id} value={conta.id}>
-                        {conta.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="filtro-centro-custo">Centro de Custo</label>
-                  <select
-                    id="filtro-centro-custo"
-                    value={centroCustoSelecionado}
-                    onChange={(e) => setCentroCustoSelecionado(e.target.value)}
-                    className="form-input"
-                  >
-                    <option value="">Todos</option>
-                    {centrosCusto.map((centro) => (
-                      <option key={centro.id} value={centro.id}>
-                        {centro.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="filtro-documento">Documento</label>
-                  <input
-                    id="filtro-documento"
-                    type="text"
-                    value={documentoFiltro}
-                    onChange={(e) => setDocumentoFiltro(e.target.value)}
-                    className="form-input"
-                    placeholder="Número ou referência"
-                  />
+                  <p className="summary-card-hint">Entradas - Saídas</p>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section className="panel">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Resumo operacional</p>
-                <h3 className="text-lg font-bold text-gray-900">Indicadores com dados reais filtrados</h3>
-                <p className="text-sm text-gray-600">
-                  Valores atualizados automaticamente conforme a empresa ativa e filtros aplicados.
-                </p>
-              </div>
-              <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
-                {resumoOperacional.total} lançamentos
-              </span>
-            </div>
+            {/* 2-column: form + table */}
+            <div className="split-view">
+              {/* LEFT: Form */}
+              <section className="split-view-panel">
+                <header className="form-section-header">
+                  <h2>{selecionado ? "Editar lançamento" : "Novo lançamento"}</h2>
+                  <p>
+                    {selecionado
+                      ? "Atualize os dados do lançamento selecionado."
+                      : "Informe os dados para registrar um novo lançamento."}
+                  </p>
+                </header>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Entradas</p>
-                <p className="mt-2 text-2xl font-bold text-gray-900">
-                  {formatadorMoeda.format(resumoOperacional.totalEntradas)}
-                </p>
-                <p className="mt-1 text-xs text-gray-600">{resumoOperacional.confirmados} confirmados</p>
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Saídas</p>
-                <p className="mt-2 text-2xl font-bold text-gray-900">
-                  {formatadorMoeda.format(resumoOperacional.totalSaidas)}
-                </p>
-                <p className="mt-1 text-xs text-gray-600">{resumoOperacional.pendentes} pendentes</p>
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Saldo</p>
-                <p
-                  className={`mt-2 text-2xl font-bold ${
-                    resumoOperacional.saldo >= 0 ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {formatadorMoeda.format(resumoOperacional.saldo)}
-                </p>
-                <p className="mt-1 text-xs text-gray-600">Diferença entre entradas e saídas</p>
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pendências</p>
-                <p className="mt-2 text-2xl font-bold text-gray-900">{resumoOperacional.pendentes}</p>
-                <p className="mt-1 text-xs text-gray-600">Lançamentos aguardando confirmação</p>
-              </div>
-            </div>
-          </section>
+                <form className="form" onSubmit={handleSalvar}>
+                  <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="lanc-data">Data *</label>
+                      <input
+                        id="lanc-data"
+                        type="date"
+                        className="form-input"
+                        value={formData}
+                        onChange={(e) => setFormData(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="lanc-tipo">Tipo *</label>
+                      <select
+                        id="lanc-tipo"
+                        className="form-input"
+                        value={formTipo}
+                        onChange={(e) => setFormTipo(e.target.value as "Entrada" | "Saída")}
+                      >
+                        <option value="Entrada">Entrada</option>
+                        <option value="Saída">Saída</option>
+                      </select>
+                    </div>
+                  </div>
 
-          <section className="panel">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Visão consolidada</p>
-                <h3 className="text-lg font-bold text-gray-900">Lançamentos cadastrados</h3>
-                <p className="text-sm text-gray-600">Use editar para ajustar histórico, conta e centros antes do envio ao DRE.</p>
-              </div>
-              <span className="rounded bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">ID_EMPRESA obrigatório</span>
-            </div>
+                  <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="lanc-historico">Histórico *</label>
+                      <input
+                        id="lanc-historico"
+                        className="form-input"
+                        value={formHistorico}
+                        onChange={(e) => setFormHistorico(e.target.value)}
+                        placeholder="Descrição do lançamento"
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="lanc-conta">Plano de conta *</label>
+                      <select
+                        id="lanc-conta"
+                        className="form-input"
+                        value={formContaId}
+                        onChange={(e) => setFormContaId(e.target.value)}
+                        required
+                      >
+                        <option value="">Selecione</option>
+                        {planoContas.map((c) => (
+                          <option key={c.id} value={c.id}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
 
-            <div className="financeiro-table-wrapper overflow-x-auto rounded-lg border border-dashed border-gray-200 bg-white text-sm">
-              <table className="financeiro-table min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50 text-xs uppercase text-gray-500">
-                  <tr>
-                    <th className="px-4 py-3 text-left">Data</th>
-                    <th className="px-4 py-3 text-left">Histórico</th>
-                    <th className="px-4 py-3 text-left">Conta</th>
-                    <th className="px-4 py-3 text-left">Centro de Custo</th>
-                    <th className="px-4 py-3 text-left">Tipo</th>
-                    <th className="px-4 py-3 text-left">Valor</th>
-                    <th className="px-4 py-3 text-left">Status</th>
-                    <th className="px-4 py-3 text-left">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {carregando ? (
-                    <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-600">
-                        Carregando lançamentos...
-                      </td>
-                    </tr>
-                  ) : dadosFiltrados.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-600">
-                        Nenhum lançamento encontrado
-                      </td>
-                    </tr>
-                  ) : (
-                    dadosFiltrados.map((item) => (
-                      <tr key={item.id} className="hover:bg-orange-50/40">
-                        <td className="px-4 py-3 text-xs font-semibold text-gray-800">{item.data}</td>
-                        <td className="px-4 py-3 text-xs text-gray-800">{item.historico}</td>
-                        <td className="px-4 py-3 text-xs text-gray-800">{item.conta}</td>
-                        <td className="px-4 py-3 text-xs text-gray-800">{item.centroCusto}</td>
-                        <td className="px-4 py-3 text-xs text-gray-800">{item.tipo}</td>
-                        <td className="px-4 py-3 text-xs font-semibold text-gray-800">
-                          R$ {Math.abs(item.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="px-4 py-3 text-xs font-semibold">
-                          <span
-                            className={`rounded-full px-3 py-1 text-[11px] ${
-                              item.status === "confirmado"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-gray-200 text-gray-700"
-                            }`}
-                          >
-                            {item.status === "confirmado" ? "Confirmado" : "Pendente"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-xs">
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              className="button button-secondary button-compact"
-                              onClick={() => handleEditar(item)}
-                            >
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              className="button button-primary button-compact"
-                            >
-                              Conciliar
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                  <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="lanc-centro">Centro de custo</label>
+                      <select
+                        id="lanc-centro"
+                        className="form-input"
+                        value={formCentroId}
+                        onChange={(e) => setFormCentroId(e.target.value)}
+                      >
+                        <option value="">Nenhum</option>
+                        {centrosCusto.map((c) => (
+                          <option key={c.id} value={c.id}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="lanc-valor">Valor *</label>
+                      <input
+                        id="lanc-valor"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="form-input"
+                        value={formValor}
+                        onChange={(e) => setFormValor(e.target.value)}
+                        placeholder="0,00"
+                        style={{ textAlign: "right" }}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="lanc-doc">Documento</label>
+                      <input
+                        id="lanc-doc"
+                        className="form-input"
+                        value={formDocumento}
+                        onChange={(e) => setFormDocumento(e.target.value)}
+                        placeholder="Número ou referência"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="lanc-status">Status</label>
+                      <select
+                        id="lanc-status"
+                        className="form-input"
+                        value={formStatus}
+                        onChange={(e) => setFormStatus(e.target.value as "confirmado" | "pendente")}
+                      >
+                        <option value="confirmado">Confirmado</option>
+                        <option value="pendente">Pendente</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-actions departamentos-actions">
+                    <div className="button-row">
+                      <button type="submit" className="button button-primary" disabled={salvando}>
+                        {salvando ? "Salvando..." : "Salvar"}
+                      </button>
+                      <button type="button" className="button button-secondary" onClick={limparForm}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </section>
+
+              {/* RIGHT: List */}
+              <section className="split-view-panel">
+                <header className="form-section-header">
+                  <h2>Lançamentos cadastrados</h2>
+                  <p>Selecione um lançamento para editar.</p>
+                </header>
+
+                <div className="form-grid two-columns" style={{ marginBottom: 12 }}>
+                  <div className="form-group">
+                    <label htmlFor="filtro-periodo">Período</label>
+                    <input
+                      id="filtro-periodo"
+                      type="month"
+                      className="form-input"
+                      value={periodo}
+                      onChange={(e) => setPeriodo(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="filtro-busca">Busca</label>
+                    <input
+                      id="filtro-busca"
+                      type="text"
+                      className="form-input"
+                      value={busca}
+                      onChange={(e) => setBusca(e.target.value)}
+                      placeholder="Histórico, conta..."
+                    />
+                  </div>
+                </div>
+
+                {carregando ? (
+                  <div className="empty-state">
+                    <p>Carregando lançamentos...</p>
+                  </div>
+                ) : dadosFiltrados.length === 0 ? (
+                  <div className="empty-state">
+                    <strong>Nenhum lançamento encontrado</strong>
+                    <p>Ajuste o período ou adicione um novo lançamento.</p>
+                  </div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Data</th>
+                          <th>Histórico</th>
+                          <th>Conta</th>
+                          <th>Tipo</th>
+                          <th style={{ textAlign: "right" }}>Valor</th>
+                          <th style={{ textAlign: "center" }}>Status</th>
+                          <th style={{ textAlign: "center" }}>Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dadosFiltrados.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.data}</td>
+                            <td>{item.historico}</td>
+                            <td>{item.conta}</td>
+                            <td>{item.tipo}</td>
+                            <td style={{ textAlign: "right", fontWeight: 600 }}>
+                              {formatadorMoeda.format(Math.abs(item.valor))}
+                            </td>
+                            <td style={{ textAlign: "center" }}>
+                              <span className={item.status === "confirmado" ? "badge badge-success" : "badge badge-danger"}>
+                                {item.status === "confirmado" ? "Confirmado" : "Pendente"}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: "center" }}>
+                              <button
+                                type="button"
+                                className="button button-secondary button-compact"
+                                onClick={() => preencherForm(item)}
+                              >
+                                Editar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
             </div>
-          </section>
+          </div>
         </main>
       </div>
-
-      <ModalOverlay
-        aberto={modalAberto}
-        onClose={() => setModalAberto(false)}
-        titulo={modo === "novo" ? "Novo lançamento" : "Editar lançamento"}
-      >
-        <form className="space-y-3" onSubmit={handleSalvar}>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="form-group">
-              <label htmlFor="modal-data">Data</label>
-              <input
-                id="modal-data"
-                name="data"
-                type="date"
-                defaultValue={selecionado?.data}
-                className="form-input"
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="modal-tipo">Tipo</label>
-              <select
-                id="modal-tipo"
-                name="tipo"
-                defaultValue={selecionado?.tipo ?? "Entrada"}
-                className="form-input"
-              >
-                <option value="Entrada">Entrada</option>
-                <option value="Saída">Saída</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="modal-historico">Histórico</label>
-              <input
-                id="modal-historico"
-                name="historico"
-                defaultValue={selecionado?.historico}
-                className="form-input"
-                placeholder="Descrição do lançamento"
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="modal-conta">Plano de Conta</label>
-              <select
-                id="modal-conta"
-                name="contaId"
-                defaultValue={selecionado?.contaId}
-                className="form-input"
-                required
-              >
-                <option value="">Selecione</option>
-                {planoContas.map((conta) => (
-                  <option key={conta.id} value={conta.id}>
-                    {conta.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="modal-centro-custo">Centro de Custo</label>
-              <select
-                id="modal-centro-custo"
-                name="centroCustoId"
-                defaultValue={selecionado?.centroCustoId ?? ""}
-                className="form-input"
-              >
-                <option value="">Selecione</option>
-                {centrosCusto.map((centro) => (
-                  <option key={centro.id} value={centro.id}>
-                    {centro.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="modal-valor">Valor</label>
-              <input
-                id="modal-valor"
-                name="valor"
-                type="number"
-                defaultValue={selecionado?.valor ?? 0}
-                className="form-input"
-                placeholder="Informe valores positivos para entradas e negativos para saídas"
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="modal-documento">Documento</label>
-              <input
-                id="modal-documento"
-                name="documento"
-                defaultValue={selecionado?.documento}
-                className="form-input"
-                placeholder="Número ou referência"
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="modal-status">Status</label>
-              <select
-                id="modal-status"
-                name="status"
-                defaultValue={selecionado?.status ?? "confirmado"}
-                className="form-input"
-              >
-                <option value="confirmado">Confirmado</option>
-                <option value="pendente">Pendente</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setModalAberto(false)}
-              className="button button-secondary"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="button button-primary"
-            >
-              Salvar lançamento
-            </button>
-          </div>
-        </form>
-      </ModalOverlay>
     </LayoutShell>
   );
 }

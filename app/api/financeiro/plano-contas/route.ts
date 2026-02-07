@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       sql: `
         SELECT ${CAMPOS}
         FROM FIN_PLANO_CONTA
-        WHERE ID_EMPRESA = ?
+        WHERE EMPRESA_ID = ?
         ORDER BY COALESCE(FIN_PLANO_CONTA_ORDEM, 0), FIN_PLANO_CONTA_CODIGO
       `,
       args: [empresaId],

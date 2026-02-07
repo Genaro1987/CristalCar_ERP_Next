@@ -515,6 +515,20 @@ export default function PontoPage() {
       );
       const json = await resposta.json();
 
+      // Buscar feriados cadastrados para a empresa
+      let feriadosSet = new Set<string>();
+      try {
+        const respFeriados = await fetch("/api/rh/feriados", { headers: headersPadrao });
+        const jsonFeriados = await respFeriados.json();
+        if (jsonFeriados?.success) {
+          for (const f of jsonFeriados.data ?? []) {
+            const dia = String(f.FERIADO_DIA).padStart(2, "0");
+            const mes = String(f.FERIADO_MES).padStart(2, "0");
+            feriadosSet.add(`${dia}-${mes}`);
+          }
+        }
+      } catch {}
+
       if (resposta.ok && json?.success) {
         const baseGrade = gerarGradeVazia(competencia);
         type LancamentoDiaApi = LancamentoDia & { eFeriado?: "S" | "N" };
@@ -535,9 +549,12 @@ export default function PontoPage() {
         const dados: LancamentoDia[] = baseGrade.map((diaBase) => {
           const diaApi: LancamentoDiaApi | undefined = diasApi.get(diaBase.dataReferencia);
           const combinadoBase = diaApi ? { ...diaBase, ...diaApi } : diaBase;
+          // Verificar se o dia é feriado cadastrado na tabela RH_FERIADO
+          const partes = diaBase.dataReferencia.split("-");
+          const isFeriadoTabela = partes.length >= 3 && feriadosSet.has(`${partes[2]}-${partes[1]}`);
           const combinado: LancamentoDia = {
             ...combinadoBase,
-            eFeriado: diaApi?.eFeriado === "S" ? "S" : combinadoBase.eFeriado ?? "N",
+            eFeriado: (diaApi?.eFeriado === "S" || isFeriadoTabela) ? "S" : combinadoBase.eFeriado ?? "N",
           };
 
           return recalcularTotaisDia(
@@ -864,7 +881,12 @@ export default function PontoPage() {
                     <label htmlFor="chkFerias" style={{ margin: 0, fontWeight: 600 }}>Registrar Férias</label>
                   </div>
 
-                  {feriasHabilitado && (
+                  {feriasHabilitado && (() => {
+                    const [anoC, mesC] = competencia.split("-");
+                    const minData = `${anoC}-${mesC}-01`;
+                    const ultimoDia = new Date(Number(anoC), Number(mesC), 0).getDate();
+                    const maxData = `${anoC}-${mesC}-${String(ultimoDia).padStart(2, "0")}`;
+                    return (
                     <div className="form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", alignItems: "flex-end" }}>
                       <div className="form-group">
                         <label htmlFor="feriasInicio">Início</label>
@@ -873,6 +895,8 @@ export default function PontoPage() {
                           id="feriasInicio"
                           value={feriasInicio}
                           onChange={(e) => setFeriasInicio(e.target.value)}
+                          min={minData}
+                          max={maxData}
                           className="form-input"
                         />
                       </div>
@@ -883,6 +907,8 @@ export default function PontoPage() {
                           id="feriasFim"
                           value={feriasFim}
                           onChange={(e) => setFeriasFim(e.target.value)}
+                          min={minData}
+                          max={maxData}
                           className="form-input"
                         />
                       </div>
@@ -897,7 +923,8 @@ export default function PontoPage() {
                         </button>
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               </section>
 

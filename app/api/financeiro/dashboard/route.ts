@@ -43,12 +43,12 @@ export async function GET(request: NextRequest) {
     // Calcular resumo de carteira (entradas, saídas e saldo)
     let sqlResumo = `
       SELECT
-        e.NOME_EMPRESA as empresa,
+        e.NOME_FANTASIA as empresa,
         COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR >= 0 THEN l.FIN_LANCAMENTO_VALOR ELSE 0 END), 0) as entradas,
         COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR < 0 THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as saidas,
         COALESCE(SUM(l.FIN_LANCAMENTO_VALOR), 0) as saldo
       FROM EMP_EMPRESA e
-      LEFT JOIN FIN_LANCAMENTO l ON l.ID_EMPRESA = e.ID_EMPRESA
+      LEFT JOIN FIN_LANCAMENTO l ON l.EMPRESA_ID = e.ID_EMPRESA
     `;
 
     const args: any[] = [];
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     sqlResumo += `
       WHERE e.ID_EMPRESA = ?
-      GROUP BY e.ID_EMPRESA, e.NOME_EMPRESA
+      GROUP BY e.ID_EMPRESA, e.NOME_FANTASIA
     `;
 
     args.push(empresaId);
@@ -80,13 +80,13 @@ export async function GET(request: NextRequest) {
     // Se não houver dados, retornar empresa com valores zerados
     if (carteira.length === 0) {
       const empresaResult = await db.execute({
-        sql: `SELECT NOME_EMPRESA FROM EMP_EMPRESA WHERE ID_EMPRESA = ?`,
+        sql: `SELECT NOME_FANTASIA FROM EMP_EMPRESA WHERE ID_EMPRESA = ?`,
         args: [empresaId],
       });
 
       if (empresaResult.rows.length > 0) {
         carteira.push({
-          empresa: (empresaResult.rows[0] as any).NOME_EMPRESA,
+          empresa: (empresaResult.rows[0] as any).NOME_FANTASIA,
           saldo: 0,
           entradas: 0,
           saidas: 0,
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
         COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR < 0 THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as saidasPeriodo,
         COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_DATA < ? THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as vencidos
       FROM FIN_LANCAMENTO l
-      WHERE l.ID_EMPRESA = ?
+      WHERE l.EMPRESA_ID = ?
     `;
 
     const alertasArgs: any[] = [dataHoje, empresaId];

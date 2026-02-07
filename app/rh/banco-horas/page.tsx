@@ -87,6 +87,7 @@ export default function BancoHorasPage() {
   const [ajusteObs, setAjusteObs] = useState("");
   const [situacaoPeriodo, setSituacaoPeriodo] = useState<string | null>(null);
   const [atualizandoPeriodo, setAtualizandoPeriodo] = useState(false);
+  const [confirmarExclusao, setConfirmarExclusao] = useState<number | null>(null);
 
   const empresaId = empresa?.id ?? null;
 
@@ -167,16 +168,23 @@ export default function BancoHorasPage() {
 
   const horasMovimentacao = parseHoraParaMinutos(horasBancoQuantidade) ?? 0;
 
+  // Saldo do período (apenas este mês, sem saldo anterior do banco)
+  const saldoPeriodoHoras = extras50Horas + extras100Horas + horasDevidas;
+
   const { saldoFinalParaPagarHoras, saldoBancoFinalHoras } = useMemo(() => {
-    let saldoFinal = saldoMesHoras;
+    // saldoPeriodo = apenas os impactos deste mês (extras - devidas)
+    // saldoAnterior = o que já estava no banco de meses anteriores
+    let saldoFinal = saldoPeriodoHoras;
     let saldoBanco = saldoAnteriorHoras;
 
     if (tipoOperacaoBanco && horasMovimentacao > 0) {
       if (tipoOperacaoBanco === "ENVIAR_HORAS_PARA_BANCO") {
-        saldoFinal = saldoMesHoras - horasMovimentacao;
+        // Envia horas do período para o banco (credita no banco, reduz pagável)
+        saldoFinal = saldoPeriodoHoras - horasMovimentacao;
         saldoBanco = saldoAnteriorHoras + horasMovimentacao;
       } else {
-        saldoFinal = saldoMesHoras + horasMovimentacao;
+        // Usa horas do banco para abater (debita do banco, aumenta pagável)
+        saldoFinal = saldoPeriodoHoras + horasMovimentacao;
         saldoBanco = saldoAnteriorHoras - horasMovimentacao;
       }
     }
@@ -187,7 +195,7 @@ export default function BancoHorasPage() {
     }
 
     return { saldoFinalParaPagarHoras: saldoFinal, saldoBancoFinalHoras: saldoBanco };
-  }, [horasMovimentacao, saldoAnteriorHoras, saldoMesHoras, tipoOperacaoBanco, zerarBancoAoFinal]);
+  }, [horasMovimentacao, saldoAnteriorHoras, saldoPeriodoHoras, tipoOperacaoBanco, zerarBancoAoFinal]);
 
   const carregarResumo = async () => {
     if (!idFuncionario) {
@@ -269,7 +277,7 @@ export default function BancoHorasPage() {
   };
 
   const excluirAjuste = async (idAjuste: number) => {
-    if (!confirm("Tem certeza que deseja excluir este ajuste?")) return;
+    setConfirmarExclusao(null);
 
     try {
       setLoading(true);
@@ -631,9 +639,9 @@ export default function BancoHorasPage() {
                   <div className="form" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
                     <div className="banco-horas-card-grid">
                       <div className="form-group">
-                        <label>SALDO MES HORAS</label>
+                        <label>SALDO DO PERÍODO</label>
                         <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
-                          {minutosParaHora(saldoMesHoras)}
+                          {minutosParaHora(saldoPeriodoHoras)}
                         </div>
                       </div>
                       <div className="form-group">
@@ -643,7 +651,7 @@ export default function BancoHorasPage() {
                         </div>
                       </div>
                       <div className="form-group">
-                        <label>TIPO DE OPERACAO</label>
+                        <label>TIPO DE OPERAÇÃO</label>
                         <select
                           value={tipoOperacaoBanco}
                           onChange={(e) =>
@@ -799,7 +807,7 @@ export default function BancoHorasPage() {
                               <td>
                                 {mov.tipo === "AJUSTE_MANUAL" && (
                                   <button
-                                    onClick={() => excluirAjuste(mov.id)}
+                                    onClick={() => setConfirmarExclusao(mov.id)}
                                     className="button-icon-only"
                                     style={{ color: "#dc2626" }}
                                     title="Excluir ajuste"
@@ -827,6 +835,8 @@ export default function BancoHorasPage() {
                         type="date"
                         value={ajusteData}
                         onChange={(e) => setAjusteData(e.target.value)}
+                        min={mes ? `${ano}-${mes.padStart(2, "0")}-01` : undefined}
+                        max={mes ? `${ano}-${mes.padStart(2, "0")}-${String(new Date(ano, Number(mes), 0).getDate()).padStart(2, "0")}` : undefined}
                         className="form-input"
                       />
                     </div>
@@ -888,6 +898,35 @@ export default function BancoHorasPage() {
           </div>
         </main>
       </div>
+
+      {/* Modal de confirmação de exclusão de ajuste */}
+      {confirmarExclusao !== null && (
+        <div className="modal-overlay" onClick={() => setConfirmarExclusao(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
+            <h3 style={{ margin: "0 0 16px", fontSize: "1.05rem", fontWeight: 700 }}>Excluir ajuste</h3>
+            <p style={{ margin: "0 0 24px", fontSize: "0.95rem", color: "#374151" }}>
+              Tem certeza que deseja excluir este ajuste? Esta ação não pode ser desfeita.
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setConfirmarExclusao(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="button button-primary"
+                style={{ backgroundColor: "#dc2626" }}
+                onClick={() => excluirAjuste(confirmarExclusao)}
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </LayoutShell>
   );
 }

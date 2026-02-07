@@ -19,10 +19,35 @@ export type PoliticaFaltas =
 
 export interface ParametrosCalculoBancoHoras {
   idFuncionario: string;
+  empresaId: number;
   ano: number;
   mes: number;
   politicaFaltas: PoliticaFaltas;
   zerarBancoNoMes: boolean;
+}
+
+/** Busca feriados cadastrados na RH_FERIADO e retorna Set de "DD-MM" */
+async function buscarFeriadosEmpresa(empresaId: number): Promise<Set<string>> {
+  const resultado = await db.execute({
+    sql: `SELECT FERIADO_DIA, FERIADO_MES FROM RH_FERIADO WHERE ID_EMPRESA = ? AND FERIADO_ATIVO = 1`,
+    args: [empresaId],
+  });
+  const set = new Set<string>();
+  for (const row of (resultado.rows ?? []) as Row[]) {
+    const dia = String(row.FERIADO_DIA).padStart(2, "0");
+    const mes = String(row.FERIADO_MES).padStart(2, "0");
+    set.add(`${dia}-${mes}`);
+  }
+  return set;
+}
+
+/** Verifica se uma data (YYYY-MM-DD) cai em um feriado cadastrado */
+function isFeriadoCadastrado(dataReferencia: string, feriadosSet: Set<string>): boolean {
+  const partes = dataReferencia.split("-");
+  if (partes.length < 3) return false;
+  const dia = partes[2];
+  const mes = partes[1];
+  return feriadosSet.has(`${dia}-${mes}`);
 }
 
 export interface ResumoBancoHorasDia {
@@ -285,6 +310,7 @@ export async function listarResumoBancoHorasPorFuncionario(
 
   const diasCompetencia = gerarDiasDaCompetencia(competencia);
   const mapaLancamentos = construirMapaLancamentos((lancamentosResultado.rows ?? []) as Row[]);
+  const feriadosSet = await buscarFeriadosEmpresa(empresaId);
 
   const resumo: ResumoBancoHorasFuncionario[] = funcionarios.map((funcionario) => {
     const ajustesFuncionario = ajustesMesPorFuncionario.get(funcionario.id) ?? {
@@ -298,7 +324,9 @@ export async function listarResumoBancoHorasPorFuncionario(
     diasCompetencia.forEach((dataReferencia) => {
       const registro = mapaLancamentos.get(funcionario.id)?.get(dataReferencia);
       const tipoOcorrencia = registro?.TIPO_OCORRENCIA?.toString().toUpperCase() ?? "NORMAL";
-      const eFeriado = (registro?.E_FERIADO as string | undefined) === "S" ? "S" : "N";
+      const eFeriadoLanc = (registro?.E_FERIADO as string | undefined) === "S";
+      const eFeriadoTabela = isFeriadoCadastrado(dataReferencia, feriadosSet);
+      const eFeriado = (eFeriadoLanc || eFeriadoTabela) ? "S" : "N";
       const tipoDia = determinarTipoDia(dataReferencia, eFeriado);
 
       const minutosTrabalhados =
@@ -312,6 +340,9 @@ export async function listarResumoBancoHorasPorFuncionario(
               entradaExtra: (registro?.ENTRADA_EXTRA as string | null | undefined) ?? null,
               saidaExtra: (registro?.SAIDA_EXTRA as string | null | undefined) ?? null,
             });
+
+      // Férias: ignorar dia (sem débito no banco de horas)
+      if (tipoOcorrencia === "FERIAS") return;
 
       const { saldoBancoMinutos, minutosPagosFeriadoFds } = calcularSaldoDia(
         tipoDia,
@@ -589,14 +620,15 @@ export async function calcularBancoHorasMes(
   const dias = gerarDiasDaCompetencia(competencia);
   const lancamentos = await buscarLancamentos(params.idFuncionario, intervalo);
   const movimentosInfo = await buscarMovimentos(params.idFuncionario, competencia);
+  const feriadosSet = await buscarFeriadosEmpresa(params.empresaId);
 
   const diasResumo: ResumoBancoHorasDia[] = dias.map((data) => {
     const registro = lancamentos.get(data);
     const tipoOcorrencia = registro?.tipoOcorrencia?.toUpperCase() ?? "NORMAL";
-    const tipoDiaBase = determinarTipoDia(
-      data,
-      (registro?.eFeriado as "S" | "N" | undefined) ?? "N"
-    );
+    const eFeriadoLanc = (registro?.eFeriado as string | undefined) === "S";
+    const eFeriadoTabela = isFeriadoCadastrado(data, feriadosSet);
+    const eFeriado = (eFeriadoLanc || eFeriadoTabela) ? "S" : "N";
+    const tipoDiaBase = determinarTipoDia(data, eFeriado);
     const tipoDia = tipoDiaDescricao(tipoDiaBase);
     const minutosTrabalhados =
       tipoOcorrencia !== "NORMAL"
@@ -610,7 +642,9 @@ export async function calcularBancoHorasMes(
             saidaExtra: registro?.saidaExtra,
           });
 
-    const jornadaPrevistaMin = tipoDia === "UTIL" ? minutosJornadaDia ?? 0 : 0;
+    // Férias: dia não conta como jornada prevista (sem débito no banco)
+    const isFerias = tipoOcorrencia === "FERIAS";
+    const jornadaPrevistaMin = (tipoDia === "UTIL" && !isFerias) ? minutosJornadaDia ?? 0 : 0;
     const diferencaBruta = minutosTrabalhados - jornadaPrevistaMin;
     const diferencaMin = Math.abs(diferencaBruta) <= toleranciaMinutos ? 0 : diferencaBruta;
 
@@ -620,7 +654,11 @@ export async function calcularBancoHorasMes(
     const faltaJustificada = tipoOcorrencia === "FALTA_JUSTIFICADA";
     const faltaNaoJustificada = tipoOcorrencia === "FALTA_NAO_JUSTIFICADA";
 
-    if (faltaJustificada || faltaNaoJustificada) {
+    if (isFerias) {
+      // Férias: sem impacto no banco de horas
+      classificacao = "NORMAL";
+      impactoBancoMin = 0;
+    } else if (faltaJustificada || faltaNaoJustificada) {
       classificacao = faltaJustificada ? "FALTA_JUSTIFICADA" : "FALTA_NAO_JUSTIFICADA";
       impactoBancoMin = diferencaMin < 0 ? diferencaMin : -Math.abs(jornadaPrevistaMin);
     } else if (tipoDia === "FERIADO" || tipoDia === "DOMINGO" || tipoDia === "SABADO") {

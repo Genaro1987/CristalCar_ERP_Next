@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
   try {
     const resumo = await calcularBancoHorasMes({
       idFuncionario,
+      empresaId,
       ano,
       mes,
       politicaFaltas: politica,

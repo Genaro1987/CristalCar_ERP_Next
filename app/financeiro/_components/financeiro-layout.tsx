@@ -32,16 +32,14 @@ export function FinanceiroPageHeader({
   return (
     <header className="page-header-wrapper">
       <div className="page-header-card">
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            {subtitulo}
-          </p>
-          <h1 className="text-2xl font-bold text-gray-900">{titulo}</h1>
-          <p className="text-sm text-gray-600">
+        <div>
+          <p className="detail-label">{subtitulo}</p>
+          <h1 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#111827", margin: 0 }}>{titulo}</h1>
+          <p style={{ fontSize: "0.85rem", color: "#6b7280", margin: "2px 0 0" }}>
             Explore, filtre e organize os cadastros com dados reais do financeiro.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="button-row">
           {codigoAjuda ? (
             <button
               type="button"
@@ -87,10 +85,10 @@ export function BarraFiltros({
   );
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <div className={`grid grid-cols-1 gap-4 ${exibirBusca ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
+    <div className="detail-card">
+      <div className="form-grid two-columns">
         {exibirBusca ? (
-          <div className="form-group md:col-span-2">
+          <div className="form-group">
             <label htmlFor="financeiro-busca">Busca</label>
             <input
               id="financeiro-busca"
@@ -135,9 +133,6 @@ export function BarraFiltros({
           </div>
         ) : null}
       </div>
-      <p className="mt-3 text-xs text-gray-600">
-        Use os filtros para validar hierarquias, status e preenchimentos obrigatórios antes de liberar cadastros para o time.
-      </p>
     </div>
   );
 }
@@ -149,9 +144,9 @@ interface SplitViewProps {
 
 export function SplitView({ left, right }: SplitViewProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr,1fr]">
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">{left}</div>
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">{right}</div>
+    <div className="split-view">
+      <div className="split-view-panel">{left}</div>
+      <div className="split-view-panel">{right}</div>
     </div>
   );
 }
@@ -164,10 +159,10 @@ interface DreLayoutProps {
 
 export function DreSplitView({ esquerda, centro, direita }: DreLayoutProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr,1.1fr,1fr]">
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">{esquerda}</div>
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">{centro}</div>
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">{direita}</div>
+    <div className="split-view" style={{ gridTemplateColumns: undefined }}>
+      <div className="split-view-panel">{esquerda}</div>
+      <div className="split-view-panel">{centro}</div>
+      <div className="split-view-panel">{direita}</div>
     </div>
   );
 }
@@ -209,19 +204,19 @@ export function ModalOverlay({ aberto, titulo, onClose, children }: ModalProps) 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="modal-overlay"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl"
+        className="modal-card"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+        <header className="form-section-header">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Formulário</p>
-            <h3 className="text-lg font-bold text-gray-900">{titulo}</h3>
+            <p className="detail-label">Formulário</p>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#111827", margin: 0 }}>{titulo}</h3>
           </div>
           <button
             type="button"
@@ -230,8 +225,8 @@ export function ModalOverlay({ aberto, titulo, onClose, children }: ModalProps) 
           >
             Fechar
           </button>
-        </div>
-        <div className="px-6 py-5">{children}</div>
+        </header>
+        <div style={{ padding: "20px 24px" }}>{children}</div>
       </div>
     </div>,
     document.body

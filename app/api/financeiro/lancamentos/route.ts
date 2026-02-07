@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
           FROM FIN_LANCAMENTO l
           INNER JOIN FIN_PLANO_CONTA pc ON pc.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID
           LEFT JOIN FIN_CENTRO_CUSTO cc ON cc.FIN_CENTRO_CUSTO_ID = l.FIN_CENTRO_CUSTO_ID
-          WHERE l.FIN_LANCAMENTO_ID = ? AND l.ID_EMPRESA = ?
+          WHERE l.FIN_LANCAMENTO_ID = ? AND l.EMPRESA_ID = ?
         `,
         args: [id, empresaId],
       });
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
       FROM FIN_LANCAMENTO l
       INNER JOIN FIN_PLANO_CONTA pc ON pc.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID
       LEFT JOIN FIN_CENTRO_CUSTO cc ON cc.FIN_CENTRO_CUSTO_ID = l.FIN_CENTRO_CUSTO_ID
-      WHERE l.ID_EMPRESA = ?
+      WHERE l.EMPRESA_ID = ?
     `;
 
     const args: any[] = [empresaId];
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
           FIN_CENTRO_CUSTO_ID,
           FIN_LANCAMENTO_DOCUMENTO,
           FIN_LANCAMENTO_STATUS,
-          ID_EMPRESA
+          EMPRESA_ID
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       args: [data, historico, valor, contaId, centroCustoId || null, documento || null, status || 'confirmado', empresaId],
@@ -252,7 +252,7 @@ export async function PUT(request: NextRequest) {
           FIN_LANCAMENTO_DOCUMENTO = ?,
           FIN_LANCAMENTO_STATUS = ?,
           FIN_LANCAMENTO_ATUALIZADO_EM = datetime('now')
-        WHERE FIN_LANCAMENTO_ID = ? AND ID_EMPRESA = ?
+        WHERE FIN_LANCAMENTO_ID = ? AND EMPRESA_ID = ?
       `,
       args: [
         data,
@@ -285,7 +285,7 @@ export async function PUT(request: NextRequest) {
         FROM FIN_LANCAMENTO l
         INNER JOIN FIN_PLANO_CONTA pc ON pc.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID
         LEFT JOIN FIN_CENTRO_CUSTO cc ON cc.FIN_CENTRO_CUSTO_ID = l.FIN_CENTRO_CUSTO_ID
-        WHERE l.FIN_LANCAMENTO_ID = ? AND l.ID_EMPRESA = ?
+        WHERE l.FIN_LANCAMENTO_ID = ? AND l.EMPRESA_ID = ?
       `,
       args: [id, empresaId],
     });
@@ -330,7 +330,7 @@ export async function PATCH(request: NextRequest) {
   try {
     // Verificar se o lançamento existe
     const verificacao = await db.execute({
-      sql: `SELECT COUNT(*) as total FROM FIN_LANCAMENTO WHERE FIN_LANCAMENTO_ID = ? AND ID_EMPRESA = ?`,
+      sql: `SELECT COUNT(*) as total FROM FIN_LANCAMENTO WHERE FIN_LANCAMENTO_ID = ? AND EMPRESA_ID = ?`,
       args: [id, empresaId],
     });
 
@@ -353,7 +353,7 @@ export async function PATCH(request: NextRequest) {
           FIN_CENTRO_CUSTO_ID = COALESCE(?, FIN_CENTRO_CUSTO_ID),
           FIN_LANCAMENTO_DOCUMENTO = COALESCE(?, FIN_LANCAMENTO_DOCUMENTO),
           FIN_LANCAMENTO_STATUS = COALESCE(?, FIN_LANCAMENTO_STATUS)
-        WHERE FIN_LANCAMENTO_ID = ? AND ID_EMPRESA = ?
+        WHERE FIN_LANCAMENTO_ID = ? AND EMPRESA_ID = ?
       `,
       args: [data, historico, valor, contaId, centroCustoId, documento, status, id, empresaId],
     });
@@ -384,7 +384,7 @@ export async function DELETE(request: NextRequest) {
 
   try {
     await db.execute({
-      sql: `DELETE FROM FIN_LANCAMENTO WHERE FIN_LANCAMENTO_ID = ? AND ID_EMPRESA = ?`,
+      sql: `DELETE FROM FIN_LANCAMENTO WHERE FIN_LANCAMENTO_ID = ? AND EMPRESA_ID = ?`,
       args: [id, empresaId],
     });
 

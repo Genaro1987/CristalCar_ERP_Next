@@ -51,5 +51,19 @@ export function formatarTipoDiaParaExibicao(tipoDia?: string | null): string {
     return "ÚTIL";
   }
 
+  if (tipoNormalizado === "FERIADO") {
+    return "FERIADO";
+  }
+
   return tipoDia ?? "";
+}
+
+export function formatarObservacaoParaExibicao(obs?: string | null): string {
+  if (!obs) return "";
+  const upper = obs.trim().toUpperCase();
+  if (upper === "FERIAS") return "Férias";
+  if (upper === "FALTA_JUSTIFICADA") return "Falta Just.";
+  if (upper === "FALTA_NAO_JUSTIFICADA") return "Falta N/Just.";
+  if (upper === "NORMAL") return "";
+  return obs;
 }

@@ -8,7 +8,7 @@ import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSeleci
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 
-import { BarraFiltros, SplitView, type FiltroPadrao, type StatusFiltro } from "./financeiro-layout";
+import { BarraFiltros, type FiltroPadrao, type StatusFiltro } from "./financeiro-layout";
 
 interface PlanoContaApiItem {
   FIN_PLANO_CONTA_ID: number;
@@ -98,6 +98,7 @@ export function PlanoContasContent() {
   const [planoContas, setPlanoContas] = useState<PlanoContaNode[]>([]);
   const [carregandoLista, setCarregandoLista] = useState(false);
   const [erroLista, setErroLista] = useState<string | null>(null);
+  const [selecionado, setSelecionado] = useState<PlanoContaNode | null>(null);
   const [consideraDre, setConsideraDre] = useState(false);
 
   const headersPadrao = useMemo<HeadersInit>(() => {
@@ -154,45 +155,36 @@ export function PlanoContasContent() {
   const arvoreCompleta = useMemo(() => construirArvore(planoContas), [planoContas]);
   const arvoreFiltrada = useMemo(() => filtrarArvore(arvoreCompleta, filtro), [arvoreCompleta, filtro]);
 
-  const textoStatus = useMemo(() => {
-    const legenda: Record<StatusFiltro, string> = {
-      todos: "Todos os status",
-      ativos: "Apenas ativos",
-      inativos: "Apenas inativos",
-    };
-    return legenda[filtro.status];
-  }, [filtro.status]);
-
   const renderNo = (item: PlanoContaNode) => {
-    const statusClass = item.ativo ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700";
+    const estaSelecionado = selecionado?.id === item.id;
 
     return (
-      <div key={item.id} className="space-y-2">
+      <div key={item.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div
-          className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition hover:border-orange-200"
+          className={`tree-node${estaSelecionado ? " selected" : ""}`}
+          onClick={() => setSelecionado(item)}
+          style={{ cursor: "pointer" }}
         >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{item.codigo}</p>
-              <p className="text-sm font-bold text-gray-900">{item.nome}</p>
-              <p className="text-xs text-gray-600">
-                Natureza: {item.natureza} | Centro de custo obrigatório: {" "}
-                {item.obrigatorioCentroCusto ? "Sim" : "Não"}
+          <div className="tree-node-header">
+            <div>
+              <p className="tree-node-code">{item.codigo}</p>
+              <p className="tree-node-name">{item.nome}</p>
+              <p className="tree-node-meta">
+                {item.natureza} | Centro custo: {item.obrigatorioCentroCusto ? "Sim" : "Não"} | DRE: {item.visivelDre ? "Sim" : "Não"}
               </p>
-              <p className="text-xs text-gray-600">Visível no DRE: {item.visivelDre ? "Sim" : "Não"}</p>
             </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}>
+            <span className={item.ativo ? "badge badge-success" : "badge badge-danger"}>
               {item.ativo ? "Ativo" : "Inativo"}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="tree-node-actions">
             <button type="button" className="button button-secondary button-compact">
-              Editar conta
+              Editar
             </button>
           </div>
         </div>
         {item.filhos.length > 0 ? (
-          <div className="ml-5 border-l border-dashed border-gray-200 pl-4">
+          <div className="tree-children">
             {item.filhos.map((filho) => renderNo(filho))}
           </div>
         ) : null}
@@ -210,158 +202,160 @@ export function PlanoContasContent() {
           modulo={moduloTela}
         />
 
-        <main className="page-content-card space-y-4">
+        <main className="page-content-card">
           {erroLista ? <NotificationBar type="error" message={erroLista} /> : null}
 
-          <section className="panel">
-            <SplitView
-              left={
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Estrutura financeira</p>
-                      <h2 className="text-xl font-bold text-gray-900">Árvore do plano de contas</h2>
+          <div className="departamentos-page">
+            <div className="split-view">
+              {/* LEFT: Tree view */}
+              <section className="split-view-panel">
+                <header className="form-section-header">
+                  <h2>Árvore do plano de contas</h2>
+                  <p>Navegue pela estrutura hierárquica. Clique para selecionar.</p>
+                </header>
+
+                <BarraFiltros
+                  filtro={filtro}
+                  onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))}
+                  exibirNatureza
+                />
+
+                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {carregandoLista ? (
+                    <div className="empty-state">
+                      <p>Buscando contas financeiras...</p>
                     </div>
-                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                      {arvoreFiltrada.length} grupos principais
-                    </span>
-                  </div>
-
-                  <BarraFiltros
-                    filtro={filtro}
-                    onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))}
-                    exibirNatureza
-                    exibirBusca={false}
-                  />
-
-                  <div className="space-y-3">
-                    {carregandoLista ? (
-                      <div className="flex items-center justify-center py-8">
-                        <p className="text-sm text-gray-600">Buscando contas financeiras...</p>
-                      </div>
-                    ) : arvoreFiltrada.length > 0 ? (
-                      arvoreFiltrada.map((item) => renderNo(item))
-                    ) : (
-                      <div className="flex items-center justify-center rounded-lg border border-dashed border-gray-200 py-8">
-                        <p className="text-sm text-gray-600">Nenhuma conta encontrada para os filtros atuais.</p>
-                      </div>
-                    )}
-                  </div>
+                  ) : arvoreFiltrada.length > 0 ? (
+                    arvoreFiltrada.map((item) => renderNo(item))
+                  ) : (
+                    <div className="empty-state">
+                      <strong>Nenhuma conta encontrada</strong>
+                      <p>Ajuste os filtros ou cadastre uma nova conta.</p>
+                    </div>
+                  )}
                 </div>
-              }
-              right={
-                <div className="space-y-4">
-                  <header className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 pb-4">
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cadastro principal</p>
-                      <h2 className="text-xl font-bold text-gray-900">Nova conta</h2>
-                      <p className="text-sm text-gray-600">
-                        Defina as contas sintéticas e analíticas para organizar lançamentos e a DRE do financeiro.
-                      </p>
-                    </div>
-                  </header>
+              </section>
 
-                  <form className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                      <div className="form-group">
-                        <label htmlFor="plano-nivel">Nível</label>
-                        <input id="plano-nivel" type="number" min={1} className="form-input" placeholder="Ex.: 1" />
-                      </div>
-                      <div className="form-group lg:col-span-2">
-                        <label htmlFor="plano-descricao">Descrição</label>
-                        <input
-                          id="plano-descricao"
-                          type="text"
-                          className="form-input"
-                          placeholder="Informe a descrição oficial da conta"
-                        />
-                      </div>
-                    </div>
+              {/* RIGHT: Form */}
+              <section className="split-view-panel">
+                <header className="form-section-header">
+                  <h2>{selecionado ? "Detalhes da conta" : "Nova conta"}</h2>
+                  <p>
+                    {selecionado
+                      ? `${selecionado.codigo} - ${selecionado.nome}`
+                      : "Defina contas sintéticas e analíticas para organizar lançamentos e a DRE."}
+                  </p>
+                </header>
 
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                      <div className="form-group">
-                        <label htmlFor="plano-tipo">Tipo de conta</label>
-                        <select id="plano-tipo" className="form-input">
-                          <option value="SINTETICA">Sintética</option>
-                          <option value="ANALITICA">Analítica</option>
-                        </select>
-                        <p className="text-xs text-gray-500">Apenas contas analíticas recebem lançamento.</p>
+                {selecionado && (
+                  <div className="detail-card" style={{ marginBottom: 16 }}>
+                    <div className="detail-grid">
+                      <div>
+                        <p className="detail-label">Código</p>
+                        <p className="detail-value">{selecionado.codigo}</p>
                       </div>
-                      <div className="form-group">
-                        <label htmlFor="plano-natureza">Natureza</label>
-                        <select id="plano-natureza" className="form-input">
-                          <option value="RECEITA">Receita</option>
-                          <option value="DESPESA">Despesa</option>
-                        </select>
+                      <div>
+                        <p className="detail-label">Natureza</p>
+                        <p className="detail-value">{selecionado.natureza}</p>
                       </div>
-                      <div className="form-group">
-                        <label htmlFor="plano-status">Status</label>
-                        <select id="plano-status" className="form-input">
-                          <option value="ATIVA">Ativa</option>
-                          <option value="INATIVA">Inativa</option>
-                        </select>
-                        <p className="text-xs text-gray-500">Contas inativas deixam de aparecer para lançamentos.</p>
+                      <div>
+                        <p className="detail-label">Status</p>
+                        <p className="detail-value">{selecionado.ativo ? "Ativo" : "Inativo"}</p>
+                      </div>
+                      <div>
+                        <p className="detail-label">Visível no DRE</p>
+                        <p className="detail-value">{selecionado.visivelDre ? "Sim" : "Não"}</p>
                       </div>
                     </div>
+                  </div>
+                )}
 
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                      <div className="form-group">
-                        <label htmlFor="plano-conta-dre">Conta do DRE vinculada</label>
-                        <select id="plano-conta-dre" className="form-input">
-                          <option value="">Selecione a conta do DRE</option>
-                          <option value="DRE_RECEITA_BRUTA">Receita bruta</option>
-                          <option value="DRE_CUSTOS">Custos</option>
-                          <option value="DRE_DESPESAS">Despesas operacionais</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="plano-considera-dre">Considerar no DRE</label>
-                        <select
-                          id="plano-considera-dre"
-                          className="form-input"
-                          value={consideraDre ? "SIM" : "NAO"}
-                          onChange={(event) => setConsideraDre(event.target.value === "SIM")}
-                        >
-                          <option value="SIM">Sim</option>
-                          <option value="NAO">Não</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="plano-data-inclusao">Data de inclusão</label>
-                        <input id="plano-data-inclusao" type="date" className="form-input" />
-                        <p className="text-xs text-gray-500">
-                          Evita lançamentos com data anterior à criação da conta.
-                        </p>
-                      </div>
+                <form className="form">
+                  <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="plano-nivel">Nível</label>
+                      <input id="plano-nivel" type="number" min={1} className="form-input" placeholder="Ex.: 1" />
                     </div>
+                    <div className="form-group">
+                      <label htmlFor="plano-descricao">Descrição *</label>
+                      <input
+                        id="plano-descricao"
+                        type="text"
+                        className="form-input"
+                        placeholder="Nome oficial da conta"
+                      />
+                    </div>
+                  </div>
 
-                    {consideraDre ? (
-                      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                        <div className="form-group lg:col-span-2">
-                          <label htmlFor="plano-rubrica-dre">Rubrica do DRE relacionada</label>
-                          <select id="plano-rubrica-dre" className="form-input">
-                            <option value="">Selecione a rubrica do DRE</option>
-                            <option value="RUBRICA_RECEITAS">Receitas operacionais</option>
-                            <option value="RUBRICA_DESPESAS">Despesas administrativas</option>
-                            <option value="RUBRICA_IMPOSTOS">Impostos e contribuições</option>
-                          </select>
-                        </div>
-                      </div>
-                    ) : null}
+                  <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="plano-tipo">Tipo de conta</label>
+                      <select id="plano-tipo" className="form-input">
+                        <option value="SINTETICA">Sintética</option>
+                        <option value="ANALITICA">Analítica</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="plano-natureza">Natureza *</label>
+                      <select id="plano-natureza" className="form-input">
+                        <option value="RECEITA">Receita</option>
+                        <option value="DESPESA">Despesa</option>
+                      </select>
+                    </div>
+                  </div>
 
-                    <div className="flex flex-wrap items-center gap-2 pt-4">
+                  <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="plano-status">Status</label>
+                      <select id="plano-status" className="form-input">
+                        <option value="ATIVA">Ativa</option>
+                        <option value="INATIVA">Inativa</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="plano-considera-dre">Considerar no DRE</label>
+                      <select
+                        id="plano-considera-dre"
+                        className="form-input"
+                        value={consideraDre ? "SIM" : "NAO"}
+                        onChange={(event) => setConsideraDre(event.target.value === "SIM")}
+                      >
+                        <option value="SIM">Sim</option>
+                        <option value="NAO">Não</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="plano-conta-dre">Conta do DRE vinculada</label>
+                      <select id="plano-conta-dre" className="form-input">
+                        <option value="">Selecione</option>
+                        <option value="DRE_RECEITA_BRUTA">Receita bruta</option>
+                        <option value="DRE_CUSTOS">Custos</option>
+                        <option value="DRE_DESPESAS">Despesas operacionais</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="plano-data-inclusao">Data de inclusão</label>
+                      <input id="plano-data-inclusao" type="date" className="form-input" />
+                    </div>
+                  </div>
+
+                  <div className="form-actions departamentos-actions">
+                    <div className="button-row">
                       <button type="button" className="button button-primary">
                         Salvar conta
                       </button>
                       <button type="button" className="button button-secondary">
-                        Limpar formulário
+                        Limpar
                       </button>
                     </div>
-                  </form>
-                </div>
-              }
-            />
-          </section>
+                  </div>
+                </form>
+              </section>
+            </div>
+          </div>
         </main>
       </div>
     </LayoutShell>

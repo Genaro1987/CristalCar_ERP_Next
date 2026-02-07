@@ -200,6 +200,12 @@ export function Sidebar() {
             requerEmpresa: true,
             codigoTela: "FIN_OBJETIVOS_SEMANAIS",
           },
+          {
+            label: "Extrato Pró-labore",
+            rota: "/financeiro/extrato-prolabore",
+            requerEmpresa: true,
+            codigoTela: "FIN_PROLABORE",
+          },
         ],
       },
     ],

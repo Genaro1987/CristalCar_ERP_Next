@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
             FIN_ESTRUTURA_DRE_TIPO,
             FIN_ESTRUTURA_DRE_DESCRICAO
           FROM FIN_ESTRUTURA_DRE
-          WHERE FIN_ESTRUTURA_DRE_ID = ? AND ID_EMPRESA = ?
+          WHERE FIN_ESTRUTURA_DRE_ID = ? AND EMPRESA_ID = ?
         `,
         args: [id, empresaId],
       });
@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
           FIN_ESTRUTURA_DRE_TIPO,
           FIN_ESTRUTURA_DRE_DESCRICAO
         FROM FIN_ESTRUTURA_DRE
-        WHERE ID_EMPRESA = ?
+        WHERE EMPRESA_ID = ?
         ORDER BY FIN_ESTRUTURA_DRE_ORDEM ASC
       `,
       args: [empresaId],
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
         FROM FIN_ESTRUTURA_DRE_CONTA dc
         INNER JOIN FIN_PLANO_CONTA pc ON pc.FIN_PLANO_CONTA_ID = dc.FIN_PLANO_CONTA_ID
         INNER JOIN FIN_ESTRUTURA_DRE dre ON dre.FIN_ESTRUTURA_DRE_ID = dc.FIN_ESTRUTURA_DRE_ID
-        WHERE dre.ID_EMPRESA = ?
+        WHERE dre.EMPRESA_ID = ?
       `,
       args: [empresaId],
     });
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
   try {
     // Verificar se o código já existe
     const verificacao = await db.execute({
-      sql: `SELECT COUNT(*) as total FROM FIN_ESTRUTURA_DRE WHERE FIN_ESTRUTURA_DRE_CODIGO = ? AND ID_EMPRESA = ?`,
+      sql: `SELECT COUNT(*) as total FROM FIN_ESTRUTURA_DRE WHERE FIN_ESTRUTURA_DRE_CODIGO = ? AND EMPRESA_ID = ?`,
       args: [codigo, empresaId],
     });
 
@@ -244,7 +244,7 @@ export async function POST(request: NextRequest) {
           FIN_ESTRUTURA_DRE_ORDEM,
           FIN_ESTRUTURA_DRE_TIPO,
           FIN_ESTRUTURA_DRE_DESCRICAO,
-          ID_EMPRESA
+          EMPRESA_ID
         ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)
       `,
       args: [paiId || null, nome, codigo, natureza, ordem || 0, tipo || null, descricao || null, empresaId],
@@ -293,7 +293,7 @@ export async function PUT(request: NextRequest) {
   try {
     // Verificar se a linha existe
     const verificacao = await db.execute({
-      sql: `SELECT COUNT(*) as total FROM FIN_ESTRUTURA_DRE WHERE FIN_ESTRUTURA_DRE_ID = ? AND ID_EMPRESA = ?`,
+      sql: `SELECT COUNT(*) as total FROM FIN_ESTRUTURA_DRE WHERE FIN_ESTRUTURA_DRE_ID = ? AND EMPRESA_ID = ?`,
       args: [id, empresaId],
     });
 
@@ -316,7 +316,7 @@ export async function PUT(request: NextRequest) {
           FIN_ESTRUTURA_DRE_DESCRICAO = COALESCE(?, FIN_ESTRUTURA_DRE_DESCRICAO),
           FIN_ESTRUTURA_DRE_ATIVO = COALESCE(?, FIN_ESTRUTURA_DRE_ATIVO),
           FIN_ESTRUTURA_DRE_ORDEM = COALESCE(?, FIN_ESTRUTURA_DRE_ORDEM)
-        WHERE FIN_ESTRUTURA_DRE_ID = ? AND ID_EMPRESA = ?
+        WHERE FIN_ESTRUTURA_DRE_ID = ? AND EMPRESA_ID = ?
       `,
       args: [nome, codigo, natureza, tipo, descricao, ativo, ordem, id, empresaId],
     });

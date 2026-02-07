@@ -169,17 +169,8 @@ export async function PUT(request: NextRequest) {
   const dias = body?.dias ?? [];
 
   try {
-    await db.execute("BEGIN");
-
-    await db.execute({
-      sql: `
-        DELETE FROM RH_PONTO_LANCAMENTO
-         WHERE ID_EMPRESA = ?
-           AND ID_FUNCIONARIO = ?
-           AND DATA_REFERENCIA BETWEEN ? AND ?
-      `,
-      args: [empresaId, funcionarioId, intervalo.inicio, intervalo.fim],
-    });
+    // Validar e preparar todos os dias antes de executar
+    const insertsArgs: any[][] = [];
 
     for (const dia of dias) {
       if (!dia?.dataReferencia || !dia.dataReferencia.startsWith(competencia)) continue;
@@ -213,7 +204,6 @@ export async function PUT(request: NextRequest) {
           "INVALIDO"
         )
       ) {
-        await db.execute("ROLLBACK");
         return NextResponse.json(
           { success: false, error: "HORARIO_INVALIDO" },
           { status: 400 }
@@ -240,45 +230,46 @@ export async function PUT(request: NextRequest) {
         continue;
       }
 
-      await db.execute({
-        sql: `
-          INSERT INTO RH_PONTO_LANCAMENTO (
-            ID_EMPRESA,
-            ID_FUNCIONARIO,
-            DATA_REFERENCIA,
-            ENTRADA_MANHA,
-            SAIDA_MANHA,
-            ENTRADA_TARDE,
-            SAIDA_TARDE,
-            ENTRADA_EXTRA,
-            SAIDA_EXTRA,
-            STATUS_DIA,
-            TIPO_OCORRENCIA,
-            ID_MOTIVO_FALTA,
-            OBS_FALTA,
-            OBSERVACAO,
-            E_FERIADO
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-        args: [
-          empresaId,
-          funcionarioId,
-          dia.dataReferencia,
-          entradaManha,
-          saidaManha,
-          entradaTarde,
-          saidaTarde,
-          entradaExtra,
-          saidaExtra,
-          tipoOcorrencia !== "NORMAL" ? tipoOcorrencia : statusDia || "NORMAL",
-          tipoOcorrencia,
-          Number.isFinite(idMotivoFalta) ? idMotivoFalta : null,
-          obsFalta,
-          observacao,
-          eFeriado,
-        ],
-      });
+      insertsArgs.push([
+        empresaId,
+        funcionarioId,
+        dia.dataReferencia,
+        entradaManha,
+        saidaManha,
+        entradaTarde,
+        saidaTarde,
+        entradaExtra,
+        saidaExtra,
+        tipoOcorrencia !== "NORMAL" ? tipoOcorrencia : statusDia || "NORMAL",
+        tipoOcorrencia,
+        Number.isFinite(idMotivoFalta) ? idMotivoFalta : null,
+        obsFalta,
+        observacao,
+        eFeriado,
+      ]);
     }
+
+    const insertSql = `
+      INSERT INTO RH_PONTO_LANCAMENTO (
+        ID_EMPRESA, ID_FUNCIONARIO, DATA_REFERENCIA,
+        ENTRADA_MANHA, SAIDA_MANHA, ENTRADA_TARDE, SAIDA_TARDE,
+        ENTRADA_EXTRA, SAIDA_EXTRA, STATUS_DIA, TIPO_OCORRENCIA,
+        ID_MOTIVO_FALTA, OBS_FALTA, OBSERVACAO, E_FERIADO
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    // Executar DELETE + INSERTs em batch atômico (suportado pelo Turso HTTP)
+    const batchStatements: Array<{ sql: string; args: any[] }> = [
+      {
+        sql: `DELETE FROM RH_PONTO_LANCAMENTO
+              WHERE ID_EMPRESA = ? AND ID_FUNCIONARIO = ?
+                AND DATA_REFERENCIA BETWEEN ? AND ?`,
+        args: [empresaId, funcionarioId, intervalo.inicio, intervalo.fim],
+      },
+      ...insertsArgs.map((args) => ({ sql: insertSql, args })),
+    ];
+
+    await db.batch(batchStatements, "write");
 
     await registrarPeriodoDigitado({
       idEmpresa: empresaId,
@@ -288,12 +279,9 @@ export async function PUT(request: NextRequest) {
       idUsuarioUltimaAtualizacao: usuarioUltimaAtualizacao,
     });
 
-    await db.execute("COMMIT");
-
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);
-    await db.execute("ROLLBACK");
     return NextResponse.json(
       { success: false, error: "ERRO_INESPERADO" },
       { status: 500 }

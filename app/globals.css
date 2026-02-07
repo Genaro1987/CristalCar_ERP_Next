@@ -376,7 +376,17 @@ a {
   margin: 0;
 }
 
-.form-section-header h2 {
+.form-section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.form-section-header h2,
+.form-section-header h3 {
   font-size: 1.05rem;
   font-weight: 600;
   margin: 0 0 4px 0;
@@ -385,7 +395,7 @@ a {
 .form-section-header p {
   font-size: 0.9rem;
   color: #6b7280;
-  margin: 0 0 16px 0;
+  margin: 0;
 }
 
 .form-grid.three-columns {
@@ -1120,6 +1130,257 @@ a {
 .financeiro-page .financeiro-table {
   width: 100%;
   min-width: 640px;
+}
+
+/* ── Financial split-view layout ── */
+.split-view {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  .split-view {
+    grid-template-columns: 1.1fr 1fr;
+  }
+}
+
+.split-view-panel {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+/* ── Tree node cards ── */
+.tree-node {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.15s ease;
+}
+
+.tree-node:hover {
+  border-color: #fdba74;
+}
+
+.tree-node.selected {
+  border-color: #f97316;
+  background-color: #fff7ed;
+}
+
+.tree-node-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tree-node-code {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.tree-node-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.tree-node-meta {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.tree-node-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tree-children {
+  margin-left: 20px;
+  padding-left: 16px;
+  border-left: 2px dashed #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Detail panel ── */
+.detail-card {
+  background-color: #f9fafb;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.detail-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.detail-description {
+  border: 1px dashed #e5e7eb;
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+/* ── Summary / indicator cards ── */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.summary-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background-color: #f9fafb;
+  padding: 16px;
+}
+
+.summary-card-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.summary-card-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 6px;
+}
+
+.summary-card-hint {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.summary-card-value.positive { color: #16a34a; }
+.summary-card-value.negative { color: #dc2626; }
+
+/* ── Empty state ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed #e5e7eb;
+  border-radius: 10px;
+  padding: 32px 16px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.empty-state strong {
+  color: #111827;
+}
+
+/* ── Extrato table (pró-labore) ── */
+.extrato-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.extrato-table th {
+  background-color: #f3f4f6;
+  color: #111827;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.extrato-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+}
+
+.extrato-table tr:hover {
+  background-color: #fff7ed;
+}
+
+.extrato-table .text-right {
+  text-align: right;
+}
+
+.extrato-table .credit { color: #16a34a; font-weight: 600; }
+.extrato-table .debit { color: #dc2626; font-weight: 600; }
+
+/* ── Section header (shared) ── */
+.section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-header h2,
+.section-header h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.section-header p {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 2px 0 0;
+}
+
+.section-header .badge-count {
+  background-color: #f3f4f6;
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #374151;
 }
 
 .page-header-wrapper {
