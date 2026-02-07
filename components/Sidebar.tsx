@@ -150,6 +150,12 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             codigoTela: "CONS001_RH_BANCO_HORAS",
             matchExact: true,
           },
+          {
+            label: "Resumo Funcionários",
+            rota: "/rh/resumo",
+            requerEmpresa: true,
+            codigoTela: "RH_RESUMO",
+          },
         ],
       },
       {
@@ -204,6 +210,12 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             rota: "/financeiro/objetivos-semanais",
             requerEmpresa: true,
             codigoTela: "FIN_OBJETIVOS_SEMANAIS",
+          },
+          {
+            label: "Importação de Dados",
+            rota: "/financeiro/importar",
+            requerEmpresa: true,
+            codigoTela: "FIN_IMPORTAR",
           },
           {
             label: "Extrato Pró-labore",

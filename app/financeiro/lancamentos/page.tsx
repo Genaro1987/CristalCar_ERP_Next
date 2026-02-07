@@ -161,12 +161,6 @@ export default function LancamentosPage() {
     []
   );
 
-  const resumo = useMemo(() => {
-    const entradas = dadosFiltrados.filter((i) => i.tipo === "Entrada").reduce((s, i) => s + Math.abs(i.valor), 0);
-    const saidas = dadosFiltrados.filter((i) => i.tipo === "Saída").reduce((s, i) => s + Math.abs(i.valor), 0);
-    return { entradas, saidas, saldo: entradas - saidas, total: dadosFiltrados.length };
-  }, [dadosFiltrados]);
-
   // Salvar
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,34 +220,6 @@ export default function LancamentosPage() {
           )}
 
           <div className="departamentos-page">
-            {/* Resumo cards */}
-            <section className="panel">
-              <div className="section-header">
-                <div>
-                  <h2>Resumo operacional</h2>
-                  <p>Valores atualizados conforme empresa ativa e filtros aplicados.</p>
-                </div>
-                <span className="badge-count">{resumo.total} lançamentos</span>
-              </div>
-              <div className="summary-cards">
-                <div className="summary-card">
-                  <p className="summary-card-label">Entradas</p>
-                  <p className="summary-card-value positive">{formatadorMoeda.format(resumo.entradas)}</p>
-                </div>
-                <div className="summary-card">
-                  <p className="summary-card-label">Saídas</p>
-                  <p className="summary-card-value negative">{formatadorMoeda.format(resumo.saidas)}</p>
-                </div>
-                <div className="summary-card">
-                  <p className="summary-card-label">Saldo</p>
-                  <p className={`summary-card-value ${resumo.saldo >= 0 ? "positive" : "negative"}`}>
-                    {formatadorMoeda.format(resumo.saldo)}
-                  </p>
-                  <p className="summary-card-hint">Entradas - Saídas</p>
-                </div>
-              </div>
-            </section>
-
             {/* 2-column: form + table */}
             <div className="split-view">
               {/* LEFT: Form */}

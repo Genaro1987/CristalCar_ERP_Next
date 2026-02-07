@@ -16,6 +16,81 @@ const CAMPOS = [
   "FIN_PLANO_CONTA_OBRIGA_CENTRO_CUSTO",
 ].join(", ");
 
+export async function POST(request: NextRequest) {
+  const empresaId = obterEmpresaIdDaRequest(request);
+  if (!empresaId) {
+    return respostaEmpresaNaoSelecionada();
+  }
+
+  const body = await request.json();
+  const { nome, codigo, natureza, paiId, visivelDre, obrigaCentroCusto } = body;
+
+  if (!nome || !codigo) {
+    return NextResponse.json(
+      { success: false, error: "Nome e código são obrigatórios" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const verificacao = await db.execute({
+      sql: `SELECT COUNT(*) as total FROM FIN_PLANO_CONTA WHERE FIN_PLANO_CONTA_CODIGO = ? AND EMPRESA_ID = ?`,
+      args: [codigo, empresaId],
+    });
+
+    const total = (verificacao.rows[0] as any).total;
+    if (total > 0) {
+      return NextResponse.json(
+        { success: false, error: `Código ${codigo} já existe` },
+        { status: 400 }
+      );
+    }
+
+    const resultado = await db.execute({
+      sql: `
+        INSERT INTO FIN_PLANO_CONTA (
+          FIN_PLANO_CONTA_PAI_ID,
+          FIN_PLANO_CONTA_NATUREZA,
+          FIN_PLANO_CONTA_NOME,
+          FIN_PLANO_CONTA_CODIGO,
+          FIN_PLANO_CONTA_ATIVO,
+          FIN_PLANO_CONTA_VISIVEL_DRE,
+          FIN_PLANO_CONTA_OBRIGA_CENTRO_CUSTO,
+          EMPRESA_ID
+        ) VALUES (?, ?, ?, ?, 1, ?, ?, ?)
+      `,
+      args: [
+        paiId || null,
+        natureza || "DESPESA",
+        nome,
+        codigo,
+        visivelDre ?? 1,
+        obrigaCentroCusto ?? 0,
+        empresaId,
+      ],
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: String(resultado.lastInsertRowid),
+          nome,
+          codigo,
+          natureza: natureza || "DESPESA",
+        },
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Erro ao criar plano de conta:", error);
+    return NextResponse.json(
+      { success: false, error: "Erro ao criar plano de conta" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function GET(request: NextRequest) {
   const empresaId = obterEmpresaIdDaRequest(request);
 

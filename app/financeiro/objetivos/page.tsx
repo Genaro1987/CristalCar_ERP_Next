@@ -228,19 +228,33 @@ export default function ObjetivosPage() {
               </div>
 
               <div className="form-group" style={{ flex: "0 0 auto" }}>
-                <label>% Global</label>
-                <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
-                  {[-10, -5, 0, 5, 10, 15, 20].map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      className="button button-secondary button-compact"
-                      onClick={() => aplicarPercentualGlobal(v)}
-                      style={{ minWidth: 36 }}
-                    >
-                      {v > 0 ? `+${v}%` : `${v}%`}
-                    </button>
-                  ))}
+                <label htmlFor="obj-pct-global">% Global</label>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <input
+                    id="obj-pct-global"
+                    type="number"
+                    className="form-input"
+                    style={{ width: 90, textAlign: "center", padding: "6px 8px" }}
+                    placeholder="0"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const val = Number((e.target as HTMLInputElement).value) || 0;
+                        aplicarPercentualGlobal(val);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="button button-secondary button-compact"
+                    onClick={() => {
+                      const el = document.getElementById("obj-pct-global") as HTMLInputElement;
+                      const val = Number(el?.value) || 0;
+                      aplicarPercentualGlobal(val);
+                    }}
+                  >
+                    Aplicar
+                  </button>
                 </div>
               </div>
             </div>
