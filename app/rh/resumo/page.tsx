@@ -60,7 +60,7 @@ export default function ResumoFuncionariosPage() {
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "RH_RESUMO";
   const nomeTela = tela?.NOME_TELA ?? "DASHBOARD RH";
-  const moduloTela = tela?.MODULO ?? "RH";
+  const moduloTela = tela?.MODULO ?? "RECURSOS HUMANOS";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const mesAtual = new Date().getMonth() + 1;

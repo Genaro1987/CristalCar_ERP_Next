@@ -571,7 +571,7 @@ export default function FuncionarioPage() {
           codigoTela="CAD005_RH_FUNCIONARIO"
           nomeTela="CADASTRO DE FUNCIONARIO"
           caminhoRota="/rh/funcionario"
-          modulo="RH"
+          modulo="RECURSOS HUMANOS"
         />
 
         <PaginaProtegida codigoTela="CAD005_RH_FUNCIONARIO">

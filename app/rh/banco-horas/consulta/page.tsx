@@ -342,7 +342,7 @@ export default function BancoHorasConsultaPage() {
           codigoTela="CONS001_RH_BANCO_HORAS"
           nomeTela="CONSULTA PONTO"
           caminhoRota="/rh/banco-horas/consulta"
-          modulo="RH"
+          modulo="RECURSOS HUMANOS"
         />
 
         <PaginaProtegida codigoTela="CONS001_RH_BANCO_HORAS">

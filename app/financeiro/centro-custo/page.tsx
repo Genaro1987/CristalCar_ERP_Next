@@ -207,9 +207,9 @@ export default function CentroCustoPage() {
   };
 
   const renderNo = (item: CentroCustoItem, nivel: number, parentLines: boolean[], isLast: boolean) => {
-    const estaSelecionado = selecionado?.id === item.id;
+    const sel = selecionado?.id === item.id;
     const temFilhos = (item.filhos?.length ?? 0) > 0;
-    const estaColapsado = colapsados.has(item.id);
+    const col = colapsados.has(item.id);
 
     return (
       <div key={item.id}>
@@ -223,44 +223,42 @@ export default function CentroCustoPage() {
             )}
           </div>
           <div
-            className={`tree-node tree-level-${Math.min(nivel, 3)}${estaSelecionado ? " selected" : ""}`}
+            className={`tree-node tree-level-${Math.min(nivel, 3)}${sel ? " selected" : ""}`}
             onClick={() => handleEditar(item)}
-            style={{ cursor: "pointer" }}
           >
-            <div className="tree-node-header">
-              <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                {temFilhos && (
-                  <button
-                    type="button"
-                    className="tree-toggle"
-                    onClick={(e) => { e.stopPropagation(); toggleColapso(item.id); }}
-                  >
-                    {estaColapsado ? "+" : "-"}
-                  </button>
-                )}
-                <div style={{ minWidth: 0 }}>
-                  <p className="tree-node-code">{item.codigo}</p>
-                  <p className="tree-node-name">{item.nome}</p>
-                  {item.descricao && <p className="tree-node-meta">{item.descricao}</p>}
-                  {temFilhos && <p className="tree-node-meta">{item.filhos!.length} sub-centro(s)</p>}
-                </div>
-              </div>
-              <span className={item.status === "ativo" ? "badge badge-success" : "badge badge-danger"}>
-                {item.status === "ativo" ? "Ativo" : "Inativo"}
-              </span>
-            </div>
-            <div className="tree-node-actions">
+            {temFilhos && (
               <button
                 type="button"
-                className="button button-secondary button-compact"
-                onClick={(e) => { e.stopPropagation(); handleEditar(item); }}
+                className="tree-toggle"
+                onClick={(e) => { e.stopPropagation(); toggleColapso(item.id); }}
               >
-                Editar
+                {col ? "+" : "−"}
               </button>
+            )}
+            <div className="tree-node-header">
+              <div className="tree-node-info">
+                <span className="tree-node-code">{item.codigo}</span>
+                <span className="tree-node-name">{item.nome}</span>
+                {item.descricao && <span className="tree-node-meta">{item.descricao}</span>}
+              </div>
+              <div className="tree-node-right">
+                <span className={`badge ${item.status === "ativo" ? "badge-success" : "badge-danger"}`}>
+                  {item.status === "ativo" ? "Ativo" : "Inativo"}
+                </span>
+                <div className="tree-node-actions">
+                  <button
+                    type="button"
+                    className="button button-secondary button-compact"
+                    onClick={(e) => { e.stopPropagation(); handleEditar(item); }}
+                  >
+                    Editar
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        {temFilhos && !estaColapsado && (
+        {temFilhos && !col && (
           <div className="tree-children">
             {item.filhos!.map((filho, idx) =>
               renderNo(filho, nivel + 1, [...parentLines, ...(nivel > 0 ? [!isLast] : [])], idx === item.filhos!.length - 1)

@@ -387,7 +387,7 @@ export default function BancoHorasPage() {
           codigoTela="REL001_RH_BANCO_HORAS"
           nomeTela="FECHAMENTO PONTO"
           caminhoRota="/rh/banco-horas"
-          modulo="RH"
+          modulo="RECURSOS HUMANOS"
         />
 
         <PaginaProtegida codigoTela="REL001_RH_BANCO_HORAS">

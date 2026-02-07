@@ -394,7 +394,7 @@ export default function JornadaPage() {
           codigoTela="CAD004_RH_JORNADA"
           nomeTela="CADASTRO DE JORNADA"
           caminhoRota="/rh/jornada"
-          modulo="RH"
+          modulo="RECURSOS HUMANOS"
         />
 
         <PaginaProtegida codigoTela="CAD004_RH_JORNADA">

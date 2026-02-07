@@ -798,7 +798,7 @@ export default function PontoPage() {
             codigoTela="LAN001_RH_PONTO"
             nomeTela="LANCAMENTO DE PONTO"
             caminhoRota="/rh/ponto"
-            modulo="RH"
+            modulo="RECURSOS HUMANOS"
           />
 
           <PaginaProtegida codigoTela="LAN001_RH_PONTO">
