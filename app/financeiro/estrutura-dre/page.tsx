@@ -60,7 +60,7 @@ export default function EstruturaDrePage() {
   const caminhoRota = "/financeiro/estrutura-dre";
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "FIN_ESTRUTURA_DRE";
-  const nomeTela = tela?.NOME_TELA ?? "Estrutura do DRE";
+  const nomeTela = tela?.NOME_TELA ?? "ESTRUTURA DO DRE";
   const moduloTela = tela?.MODULO ?? "FINANCEIRO";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 

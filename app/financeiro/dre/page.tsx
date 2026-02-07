@@ -116,7 +116,7 @@ export default function DrePage() {
   const caminhoRota = "/financeiro/dre";
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "FIN_DRE";
-  const nomeTela = tela?.NOME_TELA ?? "Relatório DRE";
+  const nomeTela = tela?.NOME_TELA ?? "RELATORIO DRE";
   const moduloTela = tela?.MODULO ?? "FINANCEIRO";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 

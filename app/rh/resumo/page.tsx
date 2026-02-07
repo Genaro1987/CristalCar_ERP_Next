@@ -58,7 +58,7 @@ export default function ResumoFuncionariosPage() {
   const caminhoRota = "/rh/resumo";
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "RH_RESUMO";
-  const nomeTela = tela?.NOME_TELA ?? "Dashboard RH";
+  const nomeTela = tela?.NOME_TELA ?? "DASHBOARD RH";
   const moduloTela = tela?.MODULO ?? "RH";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 

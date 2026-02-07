@@ -17,12 +17,31 @@ export async function GET(request: NextRequest) {
 
   const params = request.nextUrl.searchParams;
   const tipo = params.get("tipo") ?? "PLANO_CONTAS";
-  const meses = Number(params.get("meses") ?? 3);
   const anoObjetivo = Number(params.get("ano") ?? new Date().getFullYear());
 
+  // Support mesInicio/mesFim or legacy meses param
+  const mesInicioParam = params.get("mesInicio");
+  const mesFimParam = params.get("mesFim");
   const hoje = new Date();
-  const dataFim = hoje.toISOString().slice(0, 10);
-  const dataInicio = new Date(hoje.getFullYear(), hoje.getMonth() - meses, 1).toISOString().slice(0, 10);
+  let dataInicio: string;
+  let dataFim: string;
+  let meses: number;
+
+  if (mesInicioParam && mesFimParam) {
+    const mi = Number(mesInicioParam);
+    const mf = Number(mesFimParam);
+    const anoRef = hoje.getFullYear();
+    const mmI = String(mi).padStart(2, "0");
+    const mmF = String(mf).padStart(2, "0");
+    const ultimoDia = new Date(anoRef, mf, 0).getDate();
+    dataInicio = `${anoRef}-${mmI}-01`;
+    dataFim = `${anoRef}-${mmF}-${String(ultimoDia).padStart(2, "0")}`;
+    meses = mf >= mi ? mf - mi + 1 : 12 - mi + 1 + mf;
+  } else {
+    meses = Number(params.get("meses") ?? 3);
+    dataFim = hoje.toISOString().slice(0, 10);
+    dataInicio = new Date(hoje.getFullYear(), hoje.getMonth() - meses, 1).toISOString().slice(0, 10);
+  }
 
   try {
     let contasResult;

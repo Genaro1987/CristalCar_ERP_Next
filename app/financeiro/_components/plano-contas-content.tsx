@@ -86,7 +86,7 @@ export function PlanoContasContent() {
   const caminhoRota = "/financeiro/plano-contas";
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "FIN001_PLANO_CONTA";
-  const nomeTela = tela?.NOME_TELA ?? "Plano de Contas";
+  const nomeTela = tela?.NOME_TELA ?? "PLANO DE CONTAS";
   const moduloTela = tela?.MODULO ?? "FINANCEIRO";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 

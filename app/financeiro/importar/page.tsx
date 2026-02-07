@@ -98,7 +98,7 @@ export default function ImportarPage() {
   const caminhoRota = "/financeiro/importar";
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "FIN_IMPORTAR";
-  const nomeTela = tela?.NOME_TELA ?? "Importação de Dados";
+  const nomeTela = tela?.NOME_TELA ?? "IMPORTACAO DE DADOS";
   const moduloTela = tela?.MODULO ?? "FINANCEIRO";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 

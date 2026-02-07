@@ -31,7 +31,7 @@ export default function LancamentosPage() {
   const caminhoRota = "/financeiro/lancamentos";
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "FIN_LANCAMENTOS";
-  const nomeTela = tela?.NOME_TELA ?? "Lançamentos (Caixa)";
+  const nomeTela = tela?.NOME_TELA ?? "LANCAMENTOS (CAIXA)";
   const moduloTela = tela?.MODULO ?? "FINANCEIRO";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
