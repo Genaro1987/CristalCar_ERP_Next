@@ -1872,6 +1872,270 @@ a {
    MOBILE LAYOUT  (max-width: 768px)
    ═══════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════════════════
+   RH Resumo Funcionários
+   ══════════════════════════════════════════════════════ */
+
+.resumo-filtros {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #f3f4f6;
+  flex-wrap: wrap;
+}
+
+.resumo-filtro-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.resumo-filtro-item label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.resumo-filtro-item .form-input {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
+.resumo-filtro-item:first-child .form-input {
+  width: 80px;
+}
+
+.resumo-filtro-item:nth-child(2) .form-input,
+.resumo-filtro-item:nth-child(3) .form-input {
+  width: 100px;
+}
+
+.resumo-filtro-busca {
+  flex: 1;
+  min-width: 140px;
+}
+
+.resumo-filtro-busca .form-input {
+  width: 100%;
+}
+
+/* ── KPI Cards ── */
+.resumo-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.resumo-kpi {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-right: 1px solid #f3f4f6;
+  background: #ffffff;
+}
+
+.resumo-kpi:last-child {
+  border-right: none;
+}
+
+.resumo-kpi-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.resumo-kpi-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.resumo-kpi-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #111827;
+}
+
+.resumo-kpi-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+}
+
+.resumo-kpi-detail {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  line-height: 1.3;
+}
+
+/* ── Employee List ── */
+.resumo-lista {
+  padding: 12px 16px 20px;
+}
+
+.resumo-func {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  background: #ffffff;
+  transition: box-shadow 0.15s ease;
+}
+
+.resumo-func:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.resumo-func-expanded {
+  border-color: #f97316;
+  box-shadow: 0 2px 12px rgba(249, 115, 22, 0.08);
+}
+
+.resumo-func-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.resumo-func-info {
+  flex: 0 0 200px;
+  min-width: 0;
+}
+
+.resumo-func-nome {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resumo-func-dept {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  line-height: 1.3;
+}
+
+.resumo-func-metrics {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 24px;
+  align-items: center;
+}
+
+.resumo-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 60px;
+}
+
+.resumo-metric-val {
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.resumo-metric-lbl {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.resumo-metric-saldo {
+  padding-left: 16px;
+  border-left: 2px solid #e5e7eb;
+}
+
+.resumo-func-chevron {
+  font-size: 0.7rem;
+  color: #d1d5db;
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+/* ── Expanded Detail ── */
+.resumo-func-detail {
+  border-top: 1px solid #f3f4f6;
+  padding: 14px 16px;
+  background: #fafbfc;
+}
+
+.resumo-func-stats {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.resumo-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 50px;
+}
+
+.resumo-stat-num {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.3;
+}
+
+.resumo-stat-lbl {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.resumo-evolucao {
+  margin-top: 4px;
+}
+
+.resumo-evolucao-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 8px;
+}
+
+.resumo-evolucao-table {
+  font-size: 0.82rem !important;
+}
+
+.resumo-evolucao-table th,
+.resumo-evolucao-table td {
+  padding: 5px 10px !important;
+}
+
 /* ── Mobile Header ── */
 .mobile-header {
   display: none;
@@ -2417,6 +2681,100 @@ a {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+  }
+
+  /* ── RH Resumo Mobile ── */
+  .resumo-filtros {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .resumo-filtro-item:first-child .form-input {
+    width: 70px;
+  }
+
+  .resumo-filtro-item:nth-child(2) .form-input,
+  .resumo-filtro-item:nth-child(3) .form-input {
+    width: 80px;
+  }
+
+  .resumo-kpis {
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+
+  .resumo-kpi {
+    padding: 12px;
+    gap: 8px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .resumo-kpi:nth-child(odd) {
+    border-right: 1px solid #f3f4f6;
+  }
+
+  .resumo-kpi:nth-child(even) {
+    border-right: none;
+  }
+
+  .resumo-kpi:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .resumo-kpi-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  .resumo-kpi-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .resumo-kpi-value {
+    font-size: 1.05rem;
+  }
+
+  .resumo-lista {
+    padding: 8px 10px 16px;
+  }
+
+  .resumo-func-row {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .resumo-func-info {
+    flex: 1 1 100%;
+  }
+
+  .resumo-func-metrics {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .resumo-metric {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .resumo-metric-saldo {
+    padding-left: 8px;
+  }
+
+  .resumo-func-chevron {
+    display: none;
+  }
+
+  .resumo-func-detail {
+    padding: 12px;
+  }
+
+  .resumo-func-stats {
+    gap: 12px;
   }
 
   /* ── Mobile Bottom Navigation ── */

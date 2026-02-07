@@ -108,20 +108,24 @@ export default function ResumoFuncionariosPage() {
     );
   }, [dados, busca]);
 
-  // Totals
   const totais = useMemo(() => {
-    return dadosFiltrados.reduce(
-      (acc, f) => ({
-        extras50: acc.extras50 + f.extras50Min,
-        extras100: acc.extras100 + f.extras100Min,
-        devidas: acc.devidas + f.devidasMin,
-        pagar: acc.pagar + f.valorPagar,
-        descontar: acc.descontar + f.valorDescontar,
-        faltas: acc.faltas + f.faltasJustificadas + f.faltasNaoJustificadas,
-        ferias: acc.ferias + f.feriasCount,
-      }),
-      { extras50: 0, extras100: 0, devidas: 0, pagar: 0, descontar: 0, faltas: 0, ferias: 0 }
-    );
+    let extras50 = 0, extras100 = 0, devidas = 0, faltas = 0, ferias = 0;
+    let comExtras = 0, comDevidas = 0, emFerias = 0;
+
+    for (const f of dadosFiltrados) {
+      const totalExtras = f.extras50Min + f.extras100Min;
+      extras50 += f.extras50Min;
+      extras100 += f.extras100Min;
+      devidas += f.devidasMin;
+      faltas += f.faltasJustificadas + f.faltasNaoJustificadas;
+      ferias += f.feriasCount;
+      if (totalExtras > 0) comExtras++;
+      if (f.devidasMin < 0) comDevidas++;
+      if (f.feriasCount > 0) emFerias++;
+    }
+
+    const saldoGeral = extras50 + extras100 + devidas;
+    return { extras50, extras100, devidas, faltas, ferias, comExtras, comDevidas, emFerias, saldoGeral };
   }, [dadosFiltrados]);
 
   const periodoLabel = mesInicio === mesFim
@@ -138,240 +142,213 @@ export default function ResumoFuncionariosPage() {
           modulo={moduloTela}
         />
 
-        <main className="page-content-card">
-          {/* Filters */}
-          <section className="panel">
-            <div className="form-section-header">
-              <div>
-                <h2>Resumo de Funcionários</h2>
-                <p>Visão consolidada de horas extras, faltas e evolução mensal de cada colaborador.</p>
+        <main className="page-content-card" style={{ padding: 0 }}>
+          {/* Filters - compact inline */}
+          <div className="resumo-filtros">
+            <div className="resumo-filtro-item">
+              <label htmlFor="resumo-ano">Ano</label>
+              <input id="resumo-ano" type="number" className="form-input" value={ano} onChange={(e) => setAno(Number(e.target.value))} />
+            </div>
+            <div className="resumo-filtro-item">
+              <label htmlFor="resumo-mes-ini">De</label>
+              <select id="resumo-mes-ini" className="form-input" value={mesInicio} onChange={(e) => setMesInicio(Number(e.target.value))}>
+                {MESES_LABELS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+              </select>
+            </div>
+            <div className="resumo-filtro-item">
+              <label htmlFor="resumo-mes-fim">Até</label>
+              <select id="resumo-mes-fim" className="form-input" value={mesFim} onChange={(e) => setMesFim(Number(e.target.value))}>
+                {MESES_LABELS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+              </select>
+            </div>
+            <div className="resumo-filtro-item resumo-filtro-busca">
+              <label htmlFor="resumo-busca">Buscar</label>
+              <input id="resumo-busca" type="text" className="form-input" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome ou departamento" />
+            </div>
+          </div>
+
+          {/* KPI Cards */}
+          <div className="resumo-kpis">
+            <div className="resumo-kpi">
+              <div className="resumo-kpi-icon" style={{ background: "#eff6ff", color: "#2563eb" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+              </div>
+              <div className="resumo-kpi-body">
+                <span className="resumo-kpi-value">{dadosFiltrados.length}</span>
+                <span className="resumo-kpi-label">Funcionários</span>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap", marginTop: 16 }}>
-              <div className="form-group" style={{ flex: "0 0 90px" }}>
-                <label htmlFor="resumo-ano">Ano</label>
-                <input
-                  id="resumo-ano"
-                  type="number"
-                  className="form-input"
-                  value={ano}
-                  onChange={(e) => setAno(Number(e.target.value))}
-                />
+            <div className="resumo-kpi">
+              <div className="resumo-kpi-icon" style={{ background: "#ecfdf5", color: "#059669" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
               </div>
-              <div className="form-group" style={{ flex: "0 0 130px" }}>
-                <label htmlFor="resumo-mes-ini">Mês início</label>
-                <select
-                  id="resumo-mes-ini"
-                  className="form-input"
-                  value={mesInicio}
-                  onChange={(e) => setMesInicio(Number(e.target.value))}
-                >
-                  {MESES_LABELS.map((m, i) => (
-                    <option key={i} value={i + 1}>{m}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group" style={{ flex: "0 0 130px" }}>
-                <label htmlFor="resumo-mes-fim">Mês fim</label>
-                <select
-                  id="resumo-mes-fim"
-                  className="form-input"
-                  value={mesFim}
-                  onChange={(e) => setMesFim(Number(e.target.value))}
-                >
-                  {MESES_LABELS.map((m, i) => (
-                    <option key={i} value={i + 1}>{m}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group" style={{ flex: "1 1 180px" }}>
-                <label htmlFor="resumo-busca">Buscar</label>
-                <input
-                  id="resumo-busca"
-                  type="text"
-                  className="form-input"
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Nome ou departamento"
-                />
+              <div className="resumo-kpi-body">
+                <span className="resumo-kpi-value" style={{ color: "#059669" }}>{minParaHora(totais.extras50 + totais.extras100)}</span>
+                <span className="resumo-kpi-label">Horas extras total</span>
+                <span className="resumo-kpi-detail">{totais.comExtras} funcionário{totais.comExtras !== 1 ? "s" : ""} com extras</span>
               </div>
             </div>
-          </section>
 
-          {/* Summary cards */}
-          <section className="summary-cards" style={{ marginTop: 16 }}>
-            <div className="summary-card">
-              <span className="summary-label">Funcionários</span>
-              <strong className="summary-value">{dadosFiltrados.length}</strong>
+            <div className="resumo-kpi">
+              <div className="resumo-kpi-icon" style={{ background: "#fef2f2", color: "#dc2626" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/><line x1="4" y1="4" x2="20" y2="20"/></svg>
+              </div>
+              <div className="resumo-kpi-body">
+                <span className="resumo-kpi-value" style={{ color: "#dc2626" }}>{minParaHora(totais.devidas)}</span>
+                <span className="resumo-kpi-label">Horas devidas total</span>
+                <span className="resumo-kpi-detail">{totais.comDevidas} funcionário{totais.comDevidas !== 1 ? "s" : ""} com débito</span>
+              </div>
             </div>
-            <div className="summary-card">
-              <span className="summary-label">Extras 50%</span>
-              <strong className="summary-value" style={{ color: "#059669" }}>{minParaHora(totais.extras50)}</strong>
+
+            <div className="resumo-kpi">
+              <div className="resumo-kpi-icon" style={{ background: totais.saldoGeral >= 0 ? "#ecfdf5" : "#fef2f2", color: totais.saldoGeral >= 0 ? "#059669" : "#dc2626" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+              </div>
+              <div className="resumo-kpi-body">
+                <span className="resumo-kpi-value" style={{ color: totais.saldoGeral >= 0 ? "#059669" : "#dc2626" }}>{minParaHora(totais.saldoGeral)}</span>
+                <span className="resumo-kpi-label">Balanço de horas</span>
+                <span className="resumo-kpi-detail">Extras - Devidas</span>
+              </div>
             </div>
-            <div className="summary-card">
-              <span className="summary-label">Extras 100%</span>
-              <strong className="summary-value" style={{ color: "#059669" }}>{minParaHora(totais.extras100)}</strong>
+
+            <div className="resumo-kpi">
+              <div className="resumo-kpi-icon" style={{ background: "#fefce8", color: "#ca8a04" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <div className="resumo-kpi-body">
+                <span className="resumo-kpi-value">{totais.faltas}</span>
+                <span className="resumo-kpi-label">Faltas no período</span>
+                <span className="resumo-kpi-detail">{totais.emFerias} em férias</span>
+              </div>
             </div>
-            <div className="summary-card">
-              <span className="summary-label">Horas Devidas</span>
-              <strong className="summary-value" style={{ color: "#dc2626" }}>{minParaHora(totais.devidas)}</strong>
-            </div>
-            <div className="summary-card">
-              <span className="summary-label">Faltas</span>
-              <strong className="summary-value" style={{ color: "#dc2626" }}>{totais.faltas}</strong>
-              <span style={{ fontSize: "0.7rem", color: "#9ca3af" }}>{totais.ferias} dias férias</span>
-            </div>
-          </section>
+          </div>
 
           {/* Employee list */}
-          <section className="panel" style={{ marginTop: 16 }}>
+          <div className="resumo-lista">
             {carregando ? (
-              <div className="empty-state">Carregando resumo...</div>
+              <div className="empty-state" style={{ margin: 20 }}>Carregando resumo...</div>
             ) : dadosFiltrados.length === 0 ? (
-              <div className="empty-state">
-                Nenhum funcionário encontrado para o período selecionado.
-              </div>
+              <div className="empty-state" style={{ margin: 20 }}>Nenhum funcionário encontrado para o período selecionado.</div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {dadosFiltrados.map((func) => {
-                  const isExpanded = expandido === func.id;
-                  const totalFaltas = func.faltasJustificadas + func.faltasNaoJustificadas;
+              dadosFiltrados.map((func) => {
+                const isExpanded = expandido === func.id;
+                const totalFaltas = func.faltasJustificadas + func.faltasNaoJustificadas;
+                const totalExtras = func.extras50Min + func.extras100Min;
 
-                  return (
-                    <div
-                      key={func.id}
-                      className="detail-card"
-                      style={{
-                        padding: 0,
-                        borderRadius: 10,
-                        border: "1px solid #e5e7eb",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {/* Employee header row */}
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 12,
-                          padding: "12px 16px",
-                          cursor: "pointer",
-                          flexWrap: "wrap",
-                        }}
-                        onClick={() => setExpandido(isExpanded ? null : func.id)}
-                      >
-                        <div style={{ flex: "1 1 180px", minWidth: 0 }}>
-                          <strong style={{ fontSize: "0.92rem", color: "#111827", display: "block" }}>
-                            {func.nome}
-                          </strong>
-                          <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
-                            {func.departamento} &middot; {func.jornada}
-                          </span>
-                        </div>
-
-                        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center", fontSize: "0.82rem" }}>
-                          <div style={{ textAlign: "center" }}>
-                            <span style={{ display: "block", fontSize: "0.68rem", color: "#6b7280", textTransform: "uppercase" }}>Extras 50%</span>
-                            <strong style={{ color: func.extras50Min > 0 ? "#059669" : "#374151" }}>
-                              {minParaHora(func.extras50Min)}
-                            </strong>
-                          </div>
-                          <div style={{ textAlign: "center" }}>
-                            <span style={{ display: "block", fontSize: "0.68rem", color: "#6b7280", textTransform: "uppercase" }}>Extras 100%</span>
-                            <strong style={{ color: func.extras100Min > 0 ? "#059669" : "#374151" }}>
-                              {minParaHora(func.extras100Min)}
-                            </strong>
-                          </div>
-                          <div style={{ textAlign: "center" }}>
-                            <span style={{ display: "block", fontSize: "0.68rem", color: "#6b7280", textTransform: "uppercase" }}>Devidas</span>
-                            <strong style={{ color: func.devidasMin < 0 ? "#dc2626" : "#374151" }}>
-                              {minParaHora(func.devidasMin)}
-                            </strong>
-                          </div>
-                          <div style={{ textAlign: "center" }}>
-                            <span style={{ display: "block", fontSize: "0.68rem", color: "#6b7280", textTransform: "uppercase" }}>Faltas</span>
-                            <strong style={{ color: totalFaltas > 0 ? "#dc2626" : "#374151" }}>
-                              {totalFaltas}
-                            </strong>
-                          </div>
-                          <div style={{ textAlign: "center" }}>
-                            <span style={{ display: "block", fontSize: "0.68rem", color: "#6b7280", textTransform: "uppercase" }}>Saldo</span>
-                            <strong style={{ color: func.saldoUltimoMes >= 0 ? "#059669" : "#dc2626" }}>
-                              {minParaHora(func.saldoUltimoMes)}
-                            </strong>
-                          </div>
-                        </div>
-
-                        <span style={{ fontSize: "0.8rem", color: "#9ca3af", flexShrink: 0 }}>
-                          {isExpanded ? "\u25B2" : "\u25BC"}
-                        </span>
+                return (
+                  <div key={func.id} className={`resumo-func${isExpanded ? " resumo-func-expanded" : ""}`}>
+                    <div className="resumo-func-row" onClick={() => setExpandido(isExpanded ? null : func.id)}>
+                      {/* Name + dept */}
+                      <div className="resumo-func-info">
+                        <strong className="resumo-func-nome">{func.nome}</strong>
+                        <span className="resumo-func-dept">{func.departamento}</span>
                       </div>
 
-                      {/* Expanded: monthly evolution */}
-                      {isExpanded && (
-                        <div style={{ borderTop: "1px solid #e5e7eb", padding: "12px 16px", background: "#f9fafb" }}>
-                          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12, fontSize: "0.82rem" }}>
-                            <span><strong>Dias trabalhados:</strong> {func.diasTrabalhados}</span>
-                            <span><strong>Férias:</strong> {func.feriasCount} dias</span>
-                            <span><strong>Faltas just.:</strong> {func.faltasJustificadas}</span>
-                            <span><strong>Faltas n/just.:</strong> {func.faltasNaoJustificadas}</span>
-                            {func.valorPagar > 0 && (
-                              <span style={{ color: "#059669" }}><strong>A pagar:</strong> {formatMoney(func.valorPagar)}</span>
-                            )}
-                            {func.valorDescontar > 0 && (
-                              <span style={{ color: "#dc2626" }}><strong>A descontar:</strong> {formatMoney(func.valorDescontar)}</span>
-                            )}
-                          </div>
+                      {/* Metrics strip */}
+                      <div className="resumo-func-metrics">
+                        <div className="resumo-metric">
+                          <span className="resumo-metric-val" style={{ color: totalExtras > 0 ? "#059669" : "#9ca3af" }}>
+                            {minParaHora(totalExtras)}
+                          </span>
+                          <span className="resumo-metric-lbl">Extras</span>
+                        </div>
+                        <div className="resumo-metric">
+                          <span className="resumo-metric-val" style={{ color: func.devidasMin < 0 ? "#dc2626" : "#9ca3af" }}>
+                            {minParaHora(func.devidasMin)}
+                          </span>
+                          <span className="resumo-metric-lbl">Devidas</span>
+                        </div>
+                        <div className="resumo-metric">
+                          <span className="resumo-metric-val" style={{ color: totalFaltas > 0 ? "#dc2626" : "#9ca3af" }}>
+                            {totalFaltas}
+                          </span>
+                          <span className="resumo-metric-lbl">Faltas</span>
+                        </div>
+                        <div className="resumo-metric resumo-metric-saldo">
+                          <span className="resumo-metric-val" style={{ color: func.saldoUltimoMes >= 0 ? "#059669" : "#dc2626" }}>
+                            {minParaHora(func.saldoUltimoMes)}
+                          </span>
+                          <span className="resumo-metric-lbl">Saldo</span>
+                        </div>
+                      </div>
 
-                          {func.evolucao.length > 0 && (
-                            <>
-                              <h4 style={{ fontSize: "0.82rem", color: "#374151", marginBottom: 8 }}>
-                                Evolução mensal ({periodoLabel})
-                              </h4>
-                              <table className="data-table mobile-cards" style={{ fontSize: "0.82rem" }}>
-                                <thead>
-                                  <tr>
-                                    <th>Mês</th>
-                                    <th style={{ textAlign: "right" }}>Extras 50%</th>
-                                    <th style={{ textAlign: "right" }}>Extras 100%</th>
-                                    <th style={{ textAlign: "right" }}>Devidas</th>
-                                    <th style={{ textAlign: "right" }}>Saldo</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {func.evolucao.map((ev) => {
-                                    const mesIdx = Number(ev.competencia.split("-")[1]) - 1;
-                                    return (
-                                      <tr key={ev.competencia}>
-                                        <td data-label="Mês" style={{ fontWeight: 600 }}>{MESES_LABELS[mesIdx]}</td>
-                                        <td data-label="Extras 50%" style={{ color: ev.extras50Min > 0 ? "#059669" : "#374151" }}>
-                                          {minParaHora(ev.extras50Min)}
-                                        </td>
-                                        <td data-label="Extras 100%" style={{ color: ev.extras100Min > 0 ? "#059669" : "#374151" }}>
-                                          {minParaHora(ev.extras100Min)}
-                                        </td>
-                                        <td data-label="Devidas" style={{ color: ev.devidasMin < 0 ? "#dc2626" : "#374151" }}>
-                                          {minParaHora(ev.devidasMin)}
-                                        </td>
-                                        <td data-label="Saldo" style={{ fontWeight: 600, color: ev.saldoMin >= 0 ? "#059669" : "#dc2626" }}>
-                                          {minParaHora(ev.saldoMin)}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </>
+                      <span className="resumo-func-chevron">{isExpanded ? "\u25B2" : "\u25BC"}</span>
+                    </div>
+
+                    {/* Expanded detail */}
+                    {isExpanded && (
+                      <div className="resumo-func-detail">
+                        {/* Quick stats */}
+                        <div className="resumo-func-stats">
+                          <div className="resumo-stat">
+                            <span className="resumo-stat-num">{func.diasTrabalhados}</span>
+                            <span className="resumo-stat-lbl">Dias trab.</span>
+                          </div>
+                          <div className="resumo-stat">
+                            <span className="resumo-stat-num">{func.feriasCount}</span>
+                            <span className="resumo-stat-lbl">Dias férias</span>
+                          </div>
+                          <div className="resumo-stat">
+                            <span className="resumo-stat-num" style={{ color: "#059669" }}>{minParaHora(func.extras50Min)}</span>
+                            <span className="resumo-stat-lbl">Extra 50%</span>
+                          </div>
+                          <div className="resumo-stat">
+                            <span className="resumo-stat-num" style={{ color: "#059669" }}>{minParaHora(func.extras100Min)}</span>
+                            <span className="resumo-stat-lbl">Extra 100%</span>
+                          </div>
+                          {func.valorPagar > 0 && (
+                            <div className="resumo-stat">
+                              <span className="resumo-stat-num" style={{ color: "#059669" }}>{formatMoney(func.valorPagar)}</span>
+                              <span className="resumo-stat-lbl">A pagar</span>
+                            </div>
+                          )}
+                          {func.valorDescontar > 0 && (
+                            <div className="resumo-stat">
+                              <span className="resumo-stat-num" style={{ color: "#dc2626" }}>{formatMoney(func.valorDescontar)}</span>
+                              <span className="resumo-stat-lbl">A descontar</span>
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+
+                        {/* Monthly evolution */}
+                        {func.evolucao.length > 0 && (
+                          <div className="resumo-evolucao">
+                            <h4 className="resumo-evolucao-title">Evolução mensal ({periodoLabel})</h4>
+                            <table className="data-table mobile-cards resumo-evolucao-table">
+                              <thead>
+                                <tr>
+                                  <th>Mês</th>
+                                  <th>Extras 50%</th>
+                                  <th>Extras 100%</th>
+                                  <th>Devidas</th>
+                                  <th>Saldo</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {func.evolucao.map((ev) => {
+                                  const mesIdx = Number(ev.competencia.split("-")[1]) - 1;
+                                  return (
+                                    <tr key={ev.competencia}>
+                                      <td data-label="Mês"><strong>{MESES_LABELS[mesIdx]}</strong></td>
+                                      <td data-label="Extras 50%" style={{ color: ev.extras50Min > 0 ? "#059669" : "#9ca3af" }}>{minParaHora(ev.extras50Min)}</td>
+                                      <td data-label="Extras 100%" style={{ color: ev.extras100Min > 0 ? "#059669" : "#9ca3af" }}>{minParaHora(ev.extras100Min)}</td>
+                                      <td data-label="Devidas" style={{ color: ev.devidasMin < 0 ? "#dc2626" : "#9ca3af" }}>{minParaHora(ev.devidasMin)}</td>
+                                      <td data-label="Saldo" style={{ fontWeight: 700, color: ev.saldoMin >= 0 ? "#059669" : "#dc2626" }}>{minParaHora(ev.saldoMin)}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
-          </section>
+          </div>
         </main>
       </div>
     </LayoutShell>
