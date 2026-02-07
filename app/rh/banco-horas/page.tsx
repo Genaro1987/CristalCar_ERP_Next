@@ -560,7 +560,7 @@ export default function BancoHorasPage() {
                   </header>
 
                   <div style={{ display: "grid", gap: "12px", borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                    <div className="banco-horas-summary-grid">
                       <div className="form-group">
                         <label>SALDO ANTERIOR</label>
                         <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>
@@ -593,7 +593,7 @@ export default function BancoHorasPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                    <div className="banco-horas-summary-grid">
                       <div className="form-group">
                         <label>SALDO ANTERIOR (VALOR)</label>
                         <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>

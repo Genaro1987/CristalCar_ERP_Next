@@ -208,13 +208,14 @@ export default function ObjetivosSemanaisPage() {
                 {podeCriar ? "Nenhuma semana encontrada." : "Cadastre um objetivo financeiro antes de planejar semanas."}
               </div>
             ) : (
-              <table className="data-table" style={{ tableLayout: "auto" }}>
+              <div style={{ overflowX: "auto" }}>
+              <table className="data-table" style={{ tableLayout: "auto", minWidth: 560 }}>
                 <thead>
                   <tr>
                     <th>Semana</th>
                     <th>Objetivo</th>
                     <th>Responsável</th>
-                    <th style={{ textAlign: "right" }}>Meta Semanal</th>
+                    <th style={{ textAlign: "right" }}>Meta</th>
                     <th>Status</th>
                     <th>Ações</th>
                   </tr>
@@ -251,6 +252,7 @@ export default function ObjetivosSemanaisPage() {
                   })}
                 </tbody>
               </table>
+              </div>
             )}
           </section>
         </main>
@@ -338,7 +340,7 @@ export default function ObjetivosSemanaisPage() {
               placeholder="Alinhe dependências, entregáveis e impactos no caixa"
             />
           </div>
-          <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 8 }}>
+          <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
             <button type="button" onClick={() => setModalAberto(false)} className="button button-secondary">
               Cancelar
             </button>

@@ -347,6 +347,12 @@ a {
   gap: 12px;
 }
 
+.banco-horas-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
 .banco-horas-divider {
   border-top: 1px solid #e5e7eb;
   margin: 8px 0;
@@ -1969,25 +1975,40 @@ a {
   }
 
   .header-title {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
+  }
+
+  .header-subtitle {
+    font-size: 0.7rem;
   }
 
   .header-actions {
     width: 100%;
-    flex-direction: column;
+    flex-direction: row;
     gap: 8px;
+    align-items: center;
   }
 
   .screen-search-container {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
   }
 
   .screen-search-input {
     width: 100%;
+    font-size: 0.82rem;
+    padding: 7px 10px;
   }
 
   .screen-search-results {
     width: 100%;
+  }
+
+  .header-help-button {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
   }
 
   /* ── Panels ── */
@@ -1999,6 +2020,18 @@ a {
   .form-section-header {
     flex-direction: column;
     gap: 8px;
+  }
+
+  /* ── Buttons ── */
+  .button {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .button-compact {
+    padding: 5px 8px;
+    font-size: 0.72rem;
   }
 
   /* ── Forms ── */
@@ -2031,9 +2064,22 @@ a {
     align-items: stretch;
   }
 
+  .form-group label {
+    font-size: 0.78rem;
+  }
+
+  .form-input,
+  .form-input[type="date"],
+  .form-input[type="number"],
+  .form-input[type="text"],
+  select.form-input {
+    font-size: 0.85rem;
+    padding: 7px 10px;
+  }
+
   .button-row {
     flex-wrap: wrap;
-    justify-content: stretch;
+    gap: 6px;
   }
 
   .button-row .button {
@@ -2042,18 +2088,36 @@ a {
     text-align: center;
   }
 
+  /* ── Inline button groups (flex containers with gap) ── */
+  .inline-btn-group {
+    flex-wrap: wrap !important;
+  }
+
   /* ── Tables ── */
-  .data-table {
-    font-size: 0.82rem;
+  .data-table,
+  .extrato-table {
+    font-size: 0.78rem;
   }
 
   .data-table th,
-  .data-table td {
-    padding: 8px 6px;
+  .data-table td,
+  .extrato-table th,
+  .extrato-table td {
+    padding: 6px 5px;
   }
 
-  .data-table th {
-    font-size: 0.72rem;
+  .data-table th,
+  .extrato-table th {
+    font-size: 0.68rem;
+    letter-spacing: 0.03em;
+  }
+
+  /* Scroll wrapper for tables */
+  .table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -12px;
+    padding: 0 12px;
   }
 
   /* ── Summary Cards ── */
@@ -2091,6 +2155,16 @@ a {
     gap: 8px;
   }
 
+  /* ── Ponto: acoes-dia buttons ── */
+  .acoes-dia {
+    gap: 4px;
+  }
+
+  .acoes-dia .button {
+    font-size: 0.65rem;
+    padding: 4px 6px;
+  }
+
   /* ── Banco de horas ── */
   .banco-horas-resumo-grid {
     grid-template-columns: 1fr 1fr;
@@ -2108,6 +2182,11 @@ a {
 
   .banco-horas-detalhamento-table {
     table-layout: auto;
+  }
+
+  .banco-horas-summary-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
 
   .dia-cell {
@@ -2304,6 +2383,21 @@ a {
     font-size: 0.65rem;
     font-weight: 600;
     letter-spacing: 0.02em;
+  }
+
+  /* ── Feriado modal grid ── */
+  .feriado-novo-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .feriado-novo-grid .form-group:last-child {
+    grid-column: 1 / -1;
+  }
+
+  /* ── Detail card rows: wrap long content ── */
+  .detail-card-row {
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
   /* ── Financeiro specific ── */

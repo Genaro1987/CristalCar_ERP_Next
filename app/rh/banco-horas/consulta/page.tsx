@@ -389,7 +389,7 @@ export default function BancoHorasConsultaPage() {
                 </select>
               </div>
 
-                <div style={{ flex: "0 0 auto", display: "flex", gap: "8px" }}>
+                <div style={{ flex: "0 0 auto", display: "flex", gap: "8px", flexWrap: "wrap" }}>
                   <button
                     onClick={pesquisar}
                     disabled={!pesquisaHabilitada}

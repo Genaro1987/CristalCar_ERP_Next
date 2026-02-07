@@ -825,30 +825,31 @@ export default function FuncionarioPage() {
               )}
 
               {!carregandoLista && !erroLista && funcionarios.length > 0 && (
-                <table className="w-full table-fixed border-collapse data-table">
+                <div style={{ overflowX: "auto" }}>
+                <table className="data-table" style={{ minWidth: 800 }}>
                   <thead>
                     <tr>
-                      <th className="w-24 px-2 py-2">CÓDIGO</th>
-                      <th className="w-64 px-2 py-2 truncate">NOME</th>
-                      <th className="w-32 px-2 py-2">CPF</th>
-                      <th className="w-44 px-2 py-2 truncate">DEPARTAMENTO</th>
-                      <th className="w-32 px-2 py-2 truncate">JORNADA</th>
-                      <th className="w-32 px-2 py-2 truncate">PERFIL</th>
-                      <th className="w-24 px-2 py-2 text-center">STATUS</th>
-                      <th className="w-24 px-2 py-2 text-center">SALÁRIOS</th>
-                      <th className="w-24 px-2 py-2 text-center">AÇÕES</th>
+                      <th>CÓDIGO</th>
+                      <th>NOME</th>
+                      <th>CPF</th>
+                      <th>DEPARTAMENTO</th>
+                      <th>JORNADA</th>
+                      <th>PERFIL</th>
+                      <th style={{ textAlign: "center" }}>STATUS</th>
+                      <th style={{ textAlign: "center" }}>SALÁRIOS</th>
+                      <th style={{ textAlign: "center" }}>AÇÕES</th>
                     </tr>
                   </thead>
                   <tbody>
                     {funcionarios.map((funcionario) => (
                       <tr key={funcionario.ID_FUNCIONARIO}>
-                        <td className="w-24 px-2 py-2">{formatarCodigoFuncionario(funcionario.ID_FUNCIONARIO)}</td>
-                        <td className="w-64 px-2 py-2 truncate">{funcionario.NOME_COMPLETO}</td>
-                        <td className="w-32 px-2 py-2">{formatarCpf(funcionario.CPF)}</td>
-                        <td className="w-44 px-2 py-2 truncate">{funcionario.NOME_DEPARTAMENTO || "-"}</td>
-                        <td className="w-32 px-2 py-2 truncate">{funcionario.NOME_JORNADA || "-"}</td>
-                        <td className="w-32 px-2 py-2 truncate">{funcionario.NOME_PERFIL || "-"}</td>
-                        <td className="w-24 px-2 py-2 text-center">
+                        <td>{formatarCodigoFuncionario(funcionario.ID_FUNCIONARIO)}</td>
+                        <td>{funcionario.NOME_COMPLETO}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>{formatarCpf(funcionario.CPF)}</td>
+                        <td>{funcionario.NOME_DEPARTAMENTO || "-"}</td>
+                        <td>{funcionario.NOME_JORNADA || "-"}</td>
+                        <td>{funcionario.NOME_PERFIL || "-"}</td>
+                        <td style={{ textAlign: "center" }}>
                           <span
                             className={
                               funcionario.ATIVO === 1 && !funcionario.DATA_DEMISSAO
@@ -859,7 +860,7 @@ export default function FuncionarioPage() {
                             {funcionario.ATIVO === 1 && !funcionario.DATA_DEMISSAO ? "ATIVO" : "INATIVO"}
                           </span>
                         </td>
-                        <td className="w-24 px-2 py-2 text-center">
+                        <td style={{ textAlign: "center" }}>
                           <button
                             type="button"
                             className="button button-secondary button-compact"
@@ -868,7 +869,7 @@ export default function FuncionarioPage() {
                             Consultar
                           </button>
                         </td>
-                        <td className="w-24 px-2 py-2 text-center">
+                        <td style={{ textAlign: "center" }}>
                           <button
                             type="button"
                             className="button button-secondary button-compact"
@@ -881,6 +882,7 @@ export default function FuncionarioPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </section>
           </div>

@@ -185,7 +185,8 @@ export default function FinanceiroDashboardPage() {
                 <div className="form-section-header">
                   <h2>Movimentação por Empresa</h2>
                 </div>
-                <table className="data-table" style={{ marginTop: 12 }}>
+                <div style={{ overflowX: "auto" }}>
+                <table className="data-table" style={{ marginTop: 12, minWidth: 400 }}>
                   <thead>
                     <tr>
                       <th>Empresa</th>
@@ -212,6 +213,7 @@ export default function FinanceiroDashboardPage() {
                     )}
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
 

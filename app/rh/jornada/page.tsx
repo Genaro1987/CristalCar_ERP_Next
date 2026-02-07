@@ -614,8 +614,8 @@ export default function JornadaPage() {
               )}
 
               {!carregandoLista && !erroLista && jornadas.length > 0 && (
-                <div>
-                  <table className="data-table" style={{ tableLayout: "auto" }}>
+                <div style={{ overflowX: "auto" }}>
+                  <table className="data-table" style={{ tableLayout: "auto", minWidth: 600 }}>
                     <thead>
                       <tr>
                         <th>CÓDIGO</th>
@@ -681,7 +681,7 @@ export default function JornadaPage() {
             {/* Form para novo feriado */}
             <div className="detail-card" style={{ marginBottom: 16 }}>
               <p className="detail-label">Novo feriado</p>
-              <div className="form-grid" style={{ gridTemplateColumns: "80px 1fr 1fr", gap: 12, alignItems: "flex-end" }}>
+              <div className="form-grid feriado-novo-grid" style={{ gridTemplateColumns: "80px 1fr 1fr", gap: 12, alignItems: "flex-end" }}>
                 <div className="form-group">
                   <label htmlFor="feriadoDia">Dia *</label>
                   <input
@@ -741,13 +741,14 @@ export default function JornadaPage() {
                 <p>Cadastre os feriados para que sejam considerados no cálculo do ponto.</p>
               </div>
             ) : (
+              <div style={{ overflowX: "auto" }}>
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={{ width: 60 }}>DIA</th>
-                    <th style={{ width: 120 }}>MÊS</th>
+                    <th style={{ width: 50 }}>DIA</th>
+                    <th style={{ width: 100 }}>MÊS</th>
                     <th>DESCRIÇÃO</th>
-                    <th style={{ width: 80, textAlign: "right" }}>AÇÕES</th>
+                    <th style={{ width: 70, textAlign: "right" }}>AÇÕES</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -770,6 +771,7 @@ export default function JornadaPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>

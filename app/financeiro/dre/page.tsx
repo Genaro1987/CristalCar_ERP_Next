@@ -213,7 +213,7 @@ export default function DrePage() {
 
               <div className="form-group" style={{ flex: "0 0 auto" }}>
                 <label>Visão</label>
-                <div style={{ display: "flex", gap: 4 }}>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                   {visaoOpcoes.map((op) => (
                     <button
                       key={op.valor}

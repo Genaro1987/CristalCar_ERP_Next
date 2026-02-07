@@ -310,6 +310,8 @@ export default function EstruturaDrePage() {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "space-between",
+                              flexWrap: "wrap",
+                              gap: 8,
                               padding: "8px 12px",
                               border: "1px solid #e5e7eb",
                               borderRadius: 8,
@@ -317,10 +319,11 @@ export default function EstruturaDrePage() {
                               fontSize: "0.9rem",
                             }}
                           >
-                            <span>{conta}</span>
+                            <span style={{ minWidth: 0, wordBreak: "break-word", flex: 1 }}>{conta}</span>
                             <button
                               type="button"
                               className="button button-secondary button-compact"
+                              style={{ flexShrink: 0 }}
                             >
                               Remover
                             </button>

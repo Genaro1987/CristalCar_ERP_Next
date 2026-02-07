@@ -179,10 +179,10 @@ export default function ObjetivosPage() {
               </button>
             </div>
 
-            <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap", marginTop: 16 }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap", marginTop: 16 }}>
               <div className="form-group" style={{ flex: "0 0 auto" }}>
-                <label>Base do Objetivo</label>
-                <div style={{ display: "flex", gap: 4 }}>
+                <label>Base</label>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                   <button
                     type="button"
                     className={tipoPlano === "PLANO_CONTAS" ? "button button-primary button-compact" : "button button-secondary button-compact"}
@@ -201,8 +201,8 @@ export default function ObjetivosPage() {
               </div>
 
               <div className="form-group" style={{ flex: "0 0 auto" }}>
-                <label>Período Referência (média)</label>
-                <div style={{ display: "flex", gap: 4 }}>
+                <label>Período (média)</label>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                   {periodosRef.map((p) => (
                     <button
                       key={p.valor}
@@ -216,8 +216,8 @@ export default function ObjetivosPage() {
                 </div>
               </div>
 
-              <div className="form-group" style={{ flex: "0 0 120px" }}>
-                <label htmlFor="obj-ano">Ano Objetivo</label>
+              <div className="form-group" style={{ flex: "0 0 100px" }}>
+                <label htmlFor="obj-ano">Ano</label>
                 <input
                   id="obj-ano"
                   type="number"
@@ -229,14 +229,14 @@ export default function ObjetivosPage() {
 
               <div className="form-group" style={{ flex: "0 0 auto" }}>
                 <label>% Global</label>
-                <div style={{ display: "flex", gap: 4 }}>
+                <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
                   {[-10, -5, 0, 5, 10, 15, 20].map((v) => (
                     <button
                       key={v}
                       type="button"
                       className="button button-secondary button-compact"
                       onClick={() => aplicarPercentualGlobal(v)}
-                      style={{ minWidth: 40 }}
+                      style={{ minWidth: 36 }}
                     >
                       {v > 0 ? `+${v}%` : `${v}%`}
                     </button>
@@ -273,14 +273,15 @@ export default function ObjetivosPage() {
                 Nenhuma conta encontrada. Cadastre {tipoPlano === "PLANO_CONTAS" ? "o plano de contas" : "centros de custo"} primeiro.
               </div>
             ) : (
-              <table className="data-table" style={{ tableLayout: "auto" }}>
+              <div style={{ overflowX: "auto" }}>
+              <table className="data-table" style={{ tableLayout: "auto", minWidth: 580 }}>
                 <thead>
                   <tr>
                     <th style={{ textAlign: "left" }}>Conta</th>
                     <th style={{ textAlign: "left" }}>Natureza</th>
-                    <th style={{ textAlign: "right" }}>Média Mensal</th>
-                    <th style={{ textAlign: "center", width: 120 }}>Crescimento %</th>
-                    <th style={{ textAlign: "right" }}>Objetivo Mensal</th>
+                    <th style={{ textAlign: "right" }}>Média</th>
+                    <th style={{ textAlign: "center", width: 100 }}>Cresc. %</th>
+                    <th style={{ textAlign: "right" }}>Objetivo</th>
                     <th style={{ textAlign: "right" }}>Variação</th>
                   </tr>
                 </thead>
@@ -332,6 +333,7 @@ export default function ObjetivosPage() {
                   </tr>
                 </tfoot>
               </table>
+              </div>
             )}
           </section>
         </main>
