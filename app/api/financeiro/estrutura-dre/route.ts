@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { obterEmpresaIdDaRequest, respostaEmpresaNaoSelecionada } from "@/app/api/_utils/empresa";
 import { db } from "@/db/client";
 
+// Auto-ensure formula/ref100 columns exist (idempotent)
+let _schemaReady = false;
+async function ensureSchema() {
+  if (_schemaReady) return;
+  try {
+    await db.execute("ALTER TABLE FIN_ESTRUTURA_DRE ADD COLUMN FIN_ESTRUTURA_DRE_FORMULA TEXT");
+  } catch { /* column already exists */ }
+  try {
+    await db.execute("ALTER TABLE FIN_ESTRUTURA_DRE ADD COLUMN FIN_ESTRUTURA_DRE_REFERENCIA_100 INTEGER NOT NULL DEFAULT 0");
+  } catch { /* column already exists */ }
+  _schemaReady = true;
+}
+
 interface EstruturaDreDB {
   FIN_ESTRUTURA_DRE_ID: number;
   FIN_ESTRUTURA_DRE_PAI_ID: number | null;
@@ -87,6 +100,7 @@ function converterParaHierarquia(registros: EstruturaDreDB[], contasMap: Map<num
 }
 
 export async function GET(request: NextRequest) {
+  await ensureSchema();
   const empresaId = obterEmpresaIdDaRequest(request);
   if (!empresaId) {
     return respostaEmpresaNaoSelecionada();
@@ -215,6 +229,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  await ensureSchema();
   const empresaId = obterEmpresaIdDaRequest(request);
   if (!empresaId) {
     return respostaEmpresaNaoSelecionada();
@@ -298,6 +313,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  await ensureSchema();
   const empresaId = obterEmpresaIdDaRequest(request);
   if (!empresaId) {
     return respostaEmpresaNaoSelecionada();
