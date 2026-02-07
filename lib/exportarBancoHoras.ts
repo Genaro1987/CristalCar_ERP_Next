@@ -66,7 +66,7 @@ export function exportarPDF(dados: DadosExportacao) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.setTextColor("#ffffff");
-  doc.text("EXTRATO DE BANCO DE HORAS", margin, yPos);
+  doc.text("REGISTRO DE PONTO", margin, yPos);
 
   // Nome da Empresa (Direita)
   doc.setFontSize(9);
@@ -245,23 +245,23 @@ export function exportarPDF(dados: DadosExportacao) {
   const tableStartX = (pageWidth - tableWidth) / 2;
 
   const cols = [
-    { name: "DATA", width: 14, align: "left" },
-    { name: "DIA", width: 10, align: "left" },
-    { name: "TIPO", width: 28, align: "left" },
-    { name: "TRAB", width: 18, align: "center" },
-    { name: "SALDO", width: 18, align: "center" },
-    { name: "CLASSE", width: 28, align: "left" },
-    { name: "OBSERVAÇÃO", width: 60, align: "left" }
+    { name: "DATA", width: 18, align: "center" },
+    { name: "DIA", width: 14, align: "center" },
+    { name: "TIPO", width: 30, align: "center" },
+    { name: "TRAB", width: 22, align: "center" },
+    { name: "SALDO", width: 22, align: "center" },
+    { name: "CLASSE", width: 38, align: "center" },
+    { name: "OBS", width: 44, align: "center" }
   ];
 
   const colX = [
     tableStartX,
-    tableStartX + 16,
-    tableStartX + 28,
-    tableStartX + 58,
-    tableStartX + 78,
-    tableStartX + 98,
-    tableStartX + 128
+    tableStartX + 18,
+    tableStartX + 32,
+    tableStartX + 62,
+    tableStartX + 84,
+    tableStartX + 106,
+    tableStartX + 144
   ];
 
   // Header Background
@@ -273,9 +273,8 @@ export function exportarPDF(dados: DadosExportacao) {
   doc.setTextColor("#ffffff");
 
   cols.forEach((col, i) => {
-    let x = colX[i];
-    if (col.align === "center") x += (col.width / 2) - 3;
-    doc.text(col.name, x, yPos + 4);
+    const x = colX[i] + col.width / 2;
+    doc.text(col.name, x, yPos + 4, { align: "center" });
   });
 
   yPos += 7; // Espaço após header
@@ -297,9 +296,8 @@ export function exportarPDF(dados: DadosExportacao) {
       doc.setTextColor("#ffffff");
       doc.setFont("helvetica", "bold");
       cols.forEach((col, i) => {
-        let x = colX[i];
-        if (col.align === "center") x += (col.width / 2) - 3;
-        doc.text(col.name, x, yPos + 4);
+        const x = colX[i] + col.width / 2;
+        doc.text(col.name, x, yPos + 4, { align: "center" });
       });
       yPos += 7;
       doc.setFont("helvetica", "normal");
@@ -323,39 +321,39 @@ export function exportarPDF(dados: DadosExportacao) {
     // Estilos condicionais
     doc.setTextColor(colors.text);
 
-    // Data/Dia
-    doc.text(dataF, colX[0], yPos + 2.5);
+    // Data/Dia - centered
+    doc.text(dataF, colX[0] + cols[0].width / 2, yPos + 2.5, { align: "center" });
     doc.setTextColor(colors.textLight);
-    doc.text(diaSemana, colX[1], yPos + 2.5);
+    doc.text(diaSemana, colX[1] + cols[1].width / 2, yPos + 2.5, { align: "center" });
 
-    // Tipo
+    // Tipo - centered
     doc.setTextColor(colors.text);
     if (dia.tipoDia === "FERIADO") doc.setTextColor(colors.warning);
     if (dia.tipoDia === "DOMINGO") doc.setTextColor(colors.danger);
-    doc.text(tipo.substr(0, 16), colX[2], yPos + 2.5);
+    doc.text(tipo.substr(0, 16), colX[2] + cols[2].width / 2, yPos + 2.5, { align: "center" });
 
-    // Trabalhado
+    // Trabalhado - centered
     doc.setTextColor(colors.text);
-    doc.text(trab, colX[3] + 8, yPos + 2.5, { align: "center" });
+    doc.text(trab, colX[3] + cols[3].width / 2, yPos + 2.5, { align: "center" });
 
-    // Saldo
+    // Saldo - centered
     if (dia.diferencaMin > 0) doc.setTextColor(colors.success);
     else if (dia.diferencaMin < 0) doc.setTextColor(colors.danger);
     else doc.setTextColor(colors.textLight);
-    doc.text(saldo, colX[4] + 8, yPos + 2.5, { align: "center" });
+    doc.text(saldo, colX[4] + cols[4].width / 2, yPos + 2.5, { align: "center" });
 
-    // Classe
+    // Classe - centered
     doc.setTextColor(colors.text);
-    doc.text(classif.substr(0, 20), colX[5], yPos + 2.5);
+    doc.text(classif.substr(0, 20), colX[5] + cols[5].width / 2, yPos + 2.5, { align: "center" });
 
-    // Obs
+    // Obs - centered
     if (dia.observacao === "FERIAS") {
       doc.setTextColor(colors.warning);
-      doc.text("FÉRIAS", colX[6], yPos + 2.5);
+      doc.text("FERIAS", colX[6] + cols[6].width / 2, yPos + 2.5, { align: "center" });
     } else if (dia.observacao) {
       doc.setTextColor(colors.textLight);
-      const obs = dia.observacao.length > 50 ? dia.observacao.substring(0, 50) + "..." : dia.observacao;
-      doc.text(obs, colX[6], yPos + 2.5);
+      const obs = dia.observacao.length > 35 ? dia.observacao.substring(0, 35) + "..." : dia.observacao;
+      doc.text(obs, colX[6] + cols[6].width / 2, yPos + 2.5, { align: "center" });
     }
 
     yPos += rowHeight;
@@ -389,7 +387,7 @@ export function exportarPDF(dados: DadosExportacao) {
   // Disclaimer Legal
   doc.setFontSize(5);
   doc.setTextColor("#cbd5e1");
-  doc.text("Este documento é um extrato conferido de banco de horas, sujeito às normas da CLT e acordos vigentes.", pageWidth / 2, pageHeight - 8, { align: "center" });
+  doc.text("Este documento é um registro de ponto conferido, sujeito às normas da CLT e acordos vigentes.", pageWidth / 2, pageHeight - 8, { align: "center" });
 
   // Numeração de Páginas
   const totalPages = doc.getNumberOfPages();
