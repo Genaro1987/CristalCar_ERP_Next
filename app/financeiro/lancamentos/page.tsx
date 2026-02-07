@@ -31,7 +31,7 @@ export default function LancamentosPage() {
   const caminhoRota = "/financeiro/lancamentos";
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "FIN_LANCAMENTOS";
-  const nomeTela = tela?.NOME_TELA ?? "Lançamentos (Caixa)";
+  const nomeTela = tela?.NOME_TELA ?? "LANCAMENTOS (CAIXA)";
   const moduloTela = tela?.MODULO ?? "FINANCEIRO";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
@@ -161,12 +161,6 @@ export default function LancamentosPage() {
     []
   );
 
-  const resumo = useMemo(() => {
-    const entradas = dadosFiltrados.filter((i) => i.tipo === "Entrada").reduce((s, i) => s + Math.abs(i.valor), 0);
-    const saidas = dadosFiltrados.filter((i) => i.tipo === "Saída").reduce((s, i) => s + Math.abs(i.valor), 0);
-    return { entradas, saidas, saldo: entradas - saidas, total: dadosFiltrados.length };
-  }, [dadosFiltrados]);
-
   // Salvar
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,34 +220,6 @@ export default function LancamentosPage() {
           )}
 
           <div className="departamentos-page">
-            {/* Resumo cards */}
-            <section className="panel">
-              <div className="section-header">
-                <div>
-                  <h2>Resumo operacional</h2>
-                  <p>Valores atualizados conforme empresa ativa e filtros aplicados.</p>
-                </div>
-                <span className="badge-count">{resumo.total} lançamentos</span>
-              </div>
-              <div className="summary-cards">
-                <div className="summary-card">
-                  <p className="summary-card-label">Entradas</p>
-                  <p className="summary-card-value positive">{formatadorMoeda.format(resumo.entradas)}</p>
-                </div>
-                <div className="summary-card">
-                  <p className="summary-card-label">Saídas</p>
-                  <p className="summary-card-value negative">{formatadorMoeda.format(resumo.saidas)}</p>
-                </div>
-                <div className="summary-card">
-                  <p className="summary-card-label">Saldo</p>
-                  <p className={`summary-card-value ${resumo.saldo >= 0 ? "positive" : "negative"}`}>
-                    {formatadorMoeda.format(resumo.saldo)}
-                  </p>
-                  <p className="summary-card-hint">Entradas - Saídas</p>
-                </div>
-              </div>
-            </section>
-
             {/* 2-column: form + table */}
             <div className="split-view">
               {/* LEFT: Form */}
@@ -434,48 +400,50 @@ export default function LancamentosPage() {
                     <p>Ajuste o período ou adicione um novo lançamento.</p>
                   </div>
                 ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Data</th>
-                          <th>Histórico</th>
-                          <th>Conta</th>
-                          <th>Tipo</th>
-                          <th style={{ textAlign: "right" }}>Valor</th>
-                          <th style={{ textAlign: "center" }}>Status</th>
-                          <th style={{ textAlign: "center" }}>Ações</th>
+                  <table className="data-table mobile-cards">
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Histórico</th>
+                        <th>Conta</th>
+                        <th>Tipo</th>
+                        <th style={{ textAlign: "right" }}>Valor</th>
+                        <th style={{ textAlign: "center" }}>Status</th>
+                        <th style={{ textAlign: "center" }}>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dadosFiltrados.map((item) => (
+                        <tr key={item.id} onClick={() => preencherForm(item)} style={{ cursor: "pointer" }}>
+                          <td data-label="Data">{item.data}</td>
+                          <td data-label="Histórico">{item.historico}</td>
+                          <td data-label="Conta">{item.conta}</td>
+                          <td data-label="Tipo">
+                            <span className={item.tipo === "Entrada" ? "badge badge-success" : "badge badge-danger"}>
+                              {item.tipo}
+                            </span>
+                          </td>
+                          <td data-label="Valor" style={{ fontWeight: 600 }}>
+                            {formatadorMoeda.format(Math.abs(item.valor))}
+                          </td>
+                          <td data-label="Status">
+                            <span className={item.status === "confirmado" ? "badge badge-success" : "badge badge-danger"}>
+                              {item.status === "confirmado" ? "Confirmado" : "Pendente"}
+                            </span>
+                          </td>
+                          <td data-label="">
+                            <button
+                              type="button"
+                              className="button button-secondary button-compact"
+                              onClick={(e) => { e.stopPropagation(); preencherForm(item); }}
+                            >
+                              Editar
+                            </button>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {dadosFiltrados.map((item) => (
-                          <tr key={item.id}>
-                            <td>{item.data}</td>
-                            <td>{item.historico}</td>
-                            <td>{item.conta}</td>
-                            <td>{item.tipo}</td>
-                            <td style={{ textAlign: "right", fontWeight: 600 }}>
-                              {formatadorMoeda.format(Math.abs(item.valor))}
-                            </td>
-                            <td style={{ textAlign: "center" }}>
-                              <span className={item.status === "confirmado" ? "badge badge-success" : "badge badge-danger"}>
-                                {item.status === "confirmado" ? "Confirmado" : "Pendente"}
-                              </span>
-                            </td>
-                            <td style={{ textAlign: "center" }}>
-                              <button
-                                type="button"
-                                className="button button-secondary button-compact"
-                                onClick={() => preencherForm(item)}
-                              >
-                                Editar
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 )}
               </section>
             </div>

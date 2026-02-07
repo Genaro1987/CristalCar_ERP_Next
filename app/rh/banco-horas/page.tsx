@@ -72,6 +72,7 @@ export default function BancoHorasPage() {
 
   const compAtual = useMemo(() => competenciaAtual(), []);
   const [idFuncionario, setIdFuncionario] = useState("");
+  const [anosDisponiveis, setAnosDisponiveis] = useState<number[]>([compAtual.ano]);
   const [ano, setAno] = useState(compAtual.ano);
   const [mes, setMes] = useState("");
   const [periodosDisponiveis, setPeriodosDisponiveis] = useState<PeriodoOption[]>([]);
@@ -105,6 +106,16 @@ export default function BancoHorasPage() {
       .then((r) => r.json())
       .then((json) => setFuncionarios(json?.data ?? []))
       .catch(() => setFuncionarios([]));
+
+    fetch("/api/rh/anos-disponiveis", { headers: headersPadrao })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data?.length > 0) {
+          setAnosDisponiveis(json.data);
+          if (!json.data.includes(ano)) setAno(json.data[0]);
+        }
+      })
+      .catch(() => {});
   }, [empresaId, headersPadrao]);
 
   useEffect(() => {
@@ -373,7 +384,7 @@ export default function BancoHorasPage() {
       <div className="page-container">
         <HeaderBar
           codigoTela="REL001_RH_BANCO_HORAS"
-          nomeTela="BANCO DE HORAS"
+          nomeTela="FECHAMENTO PONTO"
           caminhoRota="/rh/banco-horas"
           modulo="RH"
         />
@@ -409,13 +420,16 @@ export default function BancoHorasPage() {
 
                   <div className="form-group">
                     <label htmlFor="ano">ANO</label>
-                    <input
+                    <select
                       id="ano"
-                      type="number"
                       value={ano}
                       onChange={(e) => setAno(Number(e.target.value))}
                       className="form-input"
-                    />
+                    >
+                      {anosDisponiveis.map((a) => (
+                        <option key={a} value={a}>{a}</option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="form-group">
@@ -560,7 +574,7 @@ export default function BancoHorasPage() {
                   </header>
 
                   <div style={{ display: "grid", gap: "12px", borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                    <div className="banco-horas-summary-grid">
                       <div className="form-group">
                         <label>SALDO ANTERIOR</label>
                         <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>
@@ -593,7 +607,7 @@ export default function BancoHorasPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                    <div className="banco-horas-summary-grid">
                       <div className="form-group">
                         <label>SALDO ANTERIOR (VALOR)</label>
                         <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>

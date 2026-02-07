@@ -94,6 +94,7 @@ export default function BancoHorasConsultaPage() {
   const [notification, setNotification] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
   const compAtual = useMemo(() => competenciaAtual(), []);
   const [idFuncionario, setIdFuncionario] = useState("");
+  const [anosDisponiveis, setAnosDisponiveis] = useState<number[]>([compAtual.ano]);
   const [ano, setAno] = useState(compAtual.ano);
   const [mes, setMes] = useState(compAtual.mes.toString().padStart(2, "0"));
   const [loading, setLoading] = useState(false);
@@ -126,6 +127,16 @@ export default function BancoHorasConsultaPage() {
       .then((r) => r.json())
       .then((json) => setFuncionarios(json?.data ?? []))
       .catch(() => setFuncionarios([]));
+
+    fetch("/api/rh/anos-disponiveis", { headers: headersPadrao })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data?.length > 0) {
+          setAnosDisponiveis(json.data);
+          if (!json.data.includes(ano)) setAno(json.data[0]);
+        }
+      })
+      .catch(() => {});
   }, [empresaId, headersPadrao]);
 
   useEffect(() => {
@@ -328,7 +339,7 @@ export default function BancoHorasConsultaPage() {
       <div className="page-container">
         <HeaderBar
           codigoTela="CONS001_RH_BANCO_HORAS"
-          nomeTela="CONSULTA DE BANCO DE HORAS"
+          nomeTela="CONSULTA PONTO"
           caminhoRota="/rh/banco-horas/consulta"
           modulo="RH"
         />
@@ -363,13 +374,16 @@ export default function BancoHorasConsultaPage() {
 
                 <div className="form-group" style={{ flex: "0 0 120px" }}>
                   <label htmlFor="ano">Ano</label>
-                  <input
+                  <select
                     id="ano"
-                    type="number"
                     value={ano}
                     onChange={(e) => setAno(Number(e.target.value))}
                     className="form-input"
-                  />
+                  >
+                    {anosDisponiveis.map((a) => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="form-group" style={{ flex: "1", minWidth: "150px" }}>
@@ -389,7 +403,7 @@ export default function BancoHorasConsultaPage() {
                 </select>
               </div>
 
-                <div style={{ flex: "0 0 auto", display: "flex", gap: "8px" }}>
+                <div style={{ flex: "0 0 auto", display: "flex", gap: "8px", flexWrap: "wrap" }}>
                   <button
                     onClick={pesquisar}
                     disabled={!pesquisaHabilitada}
@@ -489,8 +503,7 @@ export default function BancoHorasConsultaPage() {
                 </div>
               )}
 
-              <div style={{ overflowX: "auto" }}>
-                <table className="data-table banco-horas-detalhamento-table" style={{ tableLayout: "auto" }}>
+                <table className="data-table mobile-cards banco-horas-detalhamento-table">
                   <thead>
                     <tr>
                       <th>Dia</th>
@@ -513,20 +526,20 @@ export default function BancoHorasConsultaPage() {
                         : {};
                       return (
                         <tr key={dia.data} style={rowStyle}>
-                          <td>
+                          <td data-label="Dia">
                             <div className="dia-cell">
                               <span className="dia-data">{dia.data}</span>
                               <span className="dia-semana">{dia.diaSemana}</span>
                             </div>
                           </td>
-                          <td>
+                          <td data-label="Tipo">
                             {isFeriado ? (
                               <span className="badge" style={{ backgroundColor: "#fbbf24", color: "#78350f" }}>FERIADO</span>
                             ) : (
                               formatarTipoDiaParaExibicao(dia.tipoDia)
                             )}
                           </td>
-                          <td>
+                          <td data-label="Ocorrência">
                             {isFerias ? (
                               <span className="badge" style={{ backgroundColor: "#93c5fd", color: "#1e3a5f" }}>Férias</span>
                             ) : obs ? (
@@ -535,21 +548,32 @@ export default function BancoHorasConsultaPage() {
                               "—"
                             )}
                           </td>
-                          <td>{minutosParaHora(dia.trabalhadoMin)}</td>
-                          <td style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
+                          <td data-label="Trabalhado">{minutosParaHora(dia.trabalhadoMin)}</td>
+                          <td data-label="Diferença" style={{ color: dia.diferencaMin > 0 ? "#059669" : dia.diferencaMin < 0 ? "#dc2626" : "inherit" }}>
                             {minutosParaHora(dia.diferencaMin)}
                           </td>
-                          <td>
+                          <td data-label="Classif.">
                             <span
                               className={
-                                mapearClassificacaoParaExibicao(dia.classificacao) === "Hora Extra"
-                                  ? "badge badge-success"
-                                  : mapearClassificacaoParaExibicao(dia.classificacao) === "Devedor"
-                                  ? "badge badge-danger"
-                                  : "badge"
+                                (() => {
+                                  const c = mapearClassificacaoParaExibicao(dia.classificacao, dia.observacao, dia.tipoDia);
+                                  if (c === "Hora Extra") return "badge badge-success";
+                                  if (c === "Devedor") return "badge badge-danger";
+                                  if (c === "Férias") return "badge";
+                                  if (c === "Feriado") return "badge";
+                                  return "badge";
+                                })()
+                              }
+                              style={
+                                (() => {
+                                  const c = mapearClassificacaoParaExibicao(dia.classificacao, dia.observacao, dia.tipoDia);
+                                  if (c === "Férias") return { backgroundColor: "#dbeafe", color: "#1e40af" };
+                                  if (c === "Feriado") return { backgroundColor: "#fef3c7", color: "#92400e" };
+                                  return undefined;
+                                })()
                               }
                             >
-                              {mapearClassificacaoParaExibicao(dia.classificacao)}
+                              {mapearClassificacaoParaExibicao(dia.classificacao, dia.observacao, dia.tipoDia)}
                             </span>
                           </td>
                         </tr>
@@ -557,7 +581,6 @@ export default function BancoHorasConsultaPage() {
                     })}
                   </tbody>
                 </table>
-              </div>
             </>
           )}
           </div>

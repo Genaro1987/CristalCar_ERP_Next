@@ -23,24 +23,34 @@ function formatMoney(val: number): string {
   return val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+const MESES_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
 export default function ObjetivosPage() {
   useRequerEmpresaSelecionada();
   const { empresa } = useEmpresaSelecionada();
   const caminhoRota = "/financeiro/objetivos";
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "FIN_OBJETIVOS";
-  const nomeTela = tela?.NOME_TELA ?? "Objetivos Financeiros";
-  const moduloTela = tela?.MODULO ?? "FINANCEIRO";
+  const nomeTela = tela?.NOME_TELA ?? "OBJETIVOS FINANCEIROS";
+  const moduloTela = tela?.MODULO ?? "OBJETIVOS";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
+  const mesAtual = new Date().getMonth() + 1;
   const [tipoPlano, setTipoPlano] = useState<TipoPlano>("PLANO_CONTAS");
-  const [mesesRef, setMesesRef] = useState(3);
+  const [mesInicio, setMesInicio] = useState(Math.max(1, mesAtual - 2));
+  const [mesFim, setMesFim] = useState(mesAtual);
   const [anoObjetivo, setAnoObjetivo] = useState(new Date().getFullYear());
   const [contas, setContas] = useState<ContaComMedia[]>([]);
   const [percentuaisEditados, setPercentuaisEditados] = useState<Record<number, number>>({});
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [notification, setNotification] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
+  const [pctGlobal, setPctGlobal] = useState("");
+
+  const mesesRef = useMemo(() => {
+    if (mesFim >= mesInicio) return mesFim - mesInicio + 1;
+    return 12 - mesInicio + 1 + mesFim;
+  }, [mesInicio, mesFim]);
 
   const headersPadrao = useMemo<HeadersInit>(() => {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -54,7 +64,8 @@ export default function ObjetivosPage() {
       setCarregando(true);
       const params = new URLSearchParams({
         tipo: tipoPlano,
-        meses: String(mesesRef),
+        mesInicio: String(mesInicio),
+        mesFim: String(mesFim),
         ano: String(anoObjetivo),
       });
 
@@ -76,7 +87,7 @@ export default function ObjetivosPage() {
     } finally {
       setCarregando(false);
     }
-  }, [empresa?.id, headersPadrao, tipoPlano, mesesRef, anoObjetivo]);
+  }, [empresa?.id, headersPadrao, tipoPlano, mesInicio, mesFim, anoObjetivo]);
 
   useEffect(() => {
     carregarContas();
@@ -135,20 +146,14 @@ export default function ObjetivosPage() {
     }
   };
 
-  const aplicarPercentualGlobal = (valor: number) => {
+  const aplicarPercentualGlobal = () => {
+    const valor = Number(pctGlobal) || 0;
     const editados: Record<number, number> = {};
     for (const c of contas) {
       editados[c.contaId] = valor;
     }
     setPercentuaisEditados(editados);
   };
-
-  const periodosRef = [
-    { valor: 1, label: "1 mês" },
-    { valor: 3, label: "3 meses" },
-    { valor: 6, label: "6 meses" },
-    { valor: 12, label: "12 meses" },
-  ];
 
   return (
     <LayoutShell>
@@ -164,11 +169,10 @@ export default function ObjetivosPage() {
           {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
           <section className="panel">
-            <div className="form-section-header">
-              <div>
-                <h2>Objetivos Financeiros</h2>
-                <p>Defina metas baseadas na média do período com percentual de crescimento ou redução por conta</p>
-              </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+              <p style={{ color: "#6b7280", fontSize: "0.85rem", margin: 0 }}>
+                Defina metas baseadas na media do periodo com percentual de crescimento ou reducao por conta
+              </p>
               <button
                 type="button"
                 className="button button-primary"
@@ -179,9 +183,9 @@ export default function ObjetivosPage() {
               </button>
             </div>
 
-            <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap", marginTop: 16 }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap", marginTop: 16, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
               <div className="form-group" style={{ flex: "0 0 auto" }}>
-                <label>Base do Objetivo</label>
+                <label>Base</label>
                 <div style={{ display: "flex", gap: 4 }}>
                   <button
                     type="button"
@@ -200,56 +204,86 @@ export default function ObjetivosPage() {
                 </div>
               </div>
 
-              <div className="form-group" style={{ flex: "0 0 auto" }}>
-                <label>Período Referência (média)</label>
-                <div style={{ display: "flex", gap: 4 }}>
-                  {periodosRef.map((p) => (
-                    <button
-                      key={p.valor}
-                      type="button"
-                      className={mesesRef === p.valor ? "button button-primary button-compact" : "button button-secondary button-compact"}
-                      onClick={() => setMesesRef(p.valor)}
-                    >
-                      {p.label}
-                    </button>
+              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 80 }}>
+                <label htmlFor="obj-mes-inicio">Mes inicio</label>
+                <select
+                  id="obj-mes-inicio"
+                  className="form-input"
+                  value={mesInicio}
+                  onChange={(e) => setMesInicio(Number(e.target.value))}
+                  style={{ padding: "6px 8px" }}
+                >
+                  {MESES_LABELS.map((m, i) => (
+                    <option key={i + 1} value={i + 1}>{m}</option>
                   ))}
-                </div>
+                </select>
               </div>
 
-              <div className="form-group" style={{ flex: "0 0 120px" }}>
-                <label htmlFor="obj-ano">Ano Objetivo</label>
+              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 80 }}>
+                <label htmlFor="obj-mes-fim">Mes fim</label>
+                <select
+                  id="obj-mes-fim"
+                  className="form-input"
+                  value={mesFim}
+                  onChange={(e) => setMesFim(Number(e.target.value))}
+                  style={{ padding: "6px 8px" }}
+                >
+                  {MESES_LABELS.map((m, i) => (
+                    <option key={i + 1} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 80 }}>
+                <label htmlFor="obj-ano">Ano</label>
                 <input
                   id="obj-ano"
                   type="number"
                   className="form-input"
                   value={anoObjetivo}
                   onChange={(e) => setAnoObjetivo(Number(e.target.value))}
+                  style={{ width: 80, padding: "6px 8px" }}
                 />
               </div>
 
-              <div className="form-group" style={{ flex: "0 0 auto" }}>
-                <label>% Global</label>
-                <div style={{ display: "flex", gap: 4 }}>
-                  {[-10, -5, 0, 5, 10, 15, 20].map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      className="button button-secondary button-compact"
-                      onClick={() => aplicarPercentualGlobal(v)}
-                      style={{ minWidth: 40 }}
-                    >
-                      {v > 0 ? `+${v}%` : `${v}%`}
-                    </button>
-                  ))}
+              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 80 }}>
+                <label htmlFor="obj-pct-global">% Global</label>
+                <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                  <input
+                    id="obj-pct-global"
+                    type="number"
+                    className="form-input"
+                    style={{ width: 65, textAlign: "center", padding: "6px 8px" }}
+                    placeholder="0"
+                    value={pctGlobal}
+                    onChange={(e) => setPctGlobal(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        aplicarPercentualGlobal();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="button button-secondary button-compact"
+                    onClick={aplicarPercentualGlobal}
+                  >
+                    Aplicar
+                  </button>
                 </div>
               </div>
+
+              <span style={{ fontSize: "0.75rem", color: "#9ca3af", paddingBottom: 8 }}>
+                {mesesRef} {mesesRef === 1 ? "mes" : "meses"}
+              </span>
             </div>
           </section>
 
           {/* Summary */}
-          <section className="summary-cards" style={{ marginTop: 16 }}>
+          <section className="summary-cards" style={{ marginTop: 20 }}>
             <div className="summary-card">
-              <span className="summary-label">Média Mensal (período)</span>
+              <span className="summary-label">Media Mensal (periodo)</span>
               <strong className="summary-value">{formatMoney(totalMedia)}</strong>
             </div>
             <div className="summary-card">
@@ -257,7 +291,7 @@ export default function ObjetivosPage() {
               <strong className="summary-value" style={{ color: "#059669" }}>{formatMoney(totalObjetivo)}</strong>
             </div>
             <div className="summary-card">
-              <span className="summary-label">Diferença</span>
+              <span className="summary-label">Diferenca</span>
               <strong className="summary-value" style={{ color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}>
                 {formatMoney(totalObjetivo - totalMedia)}
               </strong>
@@ -265,7 +299,7 @@ export default function ObjetivosPage() {
           </section>
 
           {/* Table */}
-          <section className="panel" style={{ marginTop: 16 }}>
+          <section className="panel" style={{ marginTop: 20 }}>
             {carregando ? (
               <div className="empty-state">Carregando contas...</div>
             ) : contasComObjetivo.length === 0 ? (
@@ -273,15 +307,15 @@ export default function ObjetivosPage() {
                 Nenhuma conta encontrada. Cadastre {tipoPlano === "PLANO_CONTAS" ? "o plano de contas" : "centros de custo"} primeiro.
               </div>
             ) : (
-              <table className="data-table" style={{ tableLayout: "auto" }}>
+              <table className="data-table mobile-cards">
                 <thead>
                   <tr>
                     <th style={{ textAlign: "left" }}>Conta</th>
                     <th style={{ textAlign: "left" }}>Natureza</th>
-                    <th style={{ textAlign: "right" }}>Média Mensal</th>
-                    <th style={{ textAlign: "center", width: 120 }}>Crescimento %</th>
-                    <th style={{ textAlign: "right" }}>Objetivo Mensal</th>
-                    <th style={{ textAlign: "right" }}>Variação</th>
+                    <th style={{ textAlign: "right" }}>Media</th>
+                    <th style={{ textAlign: "center", width: 100 }}>Cresc. %</th>
+                    <th style={{ textAlign: "right" }}>Objetivo</th>
+                    <th style={{ textAlign: "right" }}>Variacao</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -289,8 +323,8 @@ export default function ObjetivosPage() {
                     const variacao = conta.objetivoCalculado - conta.media;
                     return (
                       <tr key={conta.contaId}>
-                        <td>{conta.nome}</td>
-                        <td>
+                        <td data-label="Conta" style={{ fontWeight: 600 }}>{conta.nome}</td>
+                        <td data-label="Natureza">
                           <span
                             className="badge"
                             style={{
@@ -301,19 +335,19 @@ export default function ObjetivosPage() {
                             {conta.natureza}
                           </span>
                         </td>
-                        <td style={{ textAlign: "right" }}>{formatMoney(conta.media)}</td>
-                        <td style={{ textAlign: "center" }}>
+                        <td data-label="Media">{formatMoney(conta.media)}</td>
+                        <td data-label="Cresc. %">
                           <input
                             type="number"
                             className="form-input"
-                            style={{ width: 80, textAlign: "center", padding: "4px 8px", margin: "0 auto", display: "block" }}
+                            style={{ width: 70, textAlign: "center", padding: "4px 8px" }}
                             value={conta.percentualEditado}
                             onChange={(e) => handlePercentualChange(conta.contaId, e.target.value)}
                             step={1}
                           />
                         </td>
-                        <td style={{ textAlign: "right", fontWeight: 600 }}>{formatMoney(conta.objetivoCalculado)}</td>
-                        <td style={{ textAlign: "right", color: variacao >= 0 ? "#059669" : "#dc2626" }}>
+                        <td data-label="Objetivo" style={{ fontWeight: 600 }}>{formatMoney(conta.objetivoCalculado)}</td>
+                        <td data-label="Variacao" style={{ color: variacao >= 0 ? "#059669" : "#dc2626" }}>
                           {variacao >= 0 ? "+" : ""}{formatMoney(variacao)}
                         </td>
                       </tr>
@@ -322,11 +356,11 @@ export default function ObjetivosPage() {
                 </tbody>
                 <tfoot>
                   <tr style={{ fontWeight: 700, borderTop: "2px solid #e5e7eb", backgroundColor: "#f3f4f6" }}>
-                    <td colSpan={2}>TOTAL</td>
-                    <td style={{ textAlign: "right" }}>{formatMoney(totalMedia)}</td>
-                    <td></td>
-                    <td style={{ textAlign: "right" }}>{formatMoney(totalObjetivo)}</td>
-                    <td style={{ textAlign: "right", color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}>
+                    <td data-label="" colSpan={2}>TOTAL</td>
+                    <td data-label="Media">{formatMoney(totalMedia)}</td>
+                    <td data-label=""></td>
+                    <td data-label="Objetivo">{formatMoney(totalObjetivo)}</td>
+                    <td data-label="Variacao" style={{ color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}>
                       {totalObjetivo - totalMedia >= 0 ? "+" : ""}{formatMoney(totalObjetivo - totalMedia)}
                     </td>
                   </tr>

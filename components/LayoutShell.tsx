@@ -1,9 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { HelpPanel, type HelpData } from "./HelpPanel";
+import { MobileHeader } from "./MobileHeader";
+import { MobileBottomNav } from "./MobileBottomNav";
 
 interface LayoutShellProps {
   children: ReactNode;
@@ -27,10 +29,26 @@ export function useHelpContext() {
   return ctx;
 }
 
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [breakpoint]);
+
+  return isMobile;
+}
+
 export default function LayoutShell({ children }: LayoutShellProps) {
   const [ajudaAberta, setAjudaAberta] = useState(false);
   const [ajudaCarregando, setAjudaCarregando] = useState(false);
   const [dadosAjuda, setDadosAjuda] = useState<HelpData | null>(null);
+  const [sidebarAberta, setSidebarAberta] = useState(false);
+  const isMobile = useIsMobile();
 
   const abrirAjuda = useMemo(
     () =>
@@ -59,6 +77,25 @@ export default function LayoutShell({ children }: LayoutShellProps) {
     setAjudaAberta(false);
   };
 
+  const toggleSidebar = useCallback(() => {
+    setSidebarAberta((prev) => !prev);
+  }, []);
+
+  const fecharSidebar = useCallback(() => {
+    setSidebarAberta(false);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile && sidebarAberta) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobile, sidebarAberta]);
+
   return (
     <HelpContext.Provider
       value={{
@@ -70,7 +107,18 @@ export default function LayoutShell({ children }: LayoutShellProps) {
       }}
     >
       <div className="app-shell">
-        <Sidebar />
+        {isMobile && sidebarAberta && (
+          <div className="mobile-sidebar-backdrop" onClick={fecharSidebar} />
+        )}
+        <Sidebar
+          mobileAberta={isMobile && sidebarAberta}
+          onNavegar={isMobile ? fecharSidebar : undefined}
+        />
+
+        {isMobile && (
+          <MobileHeader onToggleSidebar={toggleSidebar} sidebarAberta={sidebarAberta} />
+        )}
+
         <div className="layout-body">
           <div className={ajudaAberta ? "layout-main layout-with-help" : "layout-main"}>
             <main className="page-content">{children}</main>
@@ -83,6 +131,8 @@ export default function LayoutShell({ children }: LayoutShellProps) {
             )}
           </div>
         </div>
+
+        {isMobile && <MobileBottomNav />}
       </div>
     </HelpContext.Provider>
   );

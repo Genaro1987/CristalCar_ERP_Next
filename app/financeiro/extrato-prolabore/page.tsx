@@ -63,7 +63,7 @@ export default function ExtratoProlaborePage() {
   const caminhoRota = "/financeiro/extrato-prolabore";
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "FIN_PROLABORE";
-  const nomeTela = tela?.NOME_TELA ?? "Extrato Pró-labore";
+  const nomeTela = tela?.NOME_TELA ?? "EXTRATO PRO-LABORE";
   const moduloTela = tela?.MODULO ?? "FINANCEIRO";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
@@ -222,11 +222,10 @@ export default function ExtratoProlaborePage() {
             <section className="panel">
               <div className="section-header">
                 <div>
-                  <h2>Extrato Pró-labore</h2>
-                  <p>
-                    Crédito: {cfgPercentual}% das receitas (semana anterior).
-                    Débito: despesas pró-labore (semana atual).
-                    Período sábado a sexta.
+                  <p style={{ margin: 0, color: "#6b7280", fontSize: "0.85rem" }}>
+                    Credito: {cfgPercentual}% das receitas (semana anterior).
+                    Debito: despesas pro-labore (semana atual).
+                    Periodo sabado a sexta.
                   </p>
                 </div>
                 <div className="button-row">

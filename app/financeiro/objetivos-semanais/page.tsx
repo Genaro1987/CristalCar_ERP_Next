@@ -30,8 +30,8 @@ export default function ObjetivosSemanaisPage() {
   const caminhoRota = "/financeiro/objetivos-semanais";
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "FIN_OBJETIVOS_SEMANAIS";
-  const nomeTela = tela?.NOME_TELA ?? "Objetivos Semanais";
-  const moduloTela = tela?.MODULO ?? "FINANCEIRO";
+  const nomeTela = tela?.NOME_TELA ?? "OBJETIVOS SEMANAIS";
+  const moduloTela = tela?.MODULO ?? "OBJETIVOS";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const [filtroObjetivo, setFiltroObjetivo] = useState("");
@@ -49,32 +49,37 @@ export default function ObjetivosSemanaisPage() {
     const carregarDados = async () => {
       try {
         setCarregando(true);
-        const [objetivosResposta, semanasResposta] = await Promise.all([
-          fetch("/api/financeiro/objetivos", {
-            headers: { "x-empresa-id": String(empresa.id) },
-          }),
-          fetch("/api/financeiro/objetivos-semanais", {
-            headers: { "x-empresa-id": String(empresa.id) },
-          }),
-        ]);
+        // First load objectives (parent records)
+        const objetivosResposta = await fetch("/api/financeiro/objetivos", {
+          headers: { "x-empresa-id": String(empresa.id) },
+        });
 
+        let objetivosCadastrados: ObjetivoOption[] = [];
         if (objetivosResposta.ok) {
           const objetivosJson = await objetivosResposta.json();
           if (objetivosJson.success) {
-            setObjetivos(
-              (objetivosJson.data ?? []).map((item: any) => ({
-                id: String(item.id),
-                titulo: item.titulo,
-              }))
-            );
+            objetivosCadastrados = (objetivosJson.data ?? []).map((item: any) => ({
+              id: String(item.id),
+              titulo: item.titulo,
+            }));
+            setObjetivos(objetivosCadastrados);
           }
         }
 
-        if (semanasResposta.ok) {
-          const semanasJson = await semanasResposta.json();
-          if (semanasJson.success) {
-            setItens(semanasJson.data ?? []);
+        // Only load weekly objectives if there are registered objectives
+        if (objetivosCadastrados.length > 0) {
+          const semanasResposta = await fetch("/api/financeiro/objetivos-semanais", {
+            headers: { "x-empresa-id": String(empresa.id) },
+          });
+
+          if (semanasResposta.ok) {
+            const semanasJson = await semanasResposta.json();
+            if (semanasJson.success) {
+              setItens(semanasJson.data ?? []);
+            }
           }
+        } else {
+          setItens([]);
         }
       } catch (erro) {
         console.error("Erro ao carregar objetivos semanais:", erro);
@@ -147,7 +152,7 @@ export default function ObjetivosSemanaisPage() {
   };
 
   const statusLabel = (s: string) => {
-    if (s === "concluido") return "Concluído";
+    if (s === "concluido") return "Concluido";
     if (s === "andamento") return "Em andamento";
     return "Pendente";
   };
@@ -170,10 +175,16 @@ export default function ObjetivosSemanaisPage() {
 
         <main className="page-content-card">
           <section className="panel">
-            <div className="form-section-header">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
               <div>
-                <h2>Roadmap Semanal</h2>
-                <p>Planeje entregas semanais alinhadas ao plano financeiro.</p>
+                <p style={{ color: "#6b7280", fontSize: "0.85rem", margin: 0 }}>
+                  Planeje entregas semanais alinhadas ao plano financeiro.
+                  {!podeCriar && !carregando && (
+                    <span style={{ color: "#dc2626", marginLeft: 8 }}>
+                      Cadastre um objetivo financeiro primeiro.
+                    </span>
+                  )}
+                </p>
               </div>
               <button
                 type="button"
@@ -185,7 +196,7 @@ export default function ObjetivosSemanaisPage() {
               </button>
             </div>
 
-            <div style={{ marginTop: 12 }}>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
               <div className="form-group" style={{ maxWidth: 300 }}>
                 <label htmlFor="objetivo-filtro">Buscar objetivo</label>
                 <input
@@ -203,20 +214,24 @@ export default function ObjetivosSemanaisPage() {
           <section className="panel" style={{ marginTop: 16 }}>
             {carregando ? (
               <div className="empty-state">Carregando semanas...</div>
+            ) : !podeCriar ? (
+              <div className="empty-state">
+                Nenhum objetivo financeiro cadastrado. Acesse &quot;Objetivos Financeiros&quot; para cadastrar objetivos antes de planejar semanas.
+              </div>
             ) : itensFiltrados.length === 0 ? (
               <div className="empty-state">
-                {podeCriar ? "Nenhuma semana encontrada." : "Cadastre um objetivo financeiro antes de planejar semanas."}
+                Nenhuma semana encontrada. Clique em &quot;Nova semana&quot; para criar.
               </div>
             ) : (
-              <table className="data-table" style={{ tableLayout: "auto" }}>
+              <table className="data-table mobile-cards">
                 <thead>
                   <tr>
                     <th>Semana</th>
                     <th>Objetivo</th>
-                    <th>Responsável</th>
-                    <th style={{ textAlign: "right" }}>Meta Semanal</th>
+                    <th>Responsavel</th>
+                    <th style={{ textAlign: "right" }}>Meta</th>
                     <th>Status</th>
-                    <th>Ações</th>
+                    <th>Acoes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -224,20 +239,20 @@ export default function ObjetivosSemanaisPage() {
                     const sc = statusColor(item.status);
                     return (
                       <tr key={item.id}>
-                        <td style={{ fontWeight: 600 }}>{item.semana}</td>
-                        <td>{item.objetivo}</td>
-                        <td>{item.responsavel}</td>
-                        <td style={{ textAlign: "right" }}>
+                        <td data-label="Semana" style={{ fontWeight: 600 }}>{item.semana}</td>
+                        <td data-label="Objetivo">{item.objetivo}</td>
+                        <td data-label="Responsavel">{item.responsavel}</td>
+                        <td data-label="Meta">
                           {item.metaSemanal <= 100
                             ? `${item.metaSemanal}%`
                             : item.metaSemanal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                         </td>
-                        <td>
+                        <td data-label="Status">
                           <span className="badge" style={{ backgroundColor: sc.bg, color: sc.color }}>
                             {statusLabel(item.status)}
                           </span>
                         </td>
-                        <td>
+                        <td data-label="">
                           <button
                             type="button"
                             className="button button-secondary button-compact"
@@ -305,7 +320,7 @@ export default function ObjetivosSemanaisPage() {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="semanal-responsavel">Responsável</label>
+            <label htmlFor="semanal-responsavel">Responsavel</label>
             <input
               id="semanal-responsavel"
               name="responsavel"
@@ -324,21 +339,21 @@ export default function ObjetivosSemanaisPage() {
             >
               <option value="pendente">Pendente</option>
               <option value="andamento">Em andamento</option>
-              <option value="concluido">Concluído</option>
+              <option value="concluido">Concluido</option>
             </select>
           </div>
           <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-            <label htmlFor="semanal-observacao">Observações</label>
+            <label htmlFor="semanal-observacao">Observacoes</label>
             <textarea
               id="semanal-observacao"
               name="observacao"
               defaultValue={selecionado?.observacao}
               className="form-input"
               style={{ minHeight: 80 }}
-              placeholder="Alinhe dependências, entregáveis e impactos no caixa"
+              placeholder="Alinhe dependencias, entregaveis e impactos no caixa"
             />
           </div>
-          <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 8 }}>
+          <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
             <button type="button" onClick={() => setModalAberto(false)} className="button button-secondary">
               Cancelar
             </button>

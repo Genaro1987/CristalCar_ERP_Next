@@ -51,7 +51,7 @@ export default function CentroCustoPage() {
   const caminhoRota = "/financeiro/centro-custo";
   const { tela } = useTelaFinanceira(caminhoRota);
   const codigoTela = tela?.CODIGO_TELA ?? "FIN_CENTRO_CUSTO";
-  const nomeTela = tela?.NOME_TELA ?? "Centros de Custo";
+  const nomeTela = tela?.NOME_TELA ?? "CENTRO DE CUSTO";
   const moduloTela = tela?.MODULO ?? "FINANCEIRO";
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 

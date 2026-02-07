@@ -887,7 +887,7 @@ export default function PontoPage() {
                     const ultimoDia = new Date(Number(anoC), Number(mesC), 0).getDate();
                     const maxData = `${anoC}-${mesC}-${String(ultimoDia).padStart(2, "0")}`;
                     return (
-                    <div className="form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", alignItems: "flex-end" }}>
+                    <div className="form-grid three-columns" style={{ alignItems: "flex-end" }}>
                       <div className="form-group">
                         <label htmlFor="feriasInicio">Início</label>
                         <input
@@ -939,16 +939,16 @@ export default function PontoPage() {
                 )}
 
                 {diasPonto.length > 0 && (
-                  <div className="departamento-tabela-wrapper ponto-tabela">
-                    <table className="w-full table-fixed border-collapse data-table">
+                  <div style={{ overflowX: "auto" }}>
+                    <table className="data-table" style={{ minWidth: 700 }}>
                       <thead>
                         <tr>
-                          <th className="w-32 px-4 py-2 text-left">Dia</th>
-                          <th className="px-4 py-2 text-center">Horários de Trabalho</th>
-                          <th className="w-40 px-4 py-2 text-center">Intervalo (Registro)</th>
-                          <th className="w-32 px-4 py-2 text-center">Tempo trabalhado</th>
-                          <th className="w-32 px-4 py-2 text-center">Horas extras</th>
-                          <th className="w-40 px-4 py-2 text-center">Ações</th>
+                          <th style={{ textAlign: "left", whiteSpace: "nowrap" }}>Dia</th>
+                          <th style={{ textAlign: "center" }}>Horários de Trabalho</th>
+                          <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Intervalo (Registro)</th>
+                          <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Tempo trabalhado</th>
+                          <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Horas extras</th>
+                          <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Ações</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -990,10 +990,10 @@ export default function PontoPage() {
                               key={dia.dataReferencia}
                               style={Object.keys(estiloLinha).length ? estiloLinha : undefined}
                             >
-                              <td className="w-32 px-4 py-2 text-left whitespace-nowrap">
+                              <td style={{ whiteSpace: "nowrap" }}>
                                 {formatarDia(dia.dataReferencia)}
                               </td>
-                              <td className="px-4 py-2 text-center">
+                              <td style={{ textAlign: "center" }}>
                                 {falta ? (
                                   <div className="inline-flex flex-col gap-1">
                                     <span
@@ -1039,7 +1039,7 @@ export default function PontoPage() {
                                   </div>
                                 )}
                               </td>
-                              <td className="w-40 px-4 py-2 align-top">
+                              <td style={{ verticalAlign: "top" }}>
                                 {falta ? (
                                   <div className="flex flex-col gap-1 text-sm text-gray-700">
                                     <div className="font-medium">
@@ -1065,16 +1065,16 @@ export default function PontoPage() {
                                   </div>
                                 )}
                               </td>
-                              <td className="w-32 px-4 py-2 text-center text-sm">
+                              <td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
                                 {dia.minutosTrabalhados != null
                                   ? minutosParaHora(dia.minutosTrabalhados)
                                   : "--:--"}
                               </td>
-                              <td className="w-32 px-4 py-2 text-center text-sm">
+                              <td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
                                 {dia.minutosExtras != null ? minutosParaHora(dia.minutosExtras) : "--:--"}
                               </td>
-                              <td className="w-40 px-4 py-2 text-center whitespace-nowrap">
-                                <div className="acoes-dia flex flex-row justify-center gap-2 whitespace-nowrap">
+                              <td style={{ textAlign: "center", minWidth: 200 }}>
+                                <div className="acoes-dia">
                                   <button
                                     type="button"
                                     className="button button-secondary button-compact"

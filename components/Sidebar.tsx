@@ -65,7 +65,12 @@ function lerTelasPermitidas(): Set<string> {
   return new Set();
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileAberta?: boolean;
+  onNavegar?: () => void;
+}
+
+export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
   const pathname = usePathname();
   const { empresa } = useEmpresaSelecionada();
 
@@ -114,6 +119,12 @@ export function Sidebar() {
         label: "RECURSOS HUMANOS",
         itens: [
           {
+            label: "Dashboard RH",
+            rota: "/rh/resumo",
+            requerEmpresa: true,
+            codigoTela: "RH_RESUMO",
+          },
+          {
             label: "Jornadas",
             rota: "/rh/jornada",
             requerEmpresa: true,
@@ -132,14 +143,14 @@ export function Sidebar() {
             codigoTela: "LAN001_RH_PONTO",
           },
           {
-            label: "Banco de Horas",
+            label: "Fechamento Ponto",
             rota: "/rh/banco-horas",
             requerEmpresa: true,
             codigoTela: "REL001_RH_BANCO_HORAS",
             matchExact: true,
           },
           {
-            label: "Consulta Banco de Horas",
+            label: "Consulta Ponto",
             rota: "/rh/banco-horas/consulta",
             requerEmpresa: true,
             codigoTela: "CONS001_RH_BANCO_HORAS",
@@ -189,22 +200,35 @@ export function Sidebar() {
             codigoTela: "FIN_DRE",
           },
           {
-            label: "Objetivos",
+            label: "Extrato Pró-labore",
+            rota: "/financeiro/extrato-prolabore",
+            requerEmpresa: true,
+            codigoTela: "FIN_PROLABORE",
+          },
+          {
+            label: "Importação de Dados",
+            rota: "/financeiro/importar",
+            requerEmpresa: true,
+            codigoTela: "FIN_IMPORTAR",
+          },
+        ],
+      },
+      {
+        label: "OBJETIVOS",
+        itens: [
+          {
+            label: "Objetivos Financeiros",
             rota: "/financeiro/objetivos",
             requerEmpresa: true,
             codigoTela: "FIN_OBJETIVOS",
+            matchExact: true,
           },
           {
             label: "Objetivos Semanais",
             rota: "/financeiro/objetivos-semanais",
             requerEmpresa: true,
             codigoTela: "FIN_OBJETIVOS_SEMANAIS",
-          },
-          {
-            label: "Extrato Pró-labore",
-            rota: "/financeiro/extrato-prolabore",
-            requerEmpresa: true,
-            codigoTela: "FIN_PROLABORE",
+            matchExact: true,
           },
         ],
       },
@@ -229,8 +253,10 @@ export function Sidebar() {
 
   const isAjuda = pathname.startsWith("/ajuda");
 
+  const sidebarClass = mobileAberta ? "sidebar sidebar-mobile-open" : "sidebar";
+
   return (
-    <aside className="sidebar">
+    <aside className={sidebarClass}>
       <div className="sidebar-top">
         <div className="sidebar-logo-block">
           {empresa?.logoUrl ? (
@@ -267,6 +293,7 @@ export function Sidebar() {
                       key={item.rota}
                       href={item.rota}
                       className={ativo ? "sidebar-nav-item active" : "sidebar-nav-item"}
+                      onClick={onNavegar}
                     >
                       {item.label}
                     </Link>

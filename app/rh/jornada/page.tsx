@@ -614,50 +614,48 @@ export default function JornadaPage() {
               )}
 
               {!carregandoLista && !erroLista && jornadas.length > 0 && (
-                <div>
-                  <table className="data-table" style={{ tableLayout: "auto" }}>
-                    <thead>
-                      <tr>
-                        <th>CÓDIGO</th>
-                        <th>NOME</th>
-                        <th>CARGA (H)</th>
-                        <th>HORÁRIOS</th>
-                        <th>INTERVALO</th>
-                        <th>STATUS</th>
-                        <th style={{ textAlign: "right" }}>AÇÕES</th>
+                <table className="data-table mobile-cards">
+                  <thead>
+                    <tr>
+                      <th>CÓDIGO</th>
+                      <th>NOME</th>
+                      <th>CARGA (H)</th>
+                      <th>HORÁRIOS</th>
+                      <th>INTERVALO</th>
+                      <th>STATUS</th>
+                      <th style={{ textAlign: "right" }}>AÇÕES</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {jornadas.map((jornada) => (
+                      <tr key={jornada.ID_JORNADA}>
+                        <td data-label="Código">{formatarCodigoJornada(jornada.ID_JORNADA)}</td>
+                        <td data-label="Nome" style={{ fontWeight: 600 }}>{jornada.NOME_JORNADA}</td>
+                        <td data-label="Carga">{jornada.CARGA_SEMANAL_HORAS}h</td>
+                        <td data-label="Horários">{montarResumoHorariosTrabalho(jornada)}</td>
+                        <td data-label="Intervalo">{montarResumoIntervalo(jornada)}</td>
+                        <td data-label="Status">
+                          <span
+                            className={
+                              jornada.ATIVO === 1 ? "badge badge-success" : "badge badge-danger"
+                            }
+                          >
+                            {jornada.ATIVO === 1 ? "ATIVO" : "INATIVO"}
+                          </span>
+                        </td>
+                        <td data-label="">
+                          <button
+                            type="button"
+                            className="button button-secondary button-compact"
+                            onClick={() => preencherParaEdicao(jornada)}
+                          >
+                            Editar
+                          </button>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {jornadas.map((jornada) => (
-                        <tr key={jornada.ID_JORNADA}>
-                          <td style={{ whiteSpace: "nowrap" }}>{formatarCodigoJornada(jornada.ID_JORNADA)}</td>
-                          <td>{jornada.NOME_JORNADA}</td>
-                          <td>{jornada.CARGA_SEMANAL_HORAS}</td>
-                          <td style={{ whiteSpace: "nowrap" }}>{montarResumoHorariosTrabalho(jornada)}</td>
-                          <td style={{ whiteSpace: "nowrap" }}>{montarResumoIntervalo(jornada)}</td>
-                          <td>
-                            <span
-                              className={
-                                jornada.ATIVO === 1 ? "badge badge-success" : "badge badge-danger"
-                              }
-                            >
-                              {jornada.ATIVO === 1 ? "ATIVO" : "INATIVO"}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: "right" }}>
-                            <button
-                              type="button"
-                              className="button button-secondary button-compact"
-                              onClick={() => preencherParaEdicao(jornada)}
-                            >
-                              Editar
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </section>
           </div>
@@ -681,7 +679,7 @@ export default function JornadaPage() {
             {/* Form para novo feriado */}
             <div className="detail-card" style={{ marginBottom: 16 }}>
               <p className="detail-label">Novo feriado</p>
-              <div className="form-grid" style={{ gridTemplateColumns: "80px 1fr 1fr", gap: 12, alignItems: "flex-end" }}>
+              <div className="form-grid feriado-novo-grid" style={{ gridTemplateColumns: "80px 1fr 1fr", gap: 12, alignItems: "flex-end" }}>
                 <div className="form-group">
                   <label htmlFor="feriadoDia">Dia *</label>
                   <input
@@ -741,13 +739,14 @@ export default function JornadaPage() {
                 <p>Cadastre os feriados para que sejam considerados no cálculo do ponto.</p>
               </div>
             ) : (
+              <div style={{ overflowX: "auto" }}>
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={{ width: 60 }}>DIA</th>
-                    <th style={{ width: 120 }}>MÊS</th>
+                    <th style={{ width: 50 }}>DIA</th>
+                    <th style={{ width: 100 }}>MÊS</th>
                     <th>DESCRIÇÃO</th>
-                    <th style={{ width: 80, textAlign: "right" }}>AÇÕES</th>
+                    <th style={{ width: 70, textAlign: "right" }}>AÇÕES</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -770,6 +769,7 @@ export default function JornadaPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>

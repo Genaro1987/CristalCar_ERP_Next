@@ -50,10 +50,7 @@ export default function CentralAjudaPage() {
           const todas = data.telas.filter(
             (t: Tela) => t.CODIGO_TELA !== "HELP000_CORE_AJUDA"
           );
-          const ordenadas = [...todas].sort((a: Tela, b: Tela) =>
-            a.CODIGO_TELA.localeCompare(b.CODIGO_TELA)
-          );
-          setTelas(ordenadas);
+          setTelas(todas);
         }
       } catch (error) {
         console.error("Erro ao carregar telas para ajuda", error);
@@ -70,7 +67,7 @@ export default function CentralAjudaPage() {
         set.add(t.MODULO.toUpperCase());
       }
     });
-    return Array.from(set).sort();
+    return Array.from(set);
   }, [telas]);
 
   useEffect(() => {
@@ -91,7 +88,7 @@ export default function CentralAjudaPage() {
       return nome.includes(q) || cod.includes(q);
     });
 
-    return filtradas.sort((a, b) => a.CODIGO_TELA.localeCompare(b.CODIGO_TELA));
+    return filtradas;
   }, [telas, moduloSelecionado, query]);
 
   async function handleSelecionarTela(tela: Tela) {
