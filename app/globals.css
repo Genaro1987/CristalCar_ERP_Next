@@ -1068,6 +1068,11 @@ a {
   color: #92400e;
 }
 
+.badge-info {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
 .section-actions {
   margin-bottom: 16px;
   display: flex;
@@ -2377,6 +2382,14 @@ a {
   display: none;
 }
 
+/* ── DRE Desktop/Mobile toggle ── */
+.dre-desktop-table {
+  display: block;
+}
+.dre-mobile-cards {
+  display: none;
+}
+
 /* ── Mobile Bottom Nav ── */
 .mobile-bottom-nav {
   display: none;
@@ -2808,18 +2821,230 @@ a {
     grid-template-columns: 1fr;
   }
 
-  /* ── Tree nodes ── */
+  /* ── Tree nodes mobile ── */
   .tree-indent-segment {
-    width: 18px;
+    width: 14px;
   }
 
   .tree-indent-segment.branch::after,
   .tree-indent-segment.branch-last::after {
-    width: 8px;
+    width: 6px;
+  }
+
+  .tree-indent-segment.line::before,
+  .tree-indent-segment.branch::before,
+  .tree-indent-segment.branch-last::before {
+    left: 7px;
+  }
+
+  .tree-indent-segment.branch::after,
+  .tree-indent-segment.branch-last::after {
+    left: 7px;
   }
 
   .tree-node {
-    padding: 8px 10px;
+    padding: 10px 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .tree-node-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .tree-node-info {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .tree-node-code {
+    font-size: 0.72rem;
+  }
+
+  .tree-node-name {
+    font-size: 0.82rem;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .tree-node-meta {
+    width: 100%;
+    font-size: 0.7rem;
+  }
+
+  .tree-node-right {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Always show actions on mobile (no hover on touch) */
+  .tree-node-actions {
+    opacity: 1;
+    gap: 6px;
+  }
+
+  .tree-node-actions .button {
+    font-size: 0.75rem !important;
+    padding: 6px 12px !important;
+    min-height: 32px;
+  }
+
+  /* Bigger toggle button for touch */
+  .tree-toggle {
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+  }
+
+  /* Split-view: form panel collapsible header on mobile */
+  .split-view-panel .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .split-view-panel .section-header .button {
+    width: 100%;
+    text-align: center;
+  }
+
+  .split-view-panel .form-section-header {
+    margin-bottom: 8px;
+  }
+
+  /* ── DRE mobile cards ── */
+  .dre-desktop-table {
+    display: block;
+  }
+
+  .dre-mobile-cards {
+    display: none;
+  }
+
+  .dre-mobile-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .dre-desktop-table {
+    display: none;
+  }
+
+  .dre-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 12px;
+    transition: border-color 0.15s;
+  }
+
+  .dre-card:active {
+    border-color: #f97316;
+  }
+
+  .dre-card-level-0 {
+    border-left: 3px solid #f97316;
+    background-color: #fafafa;
+  }
+
+  .dre-card-level-1 {
+    border-left: 3px solid #fb923c;
+    margin-left: 8px;
+  }
+
+  .dre-card-level-2 {
+    border-left: 2px solid #fdba74;
+    margin-left: 16px;
+  }
+
+  .dre-card-level-3 {
+    border-left: 2px solid #fed7aa;
+    margin-left: 24px;
+  }
+
+  .dre-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .dre-card-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #111827;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dre-card-total {
+    font-weight: 700;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .dre-card-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 4px;
+  }
+
+  .dre-card-meta .badge {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+  }
+
+  .dre-card-periodos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f3f4f6;
+  }
+
+  .dre-card-periodo-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    padding: 2px 0;
+  }
+
+  .dre-card-periodo-label {
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  .dre-card-periodo-valor {
+    font-weight: 600;
+  }
+
+  /* DRE resultado card */
+  .dre-card-resultado {
+    background: #f3f4f6;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 4px;
+  }
+
+  .dre-card-resultado .dre-card-title {
+    font-weight: 800;
+    font-size: 0.9rem;
+  }
+
+  .dre-card-resultado .dre-card-total {
+    font-size: 1.05rem;
   }
 
   /* ── Help body ── */
@@ -3092,9 +3317,23 @@ a {
     gap: 6px;
   }
 
+  /* ── Inline inputs in mobile cards ── */
+  .data-table.mobile-cards td input.form-input {
+    width: auto;
+    min-width: 60px;
+    max-width: 100px;
+    font-size: 0.85rem;
+  }
+
   /* ── Financeiro specific ── */
   .financeiro-page .page-header-card {
     flex-direction: column;
+  }
+
+  /* ── Badges: consistent sizing on mobile ── */
+  .badge {
+    font-size: 0.68rem;
+    padding: 3px 7px;
   }
 }
 

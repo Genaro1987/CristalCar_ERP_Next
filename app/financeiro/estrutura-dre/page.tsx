@@ -404,17 +404,17 @@ export default function EstruturaDrePage() {
               </div>
               <div className="tree-node-right">
                 {item.referencia100 && (
-                  <span className="badge" style={{ backgroundColor: "#dbeafe", color: "#1e40af", fontSize: "0.65rem", padding: "2px 6px" }}>100%</span>
+                  <span className="badge badge-info">100%</span>
                 )}
-                <span className={item.status === "ativo" ? "badge badge-success" : "badge badge-danger"} style={{ fontSize: "0.65rem", padding: "2px 6px" }}>
+                <span className={item.status === "ativo" ? "badge badge-success" : "badge badge-danger"}>
                   {item.status === "ativo" ? "Ativo" : "Inativo"}
                 </span>
                 <div className="tree-node-actions">
-                  <button type="button" className="button button-secondary button-compact" style={{ fontSize: "0.7rem", padding: "2px 8px" }}
+                  <button type="button" className="button button-secondary button-compact"
                     onClick={(e) => { e.stopPropagation(); handleNovo(item.id); }}>+Filho</button>
-                  <button type="button" className="button button-secondary button-compact" style={{ fontSize: "0.7rem", padding: "2px 8px" }}
+                  <button type="button" className="button button-secondary button-compact"
                     onClick={(e) => { e.stopPropagation(); handleEditar(item); }}>Editar</button>
-                  <button type="button" className="button button-danger button-compact" style={{ fontSize: "0.7rem", padding: "2px 8px" }}
+                  <button type="button" className="button button-danger button-compact"
                     onClick={(e) => { e.stopPropagation(); pedirExcluir(item); }}>Excluir</button>
                 </div>
               </div>
