@@ -202,21 +202,26 @@ export default function BancoHorasPage() {
     let saldoFinal = saldoPeriodoHoras;
     let saldoBanco = saldoAnteriorHoras;
 
+    // Operações manuais de banco
     if (tipoOperacaoBanco && horasMovimentacao > 0) {
       if (tipoOperacaoBanco === "ENVIAR_HORAS_PARA_BANCO") {
-        // Envia horas do período para o banco (credita no banco, reduz pagável)
-        saldoFinal = saldoPeriodoHoras - horasMovimentacao;
-        saldoBanco = saldoAnteriorHoras + horasMovimentacao;
+        saldoFinal -= horasMovimentacao;
+        saldoBanco += horasMovimentacao;
       } else {
-        // Usa horas do banco para abater (debita do banco, aumenta pagável)
-        saldoFinal = saldoPeriodoHoras + horasMovimentacao;
-        saldoBanco = saldoAnteriorHoras - horasMovimentacao;
+        saldoFinal += horasMovimentacao;
+        saldoBanco -= horasMovimentacao;
       }
     }
 
-    if (zerarBancoAoFinal && saldoBanco !== 0) {
+    if (zerarBancoAoFinal) {
+      // Zerar: despeja todo o banco no pagamento/desconto
       saldoFinal += saldoBanco;
       saldoBanco = 0;
+    } else {
+      // Não zerar: banco absorve o saldo do mês (funciona como acumulador)
+      // Ex: banco 2h + mês -00:24 → banco 01:36, pagar 0
+      saldoBanco += saldoFinal;
+      saldoFinal = 0;
     }
 
     return { saldoFinalParaPagarHoras: saldoFinal, saldoBancoFinalHoras: saldoBanco };
@@ -719,7 +724,21 @@ export default function BancoHorasPage() {
                         )}
                       </div>
                       <div className="form-group">
-                        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <label>&nbsp;</label>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "8px 14px",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: 8,
+                            backgroundColor: zerarBancoAoFinal ? "#fff7ed" : "#f9fafb",
+                            minHeight: 42,
+                            cursor: "pointer",
+                          }}
+                          onClick={() => { setZerarBancoAoFinal(!zerarBancoAoFinal); setZerarBanco(!zerarBancoAoFinal); }}
+                        >
                           <input
                             type="checkbox"
                             checked={zerarBancoAoFinal}
@@ -727,10 +746,11 @@ export default function BancoHorasPage() {
                               setZerarBancoAoFinal(e.target.checked);
                               setZerarBanco(e.target.checked);
                             }}
-                            style={{ width: 16, height: 16, accentColor: "#f97316" }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ width: 18, height: 18, accentColor: "#f97316", flexShrink: 0 }}
                           />
-                          ZERAR SALDO DO BANCO
-                        </label>
+                          <span style={{ fontWeight: 600, fontSize: "0.85rem" }}>ZERAR SALDO DO BANCO</span>
+                        </div>
                         <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>
                           {zerarBancoAoFinal ? "Saldo sera zerado e convertido em pagamento/desconto" : "Saldo sera mantido para o proximo periodo"}
                         </small>
