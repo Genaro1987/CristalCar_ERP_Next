@@ -14,8 +14,8 @@ export async function POST(request: NextRequest) {
   try {
     // Check if already linked
     const existe = await db.execute({
-      sql: "SELECT 1 FROM FIN_ESTRUTURA_DRE_CONTA WHERE FIN_ESTRUTURA_DRE_ID = ? AND FIN_PLANO_CONTA_ID = ?",
-      args: [dreId, planoContaId],
+      sql: "SELECT 1 FROM FIN_ESTRUTURA_DRE_CONTA WHERE FIN_ESTRUTURA_DRE_ID = ? AND FIN_PLANO_CONTA_ID = ? AND EMPRESA_ID = ?",
+      args: [dreId, planoContaId, empresaId],
     });
 
     if (existe.rows.length > 0) {
@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
     }
 
     await db.execute({
-      sql: "INSERT INTO FIN_ESTRUTURA_DRE_CONTA (FIN_ESTRUTURA_DRE_ID, FIN_PLANO_CONTA_ID) VALUES (?, ?)",
-      args: [dreId, planoContaId],
+      sql: "INSERT INTO FIN_ESTRUTURA_DRE_CONTA (FIN_ESTRUTURA_DRE_ID, FIN_PLANO_CONTA_ID, EMPRESA_ID) VALUES (?, ?, ?)",
+      args: [dreId, planoContaId, empresaId],
     });
 
     return NextResponse.json({ success: true, message: "Conta vinculada" }, { status: 201 });
@@ -45,8 +45,8 @@ export async function DELETE(request: NextRequest) {
 
   try {
     await db.execute({
-      sql: "DELETE FROM FIN_ESTRUTURA_DRE_CONTA WHERE FIN_ESTRUTURA_DRE_ID = ? AND FIN_PLANO_CONTA_ID = ?",
-      args: [dreId, planoContaId],
+      sql: "DELETE FROM FIN_ESTRUTURA_DRE_CONTA WHERE FIN_ESTRUTURA_DRE_ID = ? AND FIN_PLANO_CONTA_ID = ? AND EMPRESA_ID = ?",
+      args: [dreId, planoContaId, empresaId],
     });
 
     return NextResponse.json({ success: true, message: "Conta desvinculada" });

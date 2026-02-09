@@ -147,7 +147,9 @@ export default function EstruturaDrePage() {
         if (resposta.ok) {
           const dados = await resposta.json();
           if (dados.success) {
-            const opcoes = (dados.data ?? []).map((item: any) => ({
+            const opcoes = (dados.data ?? [])
+            .filter((item: any) => item.FIN_PLANO_CONTA_VISIVEL_DRE === 1)
+            .map((item: any) => ({
               id: item.FIN_PLANO_CONTA_ID,
               label: `${item.FIN_PLANO_CONTA_CODIGO} ${item.FIN_PLANO_CONTA_NOME}`,
               codigo: item.FIN_PLANO_CONTA_CODIGO,
