@@ -170,10 +170,10 @@ export default function BancoHorasPage() {
   const horasDevidas = resumo?.devidasMin ?? 0;
   const valorHora = resumo?.funcionario.valorHora ?? 0;
 
-  // Valores brutos com multiplicadores corretos
+  // Valores brutos na base (sem multiplicador) para comparação justa
   const valorSaldoAnterior = (saldoAnteriorHoras / 60) * valorHora;
-  const valorExtras50Bruto = (extras50Horas / 60) * valorHora * 1.5;
-  const valorExtras100Bruto = (extras100Horas / 60) * valorHora * 2;
+  const valorExtras50Base = (extras50Horas / 60) * valorHora;
+  const valorExtras100Base = (extras100Horas / 60) * valorHora;
   const valorDevidoBruto = (horasDevidas / 60) * valorHora; // já negativo
 
   // Compensação (vem do backend)
@@ -623,7 +623,7 @@ export default function BancoHorasPage() {
                       </div>
                     </div>
 
-                    {/* Linha 2: Valores brutos com multiplicadores */}
+                    {/* Linha 2: Valores base (hora normal) */}
                     <div className="banco-horas-summary-grid">
                       <div className="form-group">
                         <label>SALDO ANTERIOR (VALOR)</label>
@@ -632,15 +632,15 @@ export default function BancoHorasPage() {
                         </div>
                       </div>
                       <div className="form-group">
-                        <label>EXTRAS 50% (VALOR x1.5)</label>
+                        <label>EXTRAS 50% (VALOR)</label>
                         <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669" }}>
-                          {formatarMoeda(valorExtras50Bruto)}
+                          {formatarMoeda(valorExtras50Base)}
                         </div>
                       </div>
                       <div className="form-group">
-                        <label>EXTRAS 100% (VALOR x2)</label>
+                        <label>EXTRAS 100% (VALOR)</label>
                         <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669" }}>
-                          {formatarMoeda(valorExtras100Bruto)}
+                          {formatarMoeda(valorExtras100Base)}
                         </div>
                       </div>
                       <div className="form-group">
@@ -658,34 +658,45 @@ export default function BancoHorasPage() {
                     </div>
 
                     {/* Linha 3: Compensação e resultado líquido */}
-                    {(comp.consumo100Min > 0 || comp.consumo50Min > 0 || comp.consumoSaldoAnteriorMin > 0) && (
-                      <div style={{ padding: "8px 12px", backgroundColor: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb", fontSize: "0.85rem" }}>
-                        <div style={{ fontWeight: 600, marginBottom: 4, color: "#374151" }}>Compensacao aplicada:</div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 16px", color: "#6b7280" }}>
+                    <div style={{ padding: "8px 12px", backgroundColor: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb", fontSize: "0.85rem" }}>
+                      <div style={{ fontWeight: 600, marginBottom: 4, color: "#374151" }}>Resultado com adicionais e compensacao:</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", color: "#6b7280" }}>
+                        {extras50Horas > 0 && (
+                          <span>Extras 50%: {minutosParaHora(extras50Horas)} x 1.5 = {formatarMoeda((extras50Horas / 60) * valorHora * 1.5)}</span>
+                        )}
+                        {extras100Horas > 0 && (
+                          <span>Extras 100%: {minutosParaHora(extras100Horas)} x 2.0 = {formatarMoeda((extras100Horas / 60) * valorHora * 2)}</span>
+                        )}
+                        {horasDevidas !== 0 && (
+                          <span>Devidas: {minutosParaHora(horasDevidas)} x 1.0 = {formatarMoeda(valorDevidoBruto)}</span>
+                        )}
+                      </div>
+                      {(comp.consumo100Min > 0 || comp.consumo50Min > 0 || comp.consumoSaldoAnteriorMin > 0) && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", color: "#9ca3af", marginTop: 4, borderTop: "1px dashed #e5e7eb", paddingTop: 4 }}>
                           {comp.consumo100Min > 0 && (
-                            <span>100% abateu {minutosParaHora(comp.consumo100Min)} de falta = -{formatarMoeda((comp.consumo100Min / 60) * valorHora * 2)}</span>
+                            <span>100% abateu {minutosParaHora(comp.consumo100Min)} falta (-{formatarMoeda((comp.consumo100Min / 60) * valorHora * 2)})</span>
                           )}
                           {comp.consumo50Min > 0 && (
-                            <span>50% abateu {minutosParaHora(comp.consumo50Min)} de falta = -{formatarMoeda((comp.consumo50Min / 60) * valorHora * 1.5)}</span>
+                            <span>50% abateu {minutosParaHora(comp.consumo50Min)} falta (-{formatarMoeda((comp.consumo50Min / 60) * valorHora * 1.5)})</span>
                           )}
                           {comp.consumoSaldoAnteriorMin > 0 && (
-                            <span>Saldo anterior abateu {minutosParaHora(comp.consumoSaldoAnteriorMin)} de falta = -{formatarMoeda((comp.consumoSaldoAnteriorMin / 60) * valorHora)}</span>
+                            <span>Saldo ant. abateu {minutosParaHora(comp.consumoSaldoAnteriorMin)} falta (-{formatarMoeda((comp.consumoSaldoAnteriorMin / 60) * valorHora)})</span>
                           )}
                         </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 16px", marginTop: 6, fontWeight: 600 }}>
-                          {horasPagar50 > 0 && (
-                            <span style={{ color: "#059669" }}>Pagar 50%: {minutosParaHora(horasPagar50)} = {formatarMoeda(valorPagar50)}</span>
-                          )}
-                          {horasPagar100 > 0 && (
-                            <span style={{ color: "#059669" }}>Pagar 100%: {minutosParaHora(horasPagar100)} = {formatarMoeda(valorPagar100)}</span>
-                          )}
-                          {horasDescontar > 0 && (
-                            <span style={{ color: "#dc2626" }}>Descontar: {minutosParaHora(horasDescontar)} = -{formatarMoeda(valorDescontar)}</span>
-                          )}
-                          <span style={{ color: "#1f2937" }}>Subtotal: {formatarMoeda(saldoMesValor)}</span>
-                        </div>
+                      )}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", marginTop: 6, fontWeight: 600, borderTop: "1px solid #d1d5db", paddingTop: 6 }}>
+                        {horasPagar50 > 0 && (
+                          <span style={{ color: "#059669" }}>Pagar 50%: {minutosParaHora(horasPagar50)} = {formatarMoeda(valorPagar50)}</span>
+                        )}
+                        {horasPagar100 > 0 && (
+                          <span style={{ color: "#059669" }}>Pagar 100%: {minutosParaHora(horasPagar100)} = {formatarMoeda(valorPagar100)}</span>
+                        )}
+                        {horasDescontar > 0 && (
+                          <span style={{ color: "#dc2626" }}>Descontar: {minutosParaHora(horasDescontar)} = -{formatarMoeda(valorDescontar)}</span>
+                        )}
+                        <span style={{ color: "#1f2937" }}>Liquido: {formatarMoeda(saldoMesValor)}</span>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </section>
 
