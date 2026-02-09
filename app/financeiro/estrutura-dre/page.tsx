@@ -15,7 +15,7 @@ interface LinhaDre {
   id: string;
   nome: string;
   codigo: string;
-  natureza: "RECEITA" | "DESPESA" | "OUTROS";
+  natureza: "RECEITA" | "DESPESA" | "CALCULADO";
   status: "ativo" | "inativo";
   tipo?: string;
   descricao?: string;
@@ -34,7 +34,7 @@ interface PlanoContaOption {
 interface FormDre {
   nome: string;
   codigo: string;
-  natureza: "RECEITA" | "DESPESA" | "OUTROS";
+  natureza: "RECEITA" | "DESPESA" | "CALCULADO";
   tipo: string;
   descricao: string;
   formula: string;
@@ -210,7 +210,7 @@ export default function EstruturaDrePage() {
             natureza: form.natureza,
             tipo: form.tipo,
             descricao: form.descricao,
-            formula: form.tipo === "Calculado" ? form.formula : null,
+            formula: form.natureza === "CALCULADO" ? form.formula : null,
             referencia100: form.referencia100 === 1,
             ativo: form.ativo,
           }),
@@ -233,7 +233,7 @@ export default function EstruturaDrePage() {
             natureza: form.natureza,
             tipo: form.tipo,
             descricao: form.descricao,
-            formula: form.tipo === "Calculado" ? form.formula : null,
+            formula: form.natureza === "CALCULADO" ? form.formula : null,
             referencia100: form.referencia100 === 1,
             paiId: form.paiId ? Number(form.paiId) : null,
           }),
@@ -519,11 +519,11 @@ export default function EstruturaDrePage() {
                         id="dre-linha-natureza"
                         className="form-input"
                         value={form.natureza}
-                        onChange={(e) => setForm((f) => ({ ...f, natureza: e.target.value as any }))}
+                        onChange={(e) => setForm((f) => ({ ...f, natureza: e.target.value as any, ...(e.target.value === "CALCULADO" ? { tipo: "Calculado" } : f.tipo === "Calculado" ? { tipo: "Fixo" } : {}) }))}
                       >
                         <option value="RECEITA">Receita</option>
                         <option value="DESPESA">Despesa</option>
-                        <option value="OUTROS">Outros</option>
+                        <option value="CALCULADO">Calculado</option>
                       </select>
                     </div>
                     <div className="form-group">
@@ -531,7 +531,8 @@ export default function EstruturaDrePage() {
                       <select
                         id="dre-linha-tipo"
                         className="form-input"
-                        value={form.tipo}
+                        value={form.natureza === "CALCULADO" ? "Calculado" : form.tipo}
+                        disabled={form.natureza === "CALCULADO"}
                         onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value }))}
                       >
                         <option value="Fixo">Fixo</option>
@@ -576,7 +577,7 @@ export default function EstruturaDrePage() {
                       <div className="form-group" />
                     </div>
                   )}
-                  {form.tipo === "Calculado" && (
+                  {form.natureza === "CALCULADO" && (
                     <div className="form-group">
                       <label htmlFor="dre-linha-formula">Formula</label>
                       <input
