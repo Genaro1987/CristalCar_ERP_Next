@@ -311,61 +311,44 @@ export default function BancoHorasConsultaPage() {
         const horasDevidas = Math.min(0, totais.devidasMin);
         const vh = resumo.funcionario.valorHora;
 
-        // Valores brutos (antes da compensação)
-        const valorExtra50Bruto = minutesToDecimal(horasExtra50) * vh * 1.5;
-        const valorExtra100Bruto = minutesToDecimal(horasExtra100) * vh * 2;
-        const valorDevidoBruto = minutesToDecimal(Math.abs(horasDevidas)) * vh;
+        // Valores na base (sem multiplicador) para comparação justa
+        const valorExtra50Base = (horasExtra50 / 60) * vh;
+        const valorExtra100Base = (horasExtra100 / 60) * vh;
+        const valorDevidoBase = (horasDevidas / 60) * vh; // já negativo
 
-        // Compensação detalhada (vem do backend)
-        const comp = resumo.compensacao ?? { consumo100Min: 0, consumo50Min: 0, consumoSaldoAnteriorMin: 0, saldoAnteriorRestanteMin: resumo.saldoAnteriorMin };
+        // Saldo do mês (apenas movimentação do período)
+        const saldoPeriodoMin = horasExtra50 + horasExtra100 + horasDevidas;
+        const valorSaldoPeriodo = (saldoPeriodoMin / 60) * vh;
 
-        // Valores compensados
-        const valorCompensado100 = minutesToDecimal(comp.consumo100Min) * vh * 2;
-        const valorCompensado50 = minutesToDecimal(comp.consumo50Min) * vh * 1.5;
-        const valorCompensadoSaldoAnt = minutesToDecimal(comp.consumoSaldoAnteriorMin) * vh;
+        // Saldo anterior
+        const saldoAnteriorMin = resumo.saldoAnteriorMin;
+        const valorSaldoAnterior = (saldoAnteriorMin / 60) * vh;
 
-        // Saldos líquidos após compensação
-        const valorPagar50 = minutesToDecimal(resumo.horasPagar50Min) * vh * 1.5;
-        const valorPagar100 = minutesToDecimal(resumo.horasPagar100Min) * vh * 2;
-        const valorDescontar = minutesToDecimal(resumo.horasDescontarMin) * vh;
+        // Ajustes e fechamentos
+        const saldoAjustes = resumo.ajustesManuaisMin + resumo.fechamentosMin;
+
+        // Saldo total = anterior + período + ajustes
+        const saldoTotalMin = saldoAnteriorMin + saldoPeriodoMin + saldoAjustes;
+        const valorSaldoTotal = (saldoTotalMin / 60) * vh;
 
         return {
           horasExtra50,
           horasExtra100,
           horasDevidas,
-          valorExtra50Bruto,
-          valorExtra100Bruto,
-          valorDevidoBruto,
-          // Compensação em minutos
-          consumo100Min: comp.consumo100Min,
-          consumo50Min: comp.consumo50Min,
-          consumoSaldoAnteriorMin: comp.consumoSaldoAnteriorMin,
-          // Compensação em valores
-          valorCompensado100,
-          valorCompensado50,
-          valorCompensadoSaldoAnt,
-          // Líquido
-          horasPagar50: resumo.horasPagar50Min,
-          horasPagar100: resumo.horasPagar100Min,
-          horasDescontar: resumo.horasDescontarMin,
-          valorPagar50,
-          valorPagar100,
-          valorDescontar,
-          subtotal: valorPagar50 + valorPagar100 - valorDescontar,
-          saldoAjustes: resumo.ajustesManuaisMin + resumo.fechamentosMin,
+          valorExtra50Base,
+          valorExtra100Base,
+          valorDevidoBase,
+          saldoPeriodoMin,
+          valorSaldoPeriodo,
+          saldoAnteriorMin,
+          valorSaldoAnterior,
+          saldoAjustes,
+          saldoTotalMin,
+          valorSaldoTotal,
           jornadaInfo: construirLinhaJornada(resumo.jornada),
         };
       })()
     : null;
-
-  const saldoFinalCalculado = resumo && resumoValores
-    ? resumo.saldoAnteriorMin +
-      resumoValores.horasExtra50 +
-      resumoValores.horasExtra100 +
-      resumoValores.horasDevidas +
-      resumo.ajustesManuaisMin +
-      resumo.fechamentosMin
-    : 0;
 
   return (
     <LayoutShell>
@@ -469,90 +452,75 @@ export default function BancoHorasConsultaPage() {
                 </p>
               </div>
 
-              <div className="banco-horas-resumo-grid">
-                <div className="banco-horas-card card-success">
-                  <p className="card-label">Horas Extras 50%</p>
-                  <p className="card-value">
-                    {minutosParaHora(resumoValores.horasExtra50)}
-                    <span className="card-sub">= {formatarMoeda(resumoValores.valorExtra50Bruto)}</span>
-                  </p>
-                </div>
-
-                <div className="banco-horas-card card-success">
-                  <p className="card-label">Horas Extras 100%</p>
-                  <p className="card-value">
-                    {minutosParaHora(resumoValores.horasExtra100)}
-                    <span className="card-sub">= {formatarMoeda(resumoValores.valorExtra100Bruto)}</span>
-                  </p>
-                </div>
-
-                <div className="banco-horas-card card-danger">
-                  <p className="card-label">Horas Devidas</p>
-                  <p className="card-value">
-                    {minutosParaHora(resumoValores.horasDevidas * -1)}
-                    <span className="card-sub">= -{formatarMoeda(resumoValores.valorDevidoBruto)}</span>
-                  </p>
-                </div>
-
-                <div className="banco-horas-card card-highlight">
-                  <p className="card-label">Saldo Final</p>
-                  <p className="card-value">{minutosParaHora(saldoFinalCalculado)}</p>
-                </div>
-
-                <div className="banco-horas-card card-neutral">
-                  <p className="card-label">Saldo Anterior</p>
-                  <p className="card-value">{minutosParaHora(resumo.saldoAnteriorMin)}</p>
-                </div>
-
-                <div className="banco-horas-card card-neutral">
-                  <p className="card-label">Ajustes e Fechamentos</p>
-                  <p className="card-value">{minutosParaHora(resumoValores.saldoAjustes)}</p>
+              {/* RESUMO DO MES */}
+              <div style={{ marginTop: 16 }}>
+                <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#374151", marginBottom: 8 }}>RESUMO DO MES</h3>
+                <div className="banco-horas-summary-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+                  <div className="form-group">
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#6b7280" }}>EXTRAS 50%</label>
+                    <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669" }}>
+                      {minutosParaHora(resumoValores.horasExtra50)}
+                    </div>
+                    <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>{formatarMoeda(resumoValores.valorExtra50Base)}</small>
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#6b7280" }}>EXTRAS 100%</label>
+                    <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669" }}>
+                      {minutosParaHora(resumoValores.horasExtra100)}
+                    </div>
+                    <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>{formatarMoeda(resumoValores.valorExtra100Base)}</small>
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#6b7280" }}>HORAS DEVIDAS</label>
+                    <div className="form-input" style={{ backgroundColor: "#fef2f2", color: "#dc2626" }}>
+                      {minutosParaHora(resumoValores.horasDevidas)}
+                    </div>
+                    <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>{formatarMoeda(resumoValores.valorDevidoBase)}</small>
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#6b7280" }}>SALDO DO MES</label>
+                    <div className="form-input" style={{ backgroundColor: "#fff3cd", fontWeight: 700 }}>
+                      {minutosParaHora(resumoValores.saldoPeriodoMin)}
+                    </div>
+                    <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>{formatarMoeda(resumoValores.valorSaldoPeriodo)}</small>
+                  </div>
                 </div>
               </div>
 
-              {/* Detalhamento da compensação */}
-              <div className="banco-horas-card banco-horas-card-full saldo-bloco">
-                <p className="card-label saldo-titulo">Saldo por hora extra ou falta</p>
-
-                {/* Valores brutos */}
-                <div className="saldo-valores" style={{ borderBottom: "1px dashed #d1d5db", paddingBottom: 6, marginBottom: 6 }}>
-                  <span>Extras 50%: {minutosParaHora(resumoValores.horasExtra50)} = {formatarMoeda(resumoValores.valorExtra50Bruto)}</span>
-                  <span>Extras 100%: {minutosParaHora(resumoValores.horasExtra100)} = {formatarMoeda(resumoValores.valorExtra100Bruto)}</span>
-                  <span>Devidas: {minutosParaHora(resumoValores.horasDevidas * -1)} = -{formatarMoeda(resumoValores.valorDevidoBruto)}</span>
-                  {resumo.saldoAnteriorMin !== 0 && (
-                    <span>Saldo Anterior: {minutosParaHora(resumo.saldoAnteriorMin)} = {formatarMoeda((resumo.saldoAnteriorMin / 60) * resumo.funcionario.valorHora)}</span>
-                  )}
+              {/* COMPOSICAO DO SALDO */}
+              <div style={{ marginTop: 24 }}>
+                <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#374151", marginBottom: 8 }}>COMPOSICAO DO SALDO</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr auto 1fr", gap: 8, alignItems: "start" }}>
+                  <div className="form-group">
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#6b7280" }}>SALDO ANTERIOR</label>
+                    <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>
+                      {minutosParaHora(resumoValores.saldoAnteriorMin)}
+                    </div>
+                    <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>{formatarMoeda(resumoValores.valorSaldoAnterior)}</small>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", paddingTop: 22, fontWeight: 700, fontSize: "1.2rem", color: "#6b7280" }}>+</div>
+                  <div className="form-group">
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#6b7280" }}>SALDO DO MES</label>
+                    <div className="form-input" style={{ backgroundColor: resumoValores.saldoPeriodoMin >= 0 ? "#f0fdf4" : "#fef2f2", color: resumoValores.saldoPeriodoMin >= 0 ? "#059669" : "#dc2626" }}>
+                      {minutosParaHora(resumoValores.saldoPeriodoMin)}
+                    </div>
+                    <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>{formatarMoeda(resumoValores.valorSaldoPeriodo)}</small>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", paddingTop: 22, fontWeight: 700, fontSize: "1.2rem", color: "#6b7280" }}>=</div>
+                  <div className="form-group">
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#6b7280" }}>SALDO TOTAL</label>
+                    <div className="form-input" style={{ backgroundColor: "#fff3cd", fontWeight: 700 }}>
+                      {minutosParaHora(resumoValores.saldoTotalMin)}
+                    </div>
+                    <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>{formatarMoeda(resumoValores.valorSaldoTotal)}</small>
+                  </div>
                 </div>
 
-                {/* Compensação detalhada */}
-                {(resumoValores.consumo100Min > 0 || resumoValores.consumo50Min > 0 || resumoValores.consumoSaldoAnteriorMin > 0) && (
-                  <div className="saldo-valores" style={{ borderBottom: "1px dashed #d1d5db", paddingBottom: 6, marginBottom: 6, color: "#6b7280", fontSize: "0.82rem" }}>
-                    <span style={{ fontWeight: 600 }}>Compensacao:</span>
-                    {resumoValores.consumo100Min > 0 && (
-                      <span>100% abateu {minutosParaHora(resumoValores.consumo100Min)} de falta = -{formatarMoeda(resumoValores.valorCompensado100)}</span>
-                    )}
-                    {resumoValores.consumo50Min > 0 && (
-                      <span>50% abateu {minutosParaHora(resumoValores.consumo50Min)} de falta = -{formatarMoeda(resumoValores.valorCompensado50)}</span>
-                    )}
-                    {resumoValores.consumoSaldoAnteriorMin > 0 && (
-                      <span>Saldo anterior abateu {minutosParaHora(resumoValores.consumoSaldoAnteriorMin)} de falta = -{formatarMoeda(resumoValores.valorCompensadoSaldoAnt)}</span>
-                    )}
+                {resumoValores.saldoAjustes !== 0 && (
+                  <div style={{ marginTop: 8, fontSize: "0.82rem", color: "#6b7280" }}>
+                    Ajustes e Fechamentos: {minutosParaHora(resumoValores.saldoAjustes)} = {formatarMoeda((resumoValores.saldoAjustes / 60) * resumo.funcionario.valorHora)}
                   </div>
                 )}
-
-                {/* Resultado líquido */}
-                <div className="saldo-valores" style={{ fontWeight: 700 }}>
-                  {resumoValores.horasPagar50 > 0 && (
-                    <span style={{ color: "#059669" }}>Pagar 50%: {minutosParaHora(resumoValores.horasPagar50)} = {formatarMoeda(resumoValores.valorPagar50)}</span>
-                  )}
-                  {resumoValores.horasPagar100 > 0 && (
-                    <span style={{ color: "#059669" }}>Pagar 100%: {minutosParaHora(resumoValores.horasPagar100)} = {formatarMoeda(resumoValores.valorPagar100)}</span>
-                  )}
-                  {resumoValores.horasDescontar > 0 && (
-                    <span style={{ color: "#dc2626" }}>Descontar: {minutosParaHora(resumoValores.horasDescontar)} = -{formatarMoeda(resumoValores.valorDescontar)}</span>
-                  )}
-                  <span>Subtotal: {formatarMoeda(resumoValores.subtotal)}</span>
-                </div>
               </div>
 
               <div className="form-section-header" style={{ marginTop: "40px" }}>
