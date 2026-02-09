@@ -91,6 +91,8 @@ export default function BancoHorasPage() {
   const [atualizandoPeriodo, setAtualizandoPeriodo] = useState(false);
   const [confirmarExclusao, setConfirmarExclusao] = useState<number | null>(null);
 
+  const periodoFechado = situacaoPeriodo === "FECHADO";
+
   const empresaId = empresa?.id ?? null;
 
   const headersPadrao = useMemo<HeadersInit>(() => {
@@ -660,7 +662,12 @@ export default function BancoHorasPage() {
                     <p>Composicao do saldo, banco de horas e fechamento.</p>
                   </header>
 
-                  <div className="form" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
+                  <div className="form" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "12px", opacity: periodoFechado ? 0.6 : 1 }}>
+                    {periodoFechado && (
+                      <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#991b1b", fontWeight: 600 }}>
+                        Periodo fechado - reabra o periodo para efetuar alteracoes.
+                      </div>
+                    )}
                     {/* Linha 1: Saldo anterior + Saldo do mês → Saldo total */}
                     <div className="banco-horas-card-grid" style={{ gridTemplateColumns: "1fr auto 1fr auto 1fr" }}>
                       <div className="form-group">
@@ -700,6 +707,7 @@ export default function BancoHorasPage() {
                             )
                           }
                           className="form-input"
+                          disabled={periodoFechado}
                         >
                           <option value="">Selecione</option>
                           <option value="ENVIAR_HORAS_PARA_BANCO">Enviar horas para banco (credito)</option>
@@ -718,6 +726,7 @@ export default function BancoHorasPage() {
                           min="00:01"
                           max="23:59"
                           step={60}
+                          disabled={periodoFechado}
                         />
                         {tipoOperacaoBanco && horasMovimentacao <= 0 && (
                           <p className="error-text">Informe um valor de horas maior que zero.</p>
@@ -735,9 +744,9 @@ export default function BancoHorasPage() {
                             borderRadius: 8,
                             backgroundColor: zerarBancoAoFinal ? "#fff7ed" : "#f9fafb",
                             minHeight: 42,
-                            cursor: "pointer",
+                            cursor: periodoFechado ? "not-allowed" : "pointer",
                           }}
-                          onClick={() => { setZerarBancoAoFinal(!zerarBancoAoFinal); setZerarBanco(!zerarBancoAoFinal); }}
+                          onClick={() => { if (!periodoFechado) { setZerarBancoAoFinal(!zerarBancoAoFinal); setZerarBanco(!zerarBancoAoFinal); } }}
                         >
                           <input
                             type="checkbox"
@@ -747,6 +756,7 @@ export default function BancoHorasPage() {
                               setZerarBanco(e.target.checked);
                             }}
                             onClick={(e) => e.stopPropagation()}
+                            disabled={periodoFechado}
                             style={{ width: 18, height: 18, accentColor: "#f97316", flexShrink: 0 }}
                           />
                           <span style={{ fontWeight: 600, fontSize: "0.85rem" }}>ZERAR SALDO DO BANCO</span>
@@ -863,7 +873,7 @@ export default function BancoHorasPage() {
                               </td>
                               <td>{mov.observacao ?? "-"}</td>
                               <td>
-                                {mov.tipo === "AJUSTE_MANUAL" && (
+                                {mov.tipo === "AJUSTE_MANUAL" && !periodoFechado && (
                                   <button
                                     onClick={() => setConfirmarExclusao(mov.id)}
                                     className="button-icon-only"
@@ -881,75 +891,85 @@ export default function BancoHorasPage() {
                     </div>
                   )}
 
-                  <div className="form-section-header" style={{ marginTop: "16px" }}>
-                    <h3>INCLUIR AJUSTE MANUAL</h3>
-                  </div>
+                  {!periodoFechado && (
+                    <>
+                      <div className="form-section-header" style={{ marginTop: "16px" }}>
+                        <h3>INCLUIR AJUSTE MANUAL</h3>
+                      </div>
 
-                  <div className="banco-horas-card-grid">
-                    <div className="form-group">
-                      <label htmlFor="ajusteData">DATA</label>
-                      <input
-                        id="ajusteData"
-                        type="date"
-                        value={ajusteData}
-                        onChange={(e) => setAjusteData(e.target.value)}
-                        min={mes ? `${ano}-${mes.padStart(2, "0")}-01` : undefined}
-                        max={mes ? `${ano}-${mes.padStart(2, "0")}-${String(new Date(ano, Number(mes), 0).getDate()).padStart(2, "0")}` : undefined}
-                        className="form-input"
-                      />
+                      <div className="banco-horas-card-grid">
+                        <div className="form-group">
+                          <label htmlFor="ajusteData">DATA</label>
+                          <input
+                            id="ajusteData"
+                            type="date"
+                            value={ajusteData}
+                            onChange={(e) => setAjusteData(e.target.value)}
+                            min={mes ? `${ano}-${mes.padStart(2, "0")}-01` : undefined}
+                            max={mes ? `${ano}-${mes.padStart(2, "0")}-${String(new Date(ano, Number(mes), 0).getDate()).padStart(2, "0")}` : undefined}
+                            className="form-input"
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="ajusteTipo">TIPO</label>
+                          <select
+                            id="ajusteTipo"
+                            value={ajusteTipo}
+                            onChange={(e) => setAjusteTipo(e.target.value as "CREDITO" | "DEBITO")}
+                            className="form-input"
+                          >
+                            <option value="CREDITO">CREDITO</option>
+                            <option value="DEBITO">DEBITO</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="ajusteHoras">HORAS (HH:MM)</label>
+                          <input
+                            id="ajusteHoras"
+                            type="time"
+                            value={ajusteHoras}
+                            onChange={(e) => setAjusteHoras(e.target.value)}
+                            className="form-input"
+                            placeholder="Ex: 02:30"
+                            step={60}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="ajusteObs">OBSERVACAO</label>
+                        <input
+                          id="ajusteObs"
+                          type="text"
+                          value={ajusteObs}
+                          onChange={(e) => setAjusteObs(e.target.value)}
+                          className="form-input"
+                          placeholder="Motivo do ajuste"
+                        />
+                      </div>
+
+                      <div className="form-actions">
+                        <div className="button-row">
+                          <button
+                            onClick={incluirAjuste}
+                            className="button button-primary"
+                            disabled={loading}
+                            style={{ backgroundColor: "#f97316", borderColor: "#ea580c" }}
+                          >
+                            Incluir Ajuste Manual
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {periodoFechado && (
+                    <div style={{ marginTop: 16, padding: "12px 14px", backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, fontSize: "0.85rem", color: "#991b1b", fontWeight: 600 }}>
+                      Periodo fechado - reabra o periodo para incluir ajustes ou alterar dados.
                     </div>
-
-                    <div className="form-group">
-                      <label htmlFor="ajusteTipo">TIPO</label>
-                      <select
-                        id="ajusteTipo"
-                        value={ajusteTipo}
-                        onChange={(e) => setAjusteTipo(e.target.value as "CREDITO" | "DEBITO")}
-                        className="form-input"
-                      >
-                        <option value="CREDITO">CREDITO</option>
-                        <option value="DEBITO">DEBITO</option>
-                      </select>
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="ajusteHoras">HORAS (HH:MM)</label>
-                      <input
-                        id="ajusteHoras"
-                        type="time"
-                        value={ajusteHoras}
-                        onChange={(e) => setAjusteHoras(e.target.value)}
-                        className="form-input"
-                        placeholder="Ex: 02:30"
-                        step={60}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="ajusteObs">OBSERVACAO</label>
-                    <input
-                      id="ajusteObs"
-                      type="text"
-                      value={ajusteObs}
-                      onChange={(e) => setAjusteObs(e.target.value)}
-                      className="form-input"
-                      placeholder="Motivo do ajuste"
-                    />
-                  </div>
-
-                  <div className="form-actions">
-                    <div className="button-row">
-                      <button
-                        onClick={incluirAjuste}
-                        className="button button-primary"
-                        disabled={loading}
-                        style={{ backgroundColor: "#f97316", borderColor: "#ea580c" }}
-                      >
-                        Incluir Ajuste Manual
-                      </button>
-                    </div>
-                  </div>
+                  )}
                 </section>
               </>
             )}
