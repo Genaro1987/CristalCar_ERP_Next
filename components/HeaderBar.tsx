@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useHelpContext } from "./LayoutShell";
 import { ROTAS_LIVRES } from "@/hooks/useEmpresaObrigatoria";
+import { usePermissoes } from "@/app/_hooks/usePermissoes";
 
 type HeaderBarProps = {
   codigoTela: string;
@@ -22,6 +23,7 @@ type ScreenResult = {
 export function HeaderBar({ codigoTela, nomeTela, caminhoRota, modulo }: HeaderBarProps) {
   const router = useRouter();
   const { abrirAjuda } = useHelpContext();
+  const { podeAcessar, permissoesCarregadas } = usePermissoes();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ScreenResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -60,7 +62,10 @@ export function HeaderBar({ codigoTela, nomeTela, caminhoRota, modulo }: HeaderB
         const res = await fetch(`/api/telas?q=${encodeURIComponent(query.trim())}`);
         const data = await res.json();
         if (data.success) {
-          setResults(data.telas);
+          const telas = permissoesCarregadas
+            ? (data.telas as ScreenResult[]).filter((t) => podeAcessar(t.CODIGO_TELA))
+            : data.telas;
+          setResults(telas);
           setIsOpen(true);
         }
       } catch (error) {
@@ -78,6 +83,13 @@ export function HeaderBar({ codigoTela, nomeTela, caminhoRota, modulo }: HeaderB
 
       if (!empresaId && !ROTAS_LIVRES.has(rotaAlvo)) {
         window.alert("Selecione uma empresa antes de acessar as telas do sistema.");
+        setIsOpen(false);
+        setQuery("");
+        return;
+      }
+
+      if (permissoesCarregadas && !podeAcessar(tela.CODIGO_TELA)) {
+        window.alert("Voce nao tem permissao para acessar esta tela.");
         setIsOpen(false);
         setQuery("");
         return;

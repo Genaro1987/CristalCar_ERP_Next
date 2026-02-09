@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
+import { usePermissoes } from "@/app/_hooks/usePermissoes";
 import Image from "next/image";
 
 type SecaoMenu = {
@@ -19,52 +20,6 @@ type ItemMenu = {
   matchExact?: boolean;
 };
 
-const CHAVES_PERMISSOES = ["SEG_PERFIL_TELAS", "TELAS_PERMITIDAS", "TELAS_AUTORIZADAS"];
-
-function extrairCodigosTela(valor: string | null): string[] {
-  if (!valor) return [];
-
-  try {
-    const parsed = JSON.parse(valor);
-    if (Array.isArray(parsed)) {
-      if (parsed.every((item) => typeof item === "string")) {
-        return parsed as string[];
-      }
-
-      if (parsed.every((item) => typeof item === "object" && item !== null)) {
-        return parsed
-          .map((item) => {
-            const possivel = item as { CODIGO_TELA?: string; codigoTela?: string };
-            return possivel?.CODIGO_TELA ?? possivel?.codigoTela;
-          })
-          .filter((codigo): codigo is string => Boolean(codigo));
-      }
-    }
-  } catch (error) {
-    // Ignora erros de parse e tenta fallback abaixo
-  }
-
-  return valor
-    .split(",")
-    .map((parte) => parte.trim())
-    .filter(Boolean);
-}
-
-function lerTelasPermitidas(): Set<string> {
-  if (typeof window === "undefined") return new Set();
-
-  for (const chave of CHAVES_PERMISSOES) {
-    const valor = window.localStorage.getItem(chave);
-    const codigos = extrairCodigosTela(valor).map((codigo) => codigo.toUpperCase());
-
-    if (codigos.length > 0) {
-      return new Set(codigos);
-    }
-  }
-
-  return new Set();
-}
-
 interface SidebarProps {
   mobileAberta?: boolean;
   onNavegar?: () => void;
@@ -73,21 +28,7 @@ interface SidebarProps {
 export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
   const pathname = usePathname();
   const { empresa } = useEmpresaSelecionada();
-
-  const [telasPermitidas, setTelasPermitidas] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    setTelasPermitidas(lerTelasPermitidas());
-
-    const listener = (event: StorageEvent) => {
-      if (event.key && CHAVES_PERMISSOES.includes(event.key)) {
-        setTelasPermitidas(lerTelasPermitidas());
-      }
-    };
-
-    window.addEventListener("storage", listener);
-    return () => window.removeEventListener("storage", listener);
-  }, [empresa?.id]);
+  const { podeAcessar, permissoesCarregadas, perfilNome } = usePermissoes();
 
   const secoesMenu: SecaoMenu[] = useMemo(
     () => [
@@ -131,13 +72,13 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             codigoTela: "CAD004_RH_JORNADA",
           },
           {
-            label: "Funcionários",
+            label: "Funcionarios",
             rota: "/rh/funcionario",
             requerEmpresa: true,
             codigoTela: "CAD005_RH_FUNCIONARIO",
           },
           {
-            label: "Lançamento de ponto",
+            label: "Lancamento de ponto",
             rota: "/rh/ponto",
             requerEmpresa: true,
             codigoTela: "LAN001_RH_PONTO",
@@ -169,7 +110,7 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             matchExact: true,
           },
           {
-            label: "Lançamentos (Caixa)",
+            label: "Lancamentos (Caixa)",
             rota: "/financeiro/lancamentos",
             requerEmpresa: true,
             codigoTela: "FIN_LANCAMENTOS",
@@ -200,13 +141,13 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             codigoTela: "FIN_DRE",
           },
           {
-            label: "Extrato Pró-labore",
+            label: "Extrato Pro-labore",
             rota: "/financeiro/extrato-prolabore",
             requerEmpresa: true,
             codigoTela: "FIN_PROLABORE",
           },
           {
-            label: "Importação de Dados",
+            label: "Importacao de Dados",
             rota: "/financeiro/importar",
             requerEmpresa: true,
             codigoTela: "FIN_IMPORTAR",
@@ -238,17 +179,12 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
 
   const possuiEmpresaSelecionada = Boolean(empresa?.id);
 
-  const usuarioTemPermissao = (codigoTela?: string) => {
-    if (!codigoTela) return true;
-    if (telasPermitidas.size === 0) return true;
-    return telasPermitidas.has(codigoTela.toUpperCase());
-  };
-
   const filtrarItens = (itens: ItemMenu[]) =>
     itens.filter((item) => {
       if (item.requerEmpresa && !possuiEmpresaSelecionada) return false;
-      if (!usuarioTemPermissao(item.codigoTela)) return false;
-      return true;
+      if (!item.codigoTela) return true;
+      if (!permissoesCarregadas) return true;
+      return podeAcessar(item.codigoTela);
     });
 
   const isAjuda = pathname.startsWith("/ajuda");
@@ -306,6 +242,12 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
       </div>
 
       <div className="sidebar-bottom">
+        {perfilNome && (
+          <div className="sidebar-perfil-indicator">
+            PERFIL ATIVO
+            <strong>{perfilNome}</strong>
+          </div>
+        )}
         <Link
           href="/ajuda"
           className={

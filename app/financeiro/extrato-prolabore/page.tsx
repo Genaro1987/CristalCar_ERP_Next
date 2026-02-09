@@ -3,6 +3,7 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
@@ -209,6 +210,7 @@ export default function ExtratoProlaborePage() {
           modulo={moduloTela}
         />
 
+        <PaginaProtegida codigoTela={codigoTela}>
         <main className="page-content-card">
           {notification && (
             <NotificationBar
@@ -537,6 +539,7 @@ export default function ExtratoProlaborePage() {
             </section>
           </div>
         </main>
+        </PaginaProtegida>
       </div>
     </LayoutShell>
   );

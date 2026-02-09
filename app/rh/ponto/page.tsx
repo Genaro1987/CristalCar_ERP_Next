@@ -3,6 +3,7 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { InputHTMLAttributes, useEffect, useMemo, useState } from "react";
@@ -797,9 +798,10 @@ export default function PontoPage() {
             codigoTela="LAN001_RH_PONTO"
             nomeTela="LANCAMENTO DE PONTO"
             caminhoRota="/rh/ponto"
-            modulo="RH"
+            modulo="RECURSOS HUMANOS"
           />
 
+          <PaginaProtegida codigoTela="LAN001_RH_PONTO">
           <main className="page-content-card">
             {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
@@ -1141,6 +1143,7 @@ export default function PontoPage() {
               </section>
             </div>
           </main>
+          </PaginaProtegida>
         </div >
       </LayoutShell >
 

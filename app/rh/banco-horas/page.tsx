@@ -8,6 +8,7 @@ import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSeleci
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import { minutosParaHora, parseHoraParaMinutos } from "@/lib/rhPontoCalculo";
 import type { ResumoBancoHorasMes } from "@/db/rhBancoHoras";
 
@@ -386,9 +387,10 @@ export default function BancoHorasPage() {
           codigoTela="REL001_RH_BANCO_HORAS"
           nomeTela="FECHAMENTO PONTO"
           caminhoRota="/rh/banco-horas"
-          modulo="RH"
+          modulo="RECURSOS HUMANOS"
         />
 
+        <PaginaProtegida codigoTela="REL001_RH_BANCO_HORAS">
         <main className="page-content-card banco-horas-page">
           {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
@@ -911,6 +913,7 @@ export default function BancoHorasPage() {
             )}
           </div>
         </main>
+        </PaginaProtegida>
       </div>
 
       {/* Modal de confirmação de exclusão de ajuste */}

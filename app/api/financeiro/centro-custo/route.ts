@@ -262,7 +262,7 @@ export async function PUT(request: NextRequest) {
           FIN_CENTRO_CUSTO_ORDEM = COALESCE(?, FIN_CENTRO_CUSTO_ORDEM)
         WHERE FIN_CENTRO_CUSTO_ID = ? AND EMPRESA_ID = ?
       `,
-      args: [nome, codigo, descricao, ativo, ordem, id, empresaId],
+      args: [nome ?? null, codigo ?? null, descricao ?? null, ativo ?? null, ordem ?? null, id, empresaId],
     });
 
     return NextResponse.json({ success: true, message: "Centro de custo atualizado" });
@@ -270,6 +270,89 @@ export async function PUT(request: NextRequest) {
     console.error("Erro ao atualizar centro de custo:", error);
     return NextResponse.json(
       { success: false, error: "Erro ao atualizar centro de custo" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const empresaId = obterEmpresaIdDaRequest(request);
+  if (!empresaId) {
+    return respostaEmpresaNaoSelecionada();
+  }
+
+  const id = request.nextUrl.searchParams.get("id");
+  if (!id) {
+    return NextResponse.json(
+      { success: false, error: "ID e obrigatorio" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    // Collect this centro + all descendants recursively
+    const descResult = await db.execute({
+      sql: `
+        WITH RECURSIVE descendants AS (
+          SELECT FIN_CENTRO_CUSTO_ID FROM FIN_CENTRO_CUSTO WHERE FIN_CENTRO_CUSTO_ID = ? AND EMPRESA_ID = ?
+          UNION ALL
+          SELECT cc.FIN_CENTRO_CUSTO_ID FROM FIN_CENTRO_CUSTO cc
+          INNER JOIN descendants d ON cc.FIN_CENTRO_CUSTO_PAI_ID = d.FIN_CENTRO_CUSTO_ID
+        )
+        SELECT FIN_CENTRO_CUSTO_ID FROM descendants
+      `,
+      args: [id, empresaId],
+    });
+
+    if (descResult.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Centro de custo nao encontrado" },
+        { status: 404 }
+      );
+    }
+
+    const ids = descResult.rows.map((r: any) => r.FIN_CENTRO_CUSTO_ID);
+    const placeholders = ids.map(() => "?").join(",");
+
+    // Check for movements (lancamentos)
+    const movResult = await db.execute({
+      sql: `SELECT COUNT(*) as total FROM FIN_LANCAMENTO WHERE FIN_CENTRO_CUSTO_ID IN (${placeholders}) AND EMPRESA_ID = ?`,
+      args: [...ids, empresaId],
+    });
+
+    const totalMov = Number((movResult.rows[0] as any).total);
+
+    if (totalMov > 0) {
+      // Has movements → inactivate all
+      const stmts = ids.map((ccId: number) => ({
+        sql: "UPDATE FIN_CENTRO_CUSTO SET FIN_CENTRO_CUSTO_ATIVO = 0 WHERE FIN_CENTRO_CUSTO_ID = ?",
+        args: [ccId],
+      }));
+      await db.batch(stmts);
+
+      return NextResponse.json({
+        success: true,
+        inativada: true,
+        message: `Centro de custo possui lancamentos. ${ids.length} centro(s) inativado(s).`,
+      });
+    }
+
+    // No movements → delete (children first)
+    const stmts = ids.reverse().map((ccId: number) => ({
+      sql: "DELETE FROM FIN_CENTRO_CUSTO WHERE FIN_CENTRO_CUSTO_ID = ?",
+      args: [ccId],
+    }));
+    await db.batch(stmts);
+
+    return NextResponse.json({
+      success: true,
+      inativada: false,
+      message: `${ids.length} centro(s) de custo excluido(s) com sucesso.`,
+    });
+  } catch (error) {
+    console.error("Erro ao excluir centro de custo:", error);
+    return NextResponse.json(
+      { success: false, error: "Erro ao excluir centro de custo" },
       { status: 500 }
     );
   }

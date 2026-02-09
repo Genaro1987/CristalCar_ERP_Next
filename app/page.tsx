@@ -5,6 +5,7 @@ import { HeaderBar } from "@/components/HeaderBar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
+import { usePermissoes } from "@/app/_hooks/usePermissoes";
 import Image from "next/image";
 
 interface Empresa {
@@ -21,14 +22,26 @@ interface Empresa {
   DATA_ATUALIZACAO?: string | null;
 }
 
+interface Perfil {
+  ID_PERFIL: string;
+  NOME_PERFIL: string;
+  DESCRICAO?: string | null;
+  ATIVO: 0 | 1;
+}
+
 export default function SelecaoEmpresaPage() {
   const router = useRouter();
   const { definirEmpresa } = useEmpresaSelecionada();
+  const { aplicarPerfil, limparPermissoes } = usePermissoes();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [saudacao, setSaudacao] = useState("");
   const [dataHoje, setDataHoje] = useState("");
+
+  const [empresaSelecionada, setEmpresaSelecionada] = useState<Empresa | null>(null);
+  const [perfisDisponiveis, setPerfisDisponiveis] = useState<Perfil[]>([]);
+  const [carregandoPerfis, setCarregandoPerfis] = useState(false);
 
   useEffect(() => {
     const carregarEmpresas = async () => {
@@ -39,7 +52,7 @@ export default function SelecaoEmpresaPage() {
         if (json?.success) {
           setEmpresas(json.data || []);
         } else {
-          setErro("Não foi possível carregar as empresas.");
+          setErro("Nao foi possivel carregar as empresas.");
         }
       } catch (err) {
         console.error(err);
@@ -71,7 +84,7 @@ export default function SelecaoEmpresaPage() {
     setDataHoje(formatador.format(agora));
   }, []);
 
-  function handleSelecionar(empresa: Empresa) {
+  async function handleSelecionar(empresa: Empresa) {
     definirEmpresa({
       id: empresa.ID_EMPRESA,
       nomeFantasia: empresa.NOME_FANTASIA,
@@ -79,6 +92,46 @@ export default function SelecaoEmpresaPage() {
       logoUrl: empresa.LOGOTIPO_URL ?? null,
     });
 
+    setEmpresaSelecionada(empresa);
+    setCarregandoPerfis(true);
+
+    try {
+      const res = await fetch("/api/seg/perfis", {
+        headers: { "x-empresa-id": String(empresa.ID_EMPRESA) },
+      });
+      const json = await res.json();
+      const perfisAtivos = (json?.data ?? []).filter((p: Perfil) => p.ATIVO === 1);
+
+      if (perfisAtivos.length === 0) {
+        limparPermissoes();
+        router.push("/core/empresa/nova");
+      } else if (perfisAtivos.length === 1) {
+        await aplicarPerfil(
+          perfisAtivos[0].ID_PERFIL,
+          perfisAtivos[0].NOME_PERFIL,
+          empresa.ID_EMPRESA
+        );
+        router.push("/core/empresa/nova");
+      } else {
+        setPerfisDisponiveis(perfisAtivos);
+      }
+    } catch (err) {
+      console.error(err);
+      limparPermissoes();
+      router.push("/core/empresa/nova");
+    } finally {
+      setCarregandoPerfis(false);
+    }
+  }
+
+  async function handleSelecionarPerfil(perfil: Perfil) {
+    if (!empresaSelecionada) return;
+    await aplicarPerfil(perfil.ID_PERFIL, perfil.NOME_PERFIL, empresaSelecionada.ID_EMPRESA);
+    router.push("/core/empresa/nova");
+  }
+
+  function handlePularPerfil() {
+    limparPermissoes();
     router.push("/core/empresa/nova");
   }
 
@@ -88,7 +141,7 @@ export default function SelecaoEmpresaPage() {
         <HeaderBar
           codigoTela="CAD001_EMP_SELECAO"
           nomeTela="INICIAL"
-          modulo="EMPRESA"
+          modulo="CADASTROS"
         />
 
         <main className="page-content-card">
@@ -117,6 +170,46 @@ export default function SelecaoEmpresaPage() {
             <p className="helper-text">Nenhuma empresa cadastrada.</p>
           )}
 
+          {perfisDisponiveis.length > 0 && empresaSelecionada && (
+            <div className="perfil-selector-overlay">
+              <h3>SELECIONE O PERFIL DE ACESSO</h3>
+              <p>
+                Empresa: <strong>{empresaSelecionada.NOME_FANTASIA}</strong> —
+                Selecione seu perfil para definir as permissoes de acesso.
+              </p>
+              <div className="perfil-card-list">
+                {perfisDisponiveis.map((perfil) => (
+                  <div
+                    key={perfil.ID_PERFIL}
+                    className="perfil-card"
+                    onClick={() => handleSelecionarPerfil(perfil)}
+                  >
+                    <div className="perfil-card-info">
+                      <span className="perfil-card-nome">
+                        {perfil.ID_PERFIL} — {perfil.NOME_PERFIL}
+                      </span>
+                      {perfil.DESCRICAO && (
+                        <span className="perfil-card-desc">{perfil.DESCRICAO}</span>
+                      )}
+                    </div>
+                    <button type="button" className="perfil-card-btn">
+                      SELECIONAR
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="perfil-skip-btn">
+                <button type="button" onClick={handlePularPerfil}>
+                  Continuar sem perfil (acesso total)
+                </button>
+              </div>
+            </div>
+          )}
+
+          {carregandoPerfis && (
+            <p className="helper-text">Carregando perfis de acesso...</p>
+          )}
+
           <div>
             {empresas.map((empresa) => {
               const ativa = empresa.ATIVA === 1;
@@ -138,7 +231,7 @@ export default function SelecaoEmpresaPage() {
                   <div className="empresa-card-info">
                     <div className="empresa-nome">{empresa.NOME_FANTASIA}</div>
                     <div className="empresa-razao">
-                      Razão social: {empresa.RAZAO_SOCIAL}
+                      Razao social: {empresa.RAZAO_SOCIAL}
                     </div>
                     <div className="empresa-cnpj">CNPJ: {empresa.CNPJ}</div>
                   <span
@@ -154,6 +247,7 @@ export default function SelecaoEmpresaPage() {
                       type="button"
                       className="button button-primary"
                       onClick={() => handleSelecionar(empresa)}
+                      disabled={carregandoPerfis}
                     >
                       SELECIONAR
                     </button>

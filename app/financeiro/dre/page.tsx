@@ -2,6 +2,7 @@
 
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
+import { PaginaProtegida } from "@/components/PaginaProtegida";
 import React, { useMemo, useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
@@ -42,6 +43,7 @@ function calcularImpactoValor(natureza: string, valor: number): number {
   return abs;
 }
 
+/* ── Desktop: table row (hierarchical) ── */
 function DreLinhaRow({
   node,
   periodos,
@@ -106,6 +108,77 @@ function DreLinhaRow({
         node.filhos?.map((filho) => (
           <DreLinhaRow key={filho.id} node={filho} periodos={periodos} nivel={nivel + 1} />
         ))}
+    </>
+  );
+}
+
+/* ── Mobile: card view (hierarchical) ── */
+function DreLinhaCard({
+  node,
+  periodos,
+  nivel,
+}: {
+  node: DreLinha;
+  periodos: PeriodoInfo[];
+  nivel: number;
+}) {
+  const [aberto, setAberto] = useState(nivel === 0);
+  const [detalhes, setDetalhes] = useState(false);
+  const temFilhos = (node.filhos?.length ?? 0) > 0;
+  const temPeriodos = periodos.length > 0 && node.colunas;
+  const levelClass = `dre-card-level-${Math.min(nivel, 3)}`;
+  const corValor = node.valor >= 0 ? "#059669" : "#dc2626";
+  const corNatureza = node.natureza === "RECEITA" ? "#059669" : node.natureza === "DESPESA" ? "#dc2626" : "#6b7280";
+
+  return (
+    <>
+      <div className={`dre-card ${levelClass}`}>
+        <div
+          className="dre-card-header"
+          onClick={() => temFilhos ? setAberto((v) => !v) : setDetalhes((v) => !v)}
+          style={{ cursor: "pointer" }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="dre-card-title">
+              {temFilhos && <span style={{ marginRight: 4, color: "#9ca3af" }}>{aberto ? "\u25BC" : "\u25B6"}</span>}
+              {node.codigo ? `${node.codigo} - ` : ""}{node.nome}
+            </div>
+            <div className="dre-card-meta">
+              <span className="badge" style={{
+                backgroundColor: node.natureza === "RECEITA" ? "#dcfce7" : node.natureza === "DESPESA" ? "#fee2e2" : "#f3f4f6",
+                color: corNatureza,
+              }}>
+                {node.natureza}
+              </span>
+            </div>
+          </div>
+          <div className="dre-card-total" style={{ color: corValor }}>
+            {formatarValor(node.valor)}
+          </div>
+        </div>
+
+        {/* Period breakdown - toggle on tap for leaf nodes */}
+        {(detalhes || (temFilhos && aberto)) && temPeriodos && (
+          <div className="dre-card-periodos">
+            {periodos.map((p) => {
+              const val = node.colunas?.[p.chave] ?? 0;
+              return (
+                <div key={p.chave} className="dre-card-periodo-item">
+                  <span className="dre-card-periodo-label">{p.label}</span>
+                  <span className="dre-card-periodo-valor" style={{ color: val >= 0 ? "#059669" : "#dc2626" }}>
+                    {formatarValor(val)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Render children */}
+      {aberto && temFilhos && node.filhos!.map((filho) => (
+        <DreLinhaCard key={filho.id} node={filho} periodos={periodos} nivel={nivel + 1} />
+      ))}
     </>
   );
 }
@@ -207,6 +280,7 @@ export default function DrePage() {
           modulo={moduloTela}
         />
 
+        <PaginaProtegida codigoTela={codigoTela}>
         <main className="page-content-card">
           <section className="panel">
             <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
@@ -225,7 +299,7 @@ export default function DrePage() {
               </div>
 
               <div className="form-group" style={{ flex: "0 0 auto" }}>
-                <label>Visão</label>
+                <label>Visao</label>
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                   {visaoOpcoes.map((op) => (
                     <button
@@ -246,45 +320,81 @@ export default function DrePage() {
             {carregando ? (
               <div className="empty-state">Carregando dados do DRE...</div>
             ) : linhas.length === 0 ? (
-              <div className="empty-state">Nenhum dado disponível. Cadastre a estrutura de DRE e vincule contas do plano.</div>
+              <div className="empty-state">Nenhum dado disponivel. Cadastre a estrutura de DRE e vincule contas do plano.</div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table className="data-table" style={{ tableLayout: "auto", minWidth: periodos.length > 4 ? "900px" : "auto" }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: "left" }}>Conta DRE</th>
-                      {periodos.map((p) => (
-                        <th key={p.chave} style={{ textAlign: "right", whiteSpace: "nowrap" }}>{p.label}</th>
+              <>
+                {/* Desktop: Table view */}
+                <div className="dre-desktop-table" style={{ overflowX: "auto" }}>
+                  <table className="data-table" style={{ tableLayout: "auto", minWidth: periodos.length > 4 ? "900px" : "auto" }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: "left" }}>Conta DRE</th>
+                        {periodos.map((p) => (
+                          <th key={p.chave} style={{ textAlign: "right", whiteSpace: "nowrap" }}>{p.label}</th>
+                        ))}
+                        <th style={{ textAlign: "right" }}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {linhas.map((linha) => (
+                        <DreLinhaRow key={linha.id} node={linha} periodos={periodos} nivel={0} />
                       ))}
-                      <th style={{ textAlign: "right" }}>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {linhas.map((linha) => (
-                      <DreLinhaRow key={linha.id} node={linha} periodos={periodos} nivel={0} />
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr style={{ fontWeight: 700, borderTop: "2px solid #e5e7eb", backgroundColor: "#f3f4f6" }}>
-                      <td style={{ paddingLeft: 8 }}>RESULTADO DO EXERCÍCIO</td>
-                      {periodos.map((p) => {
-                        const val = resultadoPorPeriodo[p.chave] ?? 0;
-                        return (
-                          <td key={p.chave} style={{ textAlign: "right", color: val >= 0 ? "#059669" : "#dc2626" }}>
-                            {val >= 0 ? "+" : "-"}{formatarValor(val)}
-                          </td>
-                        );
-                      })}
-                      <td style={{ textAlign: "right", color: totalResultado >= 0 ? "#059669" : "#dc2626" }}>
+                    </tbody>
+                    <tfoot>
+                      <tr style={{ fontWeight: 700, borderTop: "2px solid #e5e7eb", backgroundColor: "#f3f4f6" }}>
+                        <td style={{ paddingLeft: 8 }}>RESULTADO DO EXERCICIO</td>
+                        {periodos.map((p) => {
+                          const val = resultadoPorPeriodo[p.chave] ?? 0;
+                          return (
+                            <td key={p.chave} style={{ textAlign: "right", color: val >= 0 ? "#059669" : "#dc2626" }}>
+                              {val >= 0 ? "+" : "-"}{formatarValor(val)}
+                            </td>
+                          );
+                        })}
+                        <td style={{ textAlign: "right", color: totalResultado >= 0 ? "#059669" : "#dc2626" }}>
+                          {totalResultado >= 0 ? "+" : "-"}{formatarValor(totalResultado)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+
+                {/* Mobile: Card view */}
+                <div className="dre-mobile-cards">
+                  {linhas.map((linha) => (
+                    <DreLinhaCard key={linha.id} node={linha} periodos={periodos} nivel={0} />
+                  ))}
+
+                  {/* Resultado do exercicio */}
+                  <div className="dre-card-resultado">
+                    <div className="dre-card-header">
+                      <div className="dre-card-title">RESULTADO DO EXERCICIO</div>
+                      <div className="dre-card-total" style={{ color: totalResultado >= 0 ? "#059669" : "#dc2626" }}>
                         {totalResultado >= 0 ? "+" : "-"}{formatarValor(totalResultado)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+                      </div>
+                    </div>
+                    {periodos.length > 0 && (
+                      <div className="dre-card-periodos">
+                        {periodos.map((p) => {
+                          const val = resultadoPorPeriodo[p.chave] ?? 0;
+                          return (
+                            <div key={p.chave} className="dre-card-periodo-item">
+                              <span className="dre-card-periodo-label">{p.label}</span>
+                              <span className="dre-card-periodo-valor" style={{ color: val >= 0 ? "#059669" : "#dc2626" }}>
+                                {val >= 0 ? "+" : "-"}{formatarValor(val)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
           </section>
         </main>
+        </PaginaProtegida>
       </div>
     </LayoutShell>
   );
