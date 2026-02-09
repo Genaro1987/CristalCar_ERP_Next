@@ -583,12 +583,12 @@ export default function EstruturaDrePage() {
                       <input
                         id="dre-linha-formula"
                         className="form-input"
-                        placeholder="Ex: 1 - 2 - 3 (use os codigos das linhas)"
+                        placeholder="Ex: (1 + 2) - 3 * 4 / 5"
                         value={form.formula}
                         onChange={(e) => setForm((f) => ({ ...f, formula: e.target.value }))}
                       />
                       <small style={{ color: "#6b7280", fontSize: "0.78rem", marginTop: 4, display: "block" }}>
-                        Use os codigos das linhas do DRE separados por operadores (+, -, *, /). Ex: 1 - 2 - 3
+                        Use codigos das linhas com operadores: + - * / e parenteses ( ) para prioridade. Ex: (1 + 2) - 3
                       </small>
                     </div>
                   )}
