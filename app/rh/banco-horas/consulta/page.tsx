@@ -309,17 +309,49 @@ export default function BancoHorasConsultaPage() {
         const horasExtra50 = Math.max(0, totais.extras50Min);
         const horasExtra100 = Math.max(0, totais.extras100Min);
         const horasDevidas = Math.min(0, totais.devidasMin);
-        const valorExtra50 = minutesToDecimal(horasExtra50) * resumo.funcionario.valorHora * 1.5;
-        const valorExtra100 = minutesToDecimal(horasExtra100) * resumo.funcionario.valorHora * 2;
-        const valorDevido = minutesToDecimal(Math.abs(horasDevidas)) * resumo.funcionario.valorHora;
+        const vh = resumo.funcionario.valorHora;
+
+        // Valores brutos (antes da compensação)
+        const valorExtra50Bruto = minutesToDecimal(horasExtra50) * vh * 1.5;
+        const valorExtra100Bruto = minutesToDecimal(horasExtra100) * vh * 2;
+        const valorDevidoBruto = minutesToDecimal(Math.abs(horasDevidas)) * vh;
+
+        // Compensação detalhada (vem do backend)
+        const comp = resumo.compensacao ?? { consumo100Min: 0, consumo50Min: 0, consumoSaldoAnteriorMin: 0, saldoAnteriorRestanteMin: resumo.saldoAnteriorMin };
+
+        // Valores compensados
+        const valorCompensado100 = minutesToDecimal(comp.consumo100Min) * vh * 2;
+        const valorCompensado50 = minutesToDecimal(comp.consumo50Min) * vh * 1.5;
+        const valorCompensadoSaldoAnt = minutesToDecimal(comp.consumoSaldoAnteriorMin) * vh;
+
+        // Saldos líquidos após compensação
+        const valorPagar50 = minutesToDecimal(resumo.horasPagar50Min) * vh * 1.5;
+        const valorPagar100 = minutesToDecimal(resumo.horasPagar100Min) * vh * 2;
+        const valorDescontar = minutesToDecimal(resumo.horasDescontarMin) * vh;
 
         return {
           horasExtra50,
           horasExtra100,
           horasDevidas,
-          valorExtra50,
-          valorExtra100,
-          valorDevido,
+          valorExtra50Bruto,
+          valorExtra100Bruto,
+          valorDevidoBruto,
+          // Compensação em minutos
+          consumo100Min: comp.consumo100Min,
+          consumo50Min: comp.consumo50Min,
+          consumoSaldoAnteriorMin: comp.consumoSaldoAnteriorMin,
+          // Compensação em valores
+          valorCompensado100,
+          valorCompensado50,
+          valorCompensadoSaldoAnt,
+          // Líquido
+          horasPagar50: resumo.horasPagar50Min,
+          horasPagar100: resumo.horasPagar100Min,
+          horasDescontar: resumo.horasDescontarMin,
+          valorPagar50,
+          valorPagar100,
+          valorDescontar,
+          subtotal: valorPagar50 + valorPagar100 - valorDescontar,
           saldoAjustes: resumo.ajustesManuaisMin + resumo.fechamentosMin,
           jornadaInfo: construirLinhaJornada(resumo.jornada),
         };
@@ -442,7 +474,7 @@ export default function BancoHorasConsultaPage() {
                   <p className="card-label">Horas Extras 50%</p>
                   <p className="card-value">
                     {minutosParaHora(resumoValores.horasExtra50)}
-                    <span className="card-sub">= {formatarMoeda(resumoValores.valorExtra50)}</span>
+                    <span className="card-sub">= {formatarMoeda(resumoValores.valorExtra50Bruto)}</span>
                   </p>
                 </div>
 
@@ -450,7 +482,7 @@ export default function BancoHorasConsultaPage() {
                   <p className="card-label">Horas Extras 100%</p>
                   <p className="card-value">
                     {minutosParaHora(resumoValores.horasExtra100)}
-                    <span className="card-sub">= {formatarMoeda(resumoValores.valorExtra100)}</span>
+                    <span className="card-sub">= {formatarMoeda(resumoValores.valorExtra100Bruto)}</span>
                   </p>
                 </div>
 
@@ -458,7 +490,7 @@ export default function BancoHorasConsultaPage() {
                   <p className="card-label">Horas Devidas</p>
                   <p className="card-value">
                     {minutosParaHora(resumoValores.horasDevidas * -1)}
-                    <span className="card-sub">= -{formatarMoeda(resumoValores.valorDevido)}</span>
+                    <span className="card-sub">= -{formatarMoeda(resumoValores.valorDevidoBruto)}</span>
                   </p>
                 </div>
 
@@ -478,17 +510,48 @@ export default function BancoHorasConsultaPage() {
                 </div>
               </div>
 
+              {/* Detalhamento da compensação */}
               <div className="banco-horas-card banco-horas-card-full saldo-bloco">
                 <p className="card-label saldo-titulo">Saldo por hora extra ou falta</p>
-                <div className="saldo-valores">
-                  <span>{`Pagar 50%: ${formatarMoeda(resumoValores.valorExtra50)}`}</span>
-                  <span>{`Pagar 100%: ${formatarMoeda(resumoValores.valorExtra100)}`}</span>
-                  <span>{`Descontar: ${formatarMoeda(resumoValores.valorDevido)}`}</span>
-                  <span>
-                    {`Subtotal: ${formatarMoeda(
-                      resumoValores.valorExtra50 + resumoValores.valorExtra100 - resumoValores.valorDevido
-                    )}`}
-                  </span>
+
+                {/* Valores brutos */}
+                <div className="saldo-valores" style={{ borderBottom: "1px dashed #d1d5db", paddingBottom: 6, marginBottom: 6 }}>
+                  <span>Extras 50%: {minutosParaHora(resumoValores.horasExtra50)} = {formatarMoeda(resumoValores.valorExtra50Bruto)}</span>
+                  <span>Extras 100%: {minutosParaHora(resumoValores.horasExtra100)} = {formatarMoeda(resumoValores.valorExtra100Bruto)}</span>
+                  <span>Devidas: {minutosParaHora(resumoValores.horasDevidas * -1)} = -{formatarMoeda(resumoValores.valorDevidoBruto)}</span>
+                  {resumo.saldoAnteriorMin !== 0 && (
+                    <span>Saldo Anterior: {minutosParaHora(resumo.saldoAnteriorMin)} = {formatarMoeda((resumo.saldoAnteriorMin / 60) * resumo.funcionario.valorHora)}</span>
+                  )}
+                </div>
+
+                {/* Compensação detalhada */}
+                {(resumoValores.consumo100Min > 0 || resumoValores.consumo50Min > 0 || resumoValores.consumoSaldoAnteriorMin > 0) && (
+                  <div className="saldo-valores" style={{ borderBottom: "1px dashed #d1d5db", paddingBottom: 6, marginBottom: 6, color: "#6b7280", fontSize: "0.82rem" }}>
+                    <span style={{ fontWeight: 600 }}>Compensacao:</span>
+                    {resumoValores.consumo100Min > 0 && (
+                      <span>100% abateu {minutosParaHora(resumoValores.consumo100Min)} de falta = -{formatarMoeda(resumoValores.valorCompensado100)}</span>
+                    )}
+                    {resumoValores.consumo50Min > 0 && (
+                      <span>50% abateu {minutosParaHora(resumoValores.consumo50Min)} de falta = -{formatarMoeda(resumoValores.valorCompensado50)}</span>
+                    )}
+                    {resumoValores.consumoSaldoAnteriorMin > 0 && (
+                      <span>Saldo anterior abateu {minutosParaHora(resumoValores.consumoSaldoAnteriorMin)} de falta = -{formatarMoeda(resumoValores.valorCompensadoSaldoAnt)}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Resultado líquido */}
+                <div className="saldo-valores" style={{ fontWeight: 700 }}>
+                  {resumoValores.horasPagar50 > 0 && (
+                    <span style={{ color: "#059669" }}>Pagar 50%: {minutosParaHora(resumoValores.horasPagar50)} = {formatarMoeda(resumoValores.valorPagar50)}</span>
+                  )}
+                  {resumoValores.horasPagar100 > 0 && (
+                    <span style={{ color: "#059669" }}>Pagar 100%: {minutosParaHora(resumoValores.horasPagar100)} = {formatarMoeda(resumoValores.valorPagar100)}</span>
+                  )}
+                  {resumoValores.horasDescontar > 0 && (
+                    <span style={{ color: "#dc2626" }}>Descontar: {minutosParaHora(resumoValores.horasDescontar)} = -{formatarMoeda(resumoValores.valorDescontar)}</span>
+                  )}
+                  <span>Subtotal: {formatarMoeda(resumoValores.subtotal)}</span>
                 </div>
               </div>
 
