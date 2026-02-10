@@ -66,11 +66,13 @@ function ObjetivoLinhaRow({
   nivel,
   editados,
   onChangePercent,
+  onChangeValor,
 }: {
   node: DreNode;
   nivel: number;
   editados: Record<number, number>;
   onChangePercent: (id: number, val: string) => void;
+  onChangeValor: (id: number, val: string, media: number) => void;
 }) {
   const [aberto, setAberto] = useState(true);
   const temFilhos = node.filhos.length > 0;
@@ -112,7 +114,20 @@ function ObjetivoLinhaRow({
             <span style={{ color: "#9ca3af", fontSize: "0.82rem" }}>--</span>
           )}
         </td>
-        <td style={{ textAlign: "right", fontWeight: 600, whiteSpace: "nowrap" }}>{formatMoney(node.objetivo)}</td>
+        <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+          {isFolha ? (
+            <input
+              type="number"
+              className="form-input"
+              style={{ width: 120, textAlign: "right", padding: "4px 8px", fontWeight: 600 }}
+              value={Number(node.objetivo.toFixed(2))}
+              onChange={(e) => onChangeValor(node.id, e.target.value, node.media)}
+              step={0.01}
+            />
+          ) : (
+            <span style={{ fontWeight: 600 }}>{formatMoney(node.objetivo)}</span>
+          )}
+        </td>
         <td
           style={{
             textAlign: "right",
@@ -132,6 +147,7 @@ function ObjetivoLinhaRow({
             nivel={nivel + 1}
             editados={editados}
             onChangePercent={onChangePercent}
+            onChangeValor={onChangeValor}
           />
         ))}
     </>
@@ -144,11 +160,13 @@ function ObjetivoLinhaCard({
   nivel,
   editados,
   onChangePercent,
+  onChangeValor,
 }: {
   node: DreNode;
   nivel: number;
   editados: Record<number, number>;
   onChangePercent: (id: number, val: string) => void;
+  onChangeValor: (id: number, val: string, media: number) => void;
 }) {
   const [aberto, setAberto] = useState(nivel === 0);
   const temFilhos = node.filhos.length > 0;
@@ -209,9 +227,20 @@ function ObjetivoLinhaCard({
           )}
           <div className="dre-card-periodo-item">
             <span className="dre-card-periodo-label">Objetivo</span>
-            <span className="dre-card-periodo-valor" style={{ fontWeight: 600 }}>
-              {formatMoney(node.objetivo)}
-            </span>
+            {isFolha ? (
+              <input
+                type="number"
+                className="form-input"
+                style={{ width: 100, textAlign: "right", padding: "4px 6px", fontWeight: 600 }}
+                value={Number(node.objetivo.toFixed(2))}
+                onChange={(e) => onChangeValor(node.id, e.target.value, node.media)}
+                step={0.01}
+              />
+            ) : (
+              <span className="dre-card-periodo-valor" style={{ fontWeight: 600 }}>
+                {formatMoney(node.objetivo)}
+              </span>
+            )}
           </div>
           <div className="dre-card-periodo-item">
             <span className="dre-card-periodo-label">Variacao</span>
@@ -235,6 +264,7 @@ function ObjetivoLinhaCard({
             nivel={nivel + 1}
             editados={editados}
             onChangePercent={onChangePercent}
+            onChangeValor={onChangeValor}
           />
         ))}
     </>
@@ -337,6 +367,13 @@ export default function ObjetivosPage() {
   const handlePercentualChange = (id: number, valor: string) => {
     const num = valor === "" || valor === "-" ? 0 : Number(valor);
     setPercentuaisEditados((prev) => ({ ...prev, [id]: num }));
+  };
+
+  const handleValorChange = (id: number, valorStr: string, media: number) => {
+    const valorObj = valorStr === "" || valorStr === "-" ? 0 : Number(valorStr);
+    // Reverse: objetivo = media * (1 + pct/100) → pct = ((objetivo / media) - 1) * 100
+    const pct = media !== 0 ? ((valorObj / media) - 1) * 100 : 0;
+    setPercentuaisEditados((prev) => ({ ...prev, [id]: Math.round(pct * 100) / 100 }));
   };
 
   const salvarObjetivos = async () => {
@@ -558,7 +595,7 @@ export default function ObjetivosPage() {
                           <th style={{ textAlign: "left" }}>Estrutura DRE</th>
                           <th style={{ textAlign: "right", width: 140 }}>Media Mensal</th>
                           <th style={{ textAlign: "center", width: 100 }}>Cresc. %</th>
-                          <th style={{ textAlign: "right", width: 140 }}>Objetivo</th>
+                          <th style={{ textAlign: "right", width: 150 }}>Objetivo R$</th>
                           <th style={{ textAlign: "right", width: 140 }}>Variacao</th>
                         </tr>
                       </thead>
@@ -570,6 +607,7 @@ export default function ObjetivosPage() {
                             nivel={0}
                             editados={percentuaisEditados}
                             onChangePercent={handlePercentualChange}
+                            onChangeValor={handleValorChange}
                           />
                         ))}
                       </tbody>
@@ -583,8 +621,8 @@ export default function ObjetivosPage() {
                         >
                           <td style={{ paddingLeft: 8 }}>TOTAL</td>
                           <td style={{ textAlign: "right" }}>{formatMoney(totalMedia)}</td>
-                          <td></td>
-                          <td style={{ textAlign: "right" }}>{formatMoney(totalObjetivo)}</td>
+                          <td style={{ textAlign: "center", color: "#9ca3af", fontSize: "0.82rem" }}>--</td>
+                          <td style={{ textAlign: "right", fontWeight: 700 }}>{formatMoney(totalObjetivo)}</td>
                           <td
                             style={{
                               textAlign: "right",
@@ -608,6 +646,7 @@ export default function ObjetivosPage() {
                         nivel={0}
                         editados={percentuaisEditados}
                         onChangePercent={handlePercentualChange}
+                        onChangeValor={handleValorChange}
                       />
                     ))}
 
