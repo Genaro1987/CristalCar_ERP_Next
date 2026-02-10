@@ -233,10 +233,41 @@ async function importarLancamentos(
 
   const planosPorCodigo = new Map<string, number>();
   const planosPorNome = new Map<string, number>();
+  const planosNomes: { nome: string; id: number }[] = [];
   for (const row of planosResult.rows) {
     const r = row as any;
-    planosPorCodigo.set(String(r.FIN_PLANO_CONTA_CODIGO).trim().toUpperCase(), Number(r.FIN_PLANO_CONTA_ID));
-    planosPorNome.set(String(r.FIN_PLANO_CONTA_NOME).trim().toUpperCase(), Number(r.FIN_PLANO_CONTA_ID));
+    const id = Number(r.FIN_PLANO_CONTA_ID);
+    const codigo = String(r.FIN_PLANO_CONTA_CODIGO).trim().toUpperCase();
+    const nome = String(r.FIN_PLANO_CONTA_NOME).trim().toUpperCase();
+    planosPorCodigo.set(codigo, id);
+    planosPorNome.set(nome, id);
+    planosNomes.push({ nome, id });
+  }
+
+  // Fuzzy match: find conta by partial name match
+  function buscarContaFuzzy(ref: string): number | undefined {
+    const refUpper = ref.toUpperCase().trim();
+    // 1. Exact match by code or name
+    const exato = planosPorCodigo.get(refUpper) ?? planosPorNome.get(refUpper);
+    if (exato) return exato;
+
+    // 2. Partial match: ref is contained in account name, or account name is contained in ref
+    const parcial = planosNomes.find(
+      (p) => p.nome.includes(refUpper) || refUpper.includes(p.nome)
+    );
+    if (parcial) return parcial.id;
+
+    // 3. Normalize: remove accents, plurals, hyphens
+    const normalizar = (s: string) =>
+      s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
+    const refNorm = normalizar(refUpper);
+    const parcialNorm = planosNomes.find((p) => {
+      const nomeNorm = normalizar(p.nome);
+      return nomeNorm.includes(refNorm) || refNorm.includes(nomeNorm);
+    });
+    if (parcialNorm) return parcialNorm.id;
+
+    return undefined;
   }
 
   // Build lookup maps for centros de custo
@@ -263,22 +294,26 @@ async function importarLancamentos(
     const valorStr = obterValor(linha, mapeamento, "valor");
     const documento = obterValor(linha, mapeamento, "documento");
     const tipoStr = obterValor(linha, mapeamento, "tipo").toUpperCase();
+    const operacaoStr = obterValor(linha, mapeamento, "operacao").toUpperCase();
 
-    if (!dataStr || !historico || !contaRef) {
-      erros.push(`Linha ${i + 1}: data, histórico e conta são obrigatórios`);
+    if (!dataStr || !contaRef) {
+      erros.push(`Linha ${i + 1}: data e conta sao obrigatorios`);
       continue;
     }
 
-    // Parse date - support dd/mm/yyyy and yyyy-mm-dd
+    // Parse date - support dd/mm/yyyy, dd-mm-yyyy, and yyyy-mm-dd
     let dataFormatada = dataStr;
     if (dataStr.includes("/")) {
       const partes = dataStr.split("/");
       if (partes.length === 3) {
         dataFormatada = `${partes[2]}-${partes[1].padStart(2, "0")}-${partes[0].padStart(2, "0")}`;
       }
+    } else if (/^\d{2}-\d{2}-\d{4}$/.test(dataStr)) {
+      const partes = dataStr.split("-");
+      dataFormatada = `${partes[2]}-${partes[1]}-${partes[0]}`;
     }
 
-    // Parse valor
+    // Parse valor - handle various BR formats: "1.234,56", "1234.56", "-R$ 1.234,56"
     let valor = parseFloat(
       valorStr
         .replace(/[R$\s]/g, "")
@@ -287,24 +322,27 @@ async function importarLancamentos(
     );
 
     if (isNaN(valor)) {
-      erros.push(`Linha ${i + 1}: valor "${valorStr}" inválido`);
+      erros.push(`Linha ${i + 1}: valor "${valorStr}" invalido`);
       continue;
     }
 
-    // Determine sign based on tipo if available
-    if (tipoStr === "SAIDA" || tipoStr === "SAÍDA" || tipoStr === "DESPESA" || tipoStr === "DEBITO" || tipoStr === "DÉBITO") {
+    // Determine sign based on tipo or operacao fields
+    const sinalizador = tipoStr || operacaoStr;
+    if (sinalizador === "SAIDA" || sinalizador === "SAÍDA" || sinalizador === "DESPESA" || sinalizador === "DEBITO" || sinalizador === "DÉBITO" || sinalizador === "S") {
       valor = -Math.abs(valor);
-    } else if (tipoStr === "ENTRADA" || tipoStr === "RECEITA" || tipoStr === "CREDITO" || tipoStr === "CRÉDITO") {
+    } else if (sinalizador === "ENTRADA" || sinalizador === "RECEITA" || sinalizador === "CREDITO" || sinalizador === "CRÉDITO" || sinalizador === "E") {
       valor = Math.abs(valor);
     }
 
-    // Resolve plano de conta
-    const contaUpper = contaRef.toUpperCase();
-    let contaId = planosPorCodigo.get(contaUpper) ?? planosPorNome.get(contaUpper);
+    // Resolve plano de conta with fuzzy matching
+    const contaId = buscarContaFuzzy(contaRef);
     if (!contaId) {
-      erros.push(`Linha ${i + 1}: conta "${contaRef}" não encontrada`);
+      erros.push(`Linha ${i + 1}: conta "${contaRef}" nao encontrada`);
       continue;
     }
+
+    // Use historico if mapped, otherwise use contaRef as fallback
+    const historicoFinal = historico || contaRef;
 
     // Resolve centro de custo (optional)
     let centroId: number | null = null;
@@ -323,7 +361,7 @@ async function importarLancamentos(
           FIN_PLANO_CONTA_ID, FIN_CENTRO_CUSTO_ID, FIN_LANCAMENTO_DOCUMENTO,
           FIN_LANCAMENTO_STATUS, EMPRESA_ID
         ) VALUES (?, ?, ?, ?, ?, ?, 'confirmado', ?)`,
-        args: [dataFormatada, historico, valor, contaId, centroId, documento || null, empresaId],
+        args: [dataFormatada, historicoFinal, valor, contaId, centroId, documento || null, empresaId],
       });
 
       importados++;

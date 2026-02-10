@@ -33,10 +33,11 @@ const CAMPOS_POR_TIPO: Record<TipoImportacao, CampoMapeamento[]> = {
   ],
   lancamentos: [
     { campo: "data", label: "Data", obrigatorio: true },
-    { campo: "historico", label: "Histórico", obrigatorio: true },
-    { campo: "conta", label: "Plano de Conta (código ou nome)", obrigatorio: true },
+    { campo: "historico", label: "Historico / Descricao", obrigatorio: false },
+    { campo: "conta", label: "Plano de Conta (codigo ou nome)", obrigatorio: true },
     { campo: "valor", label: "Valor", obrigatorio: true },
-    { campo: "tipo", label: "Tipo (Entrada/Saída)", obrigatorio: false },
+    { campo: "tipo", label: "Tipo (Entrada/Saida)", obrigatorio: false },
+    { campo: "operacao", label: "Operacao (Entrada/Saida)", obrigatorio: false },
     { campo: "centroCusto", label: "Centro de Custo", obrigatorio: false },
     { campo: "documento", label: "Documento", obrigatorio: false },
   ],
@@ -145,16 +146,63 @@ export default function ImportarPage() {
       setHeaders(h);
       setDados(rows);
 
-      // Auto-map matching columns
+      // Auto-map matching columns with smart heuristics
       const autoMap: Record<string, string> = {};
-      for (const campo of camposDoTipo) {
-        const campoLower = campo.campo.toLowerCase();
-        const labelLower = campo.label.toLowerCase();
-        const match = h.find((hdr) => {
-          const hdrLower = hdr.toLowerCase();
-          return hdrLower === campoLower || hdrLower.includes(campoLower) || hdrLower.includes(labelLower);
-        });
-        if (match) autoMap[campo.campo] = match;
+      const headersLower = h.map((hdr) => hdr.toLowerCase().trim());
+
+      if (tipo === "lancamentos") {
+        // Smart mapping for common Excel formats (e.g., ID, Data, Operacao, Tipo, Conta, Valor, Data do Registro)
+        const mapHeuristics: Record<string, string[]> = {
+          data: ["data", "data lancamento", "dt"],
+          historico: ["conta", "descricao", "historico", "descr", "obs", "observacao"],
+          conta: ["tipo", "plano", "plano de conta", "categoria", "classificacao"],
+          valor: ["valor", "vlr", "montante", "total"],
+          tipo: ["tipo"],
+          operacao: ["operacao", "operação", "op", "entrada/saida", "entrada_saida"],
+          centroCusto: ["centro", "centro custo", "centro de custo", "cc"],
+          documento: ["documento", "doc", "nf", "nota"],
+        };
+
+        // First pass: try exact matches
+        for (const [campo, aliases] of Object.entries(mapHeuristics)) {
+          const match = h.find((hdr) => aliases.includes(hdr.toLowerCase().trim()));
+          if (match) autoMap[campo] = match;
+        }
+
+        // Handle conflict: if both "tipo" and "conta" map to "Tipo" column,
+        // and there's a separate "Conta" column, resolve it:
+        // "Tipo" (TERCEIROS, GASTO FIXO etc) = plano de contas → campo "conta"
+        // "Conta" (description text) = historico → campo "historico"
+        const temColTipo = h.find((hdr) => hdr.toLowerCase().trim() === "tipo");
+        const temColConta = h.find((hdr) => hdr.toLowerCase().trim() === "conta");
+        const temColOperacao = h.find((hdr) => hdr.toLowerCase().trim() === "operacao" || hdr.toLowerCase().trim() === "operação");
+
+        if (temColTipo && temColConta) {
+          autoMap["conta"] = temColTipo;
+          autoMap["historico"] = temColConta;
+          if (temColOperacao) {
+            autoMap["operacao"] = temColOperacao;
+          }
+          delete autoMap["tipo"];
+        }
+
+        // Find "Data" but not "Data do Registro" for the main date
+        const dataHeaders = h.filter((hdr) => hdr.toLowerCase().includes("data"));
+        if (dataHeaders.length >= 1) {
+          const mainData = dataHeaders.find((hdr) => hdr.toLowerCase().trim() === "data") ?? dataHeaders[0];
+          autoMap["data"] = mainData;
+        }
+      } else {
+        // Default mapping for plano_contas and centro_custo
+        for (const campo of camposDoTipo) {
+          const campoLower = campo.campo.toLowerCase();
+          const labelLower = campo.label.toLowerCase();
+          const match = h.find((hdr) => {
+            const hdrLower = hdr.toLowerCase();
+            return hdrLower === campoLower || hdrLower.includes(campoLower) || hdrLower.includes(labelLower);
+          });
+          if (match) autoMap[campo.campo] = match;
+        }
       }
       setMapeamento(autoMap);
       setEtapa("mapeamento");
@@ -308,6 +356,13 @@ export default function ImportarPage() {
                     </span>
                   ))}
                 </div>
+                {tipo === "lancamentos" && (
+                  <p style={{ marginTop: 10, fontSize: "0.8rem", color: "#6b7280" }}>
+                    Dica: Se seu arquivo tem colunas como &quot;Tipo&quot; (ex: TERCEIROS, GASTO FIXO, PECAS) e &quot;Conta&quot; (descricao),
+                    mapeie &quot;Tipo&quot; para &quot;Plano de Conta&quot; e &quot;Conta&quot; para &quot;Historico&quot;.
+                    O sistema busca o plano de contas pelo nome, inclusive com correspondencia parcial.
+                  </p>
+                )}
               </div>
             )}
           </section>

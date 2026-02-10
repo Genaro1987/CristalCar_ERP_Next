@@ -177,6 +177,13 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             matchExact: true,
           },
           {
+            label: "Acompanhamento",
+            rota: "/financeiro/objetivos/acompanhamento",
+            requerEmpresa: true,
+            codigoTela: "FIN_OBJETIVOS",
+            matchExact: true,
+          },
+          {
             label: "Objetivos Semanais",
             rota: "/financeiro/objetivos-semanais",
             requerEmpresa: true,
@@ -251,17 +258,21 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             </div>
           );
         })}
+
+        <div style={{ marginTop: 8 }}>
+          <nav className="sidebar-nav">
+            <Link
+              href="/ajuda"
+              className={isAjuda ? "sidebar-nav-item active" : "sidebar-nav-item"}
+              onClick={onNavegar}
+            >
+              Ajuda
+            </Link>
+          </nav>
+        </div>
       </div>
 
       <div className="sidebar-bottom">
-        <Link
-          href="/ajuda"
-          className={
-            isAjuda ? "sidebar-help-link active" : "sidebar-help-link"
-          }
-        >
-          AJUDA
-        </Link>
         {perfilNome && (
           <div className="sidebar-perfil-indicator">
             PERFIL ATIVO

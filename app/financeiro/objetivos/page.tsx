@@ -9,15 +9,16 @@ import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSeleci
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 import { NotificationBar } from "@/components/NotificationBar";
 
-type TipoPlano = "PLANO_CONTAS" | "CENTRO_CUSTO";
-
-interface ContaComMedia {
-  contaId: number;
+interface DreNode {
+  id: number;
+  paiId: number | null;
+  codigo: string;
   nome: string;
   natureza: string;
   media: number;
   percentual: number;
   objetivo: number;
+  filhos: DreNode[];
 }
 
 function formatMoney(val: number): string {
@@ -25,6 +26,220 @@ function formatMoney(val: number): string {
 }
 
 const MESES_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+/* ── Collect all leaf IDs from tree ── */
+function coletarFolhas(nodes: DreNode[]): number[] {
+  const ids: number[] = [];
+  for (const n of nodes) {
+    if (n.filhos.length === 0) {
+      ids.push(n.id);
+    } else {
+      ids.push(...coletarFolhas(n.filhos));
+    }
+  }
+  return ids;
+}
+
+/* ── Apply edited percentages and recalculate tree ── */
+function recalcularArvore(node: DreNode, editados: Record<number, number>): DreNode {
+  if (node.filhos.length === 0) {
+    const pct = editados[node.id] ?? node.percentual;
+    const objetivo = node.media * (1 + pct / 100);
+    return { ...node, percentual: pct, objetivo };
+  }
+
+  const filhosRecalc = node.filhos.map((f) => recalcularArvore(f, editados));
+  const mediaFilhos = filhosRecalc.reduce((acc, f) => acc + f.media, 0);
+  const objetivoFilhos = filhosRecalc.reduce((acc, f) => acc + f.objetivo, 0);
+
+  return {
+    ...node,
+    filhos: filhosRecalc,
+    media: node.filhos.length > 0 ? mediaFilhos : node.media,
+    objetivo: node.filhos.length > 0 ? objetivoFilhos : node.objetivo,
+  };
+}
+
+/* ── Desktop tree row ── */
+function ObjetivoLinhaRow({
+  node,
+  nivel,
+  editados,
+  onChangePercent,
+}: {
+  node: DreNode;
+  nivel: number;
+  editados: Record<number, number>;
+  onChangePercent: (id: number, val: string) => void;
+}) {
+  const [aberto, setAberto] = useState(true);
+  const temFilhos = node.filhos.length > 0;
+  const paddingLeft = nivel * 20 + 8;
+  const isFolha = !temFilhos;
+  const variacao = node.objetivo - node.media;
+  const corNatureza =
+    node.natureza === "RECEITA" ? "#059669" : node.natureza === "DESPESA" ? "#dc2626" : "#6b7280";
+
+  return (
+    <>
+      <tr
+        style={{
+          fontWeight: nivel === 0 ? 700 : temFilhos ? 600 : 400,
+          backgroundColor: nivel === 0 ? "#f9fafb" : "transparent",
+        }}
+      >
+        <td
+          style={{ paddingLeft, cursor: temFilhos ? "pointer" : "default", whiteSpace: "nowrap" }}
+          onClick={() => temFilhos && setAberto((v) => !v)}
+        >
+          {temFilhos ? (aberto ? "- " : "+ ") : "  "}
+          {node.codigo ? `${node.codigo} - ` : ""}
+          {node.nome}
+          <span style={{ marginLeft: 8, fontSize: "0.7rem", color: corNatureza }}>{node.natureza}</span>
+        </td>
+        <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>{formatMoney(node.media)}</td>
+        <td style={{ textAlign: "center" }}>
+          {isFolha ? (
+            <input
+              type="number"
+              className="form-input"
+              style={{ width: 80, textAlign: "center", padding: "4px 8px", margin: "0 auto", display: "block" }}
+              value={editados[node.id] ?? node.percentual}
+              onChange={(e) => onChangePercent(node.id, e.target.value)}
+              step={1}
+            />
+          ) : (
+            <span style={{ color: "#9ca3af", fontSize: "0.82rem" }}>--</span>
+          )}
+        </td>
+        <td style={{ textAlign: "right", fontWeight: 600, whiteSpace: "nowrap" }}>{formatMoney(node.objetivo)}</td>
+        <td
+          style={{
+            textAlign: "right",
+            whiteSpace: "nowrap",
+            color: variacao >= 0 ? "#059669" : "#dc2626",
+          }}
+        >
+          {variacao >= 0 ? "+" : ""}
+          {formatMoney(variacao)}
+        </td>
+      </tr>
+      {aberto &&
+        node.filhos.map((filho) => (
+          <ObjetivoLinhaRow
+            key={filho.id}
+            node={filho}
+            nivel={nivel + 1}
+            editados={editados}
+            onChangePercent={onChangePercent}
+          />
+        ))}
+    </>
+  );
+}
+
+/* ── Mobile tree card ── */
+function ObjetivoLinhaCard({
+  node,
+  nivel,
+  editados,
+  onChangePercent,
+}: {
+  node: DreNode;
+  nivel: number;
+  editados: Record<number, number>;
+  onChangePercent: (id: number, val: string) => void;
+}) {
+  const [aberto, setAberto] = useState(nivel === 0);
+  const temFilhos = node.filhos.length > 0;
+  const isFolha = !temFilhos;
+  const variacao = node.objetivo - node.media;
+  const corNatureza =
+    node.natureza === "RECEITA" ? "#059669" : node.natureza === "DESPESA" ? "#dc2626" : "#6b7280";
+  const levelClass = `dre-card-level-${Math.min(nivel, 3)}`;
+
+  return (
+    <>
+      <div className={`dre-card ${levelClass}`}>
+        <div
+          className="dre-card-header"
+          onClick={() => temFilhos && setAberto((v) => !v)}
+          style={{ cursor: temFilhos ? "pointer" : "default" }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="dre-card-title">
+              {temFilhos && (
+                <span style={{ marginRight: 4, color: "#9ca3af" }}>{aberto ? "\u25BC" : "\u25B6"}</span>
+              )}
+              {node.codigo ? `${node.codigo} - ` : ""}
+              {node.nome}
+            </div>
+            <div className="dre-card-meta">
+              <span
+                className="badge"
+                style={{
+                  backgroundColor:
+                    node.natureza === "RECEITA" ? "#dcfce7" : node.natureza === "DESPESA" ? "#fee2e2" : "#f3f4f6",
+                  color: corNatureza,
+                }}
+              >
+                {node.natureza}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="dre-card-periodos">
+          <div className="dre-card-periodo-item">
+            <span className="dre-card-periodo-label">Media</span>
+            <span className="dre-card-periodo-valor">{formatMoney(node.media)}</span>
+          </div>
+          {isFolha && (
+            <div className="dre-card-periodo-item" style={{ alignItems: "center" }}>
+              <span className="dre-card-periodo-label">Cresc. %</span>
+              <input
+                type="number"
+                className="form-input"
+                style={{ width: 70, textAlign: "center", padding: "4px 6px" }}
+                value={editados[node.id] ?? node.percentual}
+                onChange={(e) => onChangePercent(node.id, e.target.value)}
+                step={1}
+              />
+            </div>
+          )}
+          <div className="dre-card-periodo-item">
+            <span className="dre-card-periodo-label">Objetivo</span>
+            <span className="dre-card-periodo-valor" style={{ fontWeight: 600 }}>
+              {formatMoney(node.objetivo)}
+            </span>
+          </div>
+          <div className="dre-card-periodo-item">
+            <span className="dre-card-periodo-label">Variacao</span>
+            <span
+              className="dre-card-periodo-valor"
+              style={{ color: variacao >= 0 ? "#059669" : "#dc2626" }}
+            >
+              {variacao >= 0 ? "+" : ""}
+              {formatMoney(variacao)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {aberto &&
+        temFilhos &&
+        node.filhos.map((filho) => (
+          <ObjetivoLinhaCard
+            key={filho.id}
+            node={filho}
+            nivel={nivel + 1}
+            editados={editados}
+            onChangePercent={onChangePercent}
+          />
+        ))}
+    </>
+  );
+}
 
 export default function ObjetivosPage() {
   useRequerEmpresaSelecionada();
@@ -37,15 +252,18 @@ export default function ObjetivosPage() {
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const mesAtual = new Date().getMonth() + 1;
-  const [tipoPlano, setTipoPlano] = useState<TipoPlano>("PLANO_CONTAS");
+  const anoAtual = new Date().getFullYear();
   const [mesInicio, setMesInicio] = useState(Math.max(1, mesAtual - 2));
   const [mesFim, setMesFim] = useState(mesAtual);
-  const [anoObjetivo, setAnoObjetivo] = useState(new Date().getFullYear());
-  const [contas, setContas] = useState<ContaComMedia[]>([]);
+  const [anoRef, setAnoRef] = useState(anoAtual);
+  const [anoObjetivo, setAnoObjetivo] = useState(anoAtual);
+  const [arvoreOriginal, setArvoreOriginal] = useState<DreNode[]>([]);
   const [percentuaisEditados, setPercentuaisEditados] = useState<Record<number, number>>({});
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
-  const [notification, setNotification] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
+  const [notification, setNotification] = useState<{ type: "success" | "error" | "info"; message: string } | null>(
+    null
+  );
   const [pctGlobal, setPctGlobal] = useState("");
 
   const mesesRef = useMemo(() => {
@@ -59,58 +277,66 @@ export default function ObjetivosPage() {
     return headers;
   }, [empresa?.id]);
 
-  const carregarContas = useCallback(async () => {
+  const carregarDados = useCallback(async () => {
     if (!empresa?.id) return;
     try {
       setCarregando(true);
       const params = new URLSearchParams({
-        tipo: tipoPlano,
+        anoRef: String(anoRef),
         mesInicio: String(mesInicio),
         mesFim: String(mesFim),
-        ano: String(anoObjetivo),
+        anoObjetivo: String(anoObjetivo),
       });
 
-      const resp = await fetch(`/api/financeiro/objetivos/contas?${params}`, {
+      const resp = await fetch(`/api/financeiro/objetivos/dre?${params}`, {
         headers: headersPadrao,
       });
       const json = await resp.json();
 
       if (json?.success) {
-        setContas(json.data ?? []);
+        const dados: DreNode[] = json.data ?? [];
+        setArvoreOriginal(dados);
+
+        // Extract saved percentages from tree (leaf nodes)
         const editados: Record<number, number> = {};
-        for (const c of json.data ?? []) {
-          editados[c.contaId] = c.percentual;
+        function extrairPcts(nodes: DreNode[]) {
+          for (const n of nodes) {
+            if (n.filhos.length === 0) {
+              editados[n.id] = n.percentual;
+            } else {
+              extrairPcts(n.filhos);
+            }
+          }
         }
+        extrairPcts(dados);
         setPercentuaisEditados(editados);
       }
     } catch (err) {
-      console.error("Erro ao carregar contas:", err);
+      console.error("Erro ao carregar objetivos DRE:", err);
     } finally {
       setCarregando(false);
     }
-  }, [empresa?.id, headersPadrao, tipoPlano, mesInicio, mesFim, anoObjetivo]);
+  }, [empresa?.id, headersPadrao, anoRef, mesInicio, mesFim, anoObjetivo]);
 
   useEffect(() => {
-    carregarContas();
-  }, [carregarContas]);
+    carregarDados();
+  }, [carregarDados]);
 
-  const contasComObjetivo = useMemo(() => {
-    return contas.map((c) => {
-      const pct = percentuaisEditados[c.contaId] ?? c.percentual;
-      return {
-        ...c,
-        percentualEditado: pct,
-        objetivoCalculado: c.media * (1 + pct / 100),
-      };
-    });
-  }, [contas, percentuaisEditados]);
+  // Recalculate tree with edited percentages
+  const arvoreCalculada = useMemo(() => {
+    return arvoreOriginal.map((n) => recalcularArvore(n, percentuaisEditados));
+  }, [arvoreOriginal, percentuaisEditados]);
 
-  const totalMedia = useMemo(() => contasComObjetivo.reduce((acc, c) => acc + c.media, 0), [contasComObjetivo]);
-  const totalObjetivo = useMemo(() => contasComObjetivo.reduce((acc, c) => acc + c.objetivoCalculado, 0), [contasComObjetivo]);
+  // Totals from root nodes
+  const totalMedia = useMemo(() => arvoreCalculada.reduce((acc, n) => acc + n.media, 0), [arvoreCalculada]);
+  const totalObjetivo = useMemo(
+    () => arvoreCalculada.reduce((acc, n) => acc + n.objetivo, 0),
+    [arvoreCalculada]
+  );
 
-  const handlePercentualChange = (contaId: number, valor: string) => {
+  const handlePercentualChange = (id: number, valor: string) => {
     const num = valor === "" || valor === "-" ? 0 : Number(valor);
-    setPercentuaisEditados((prev) => ({ ...prev, [contaId]: num }));
+    setPercentuaisEditados((prev) => ({ ...prev, [id]: num }));
   };
 
   const salvarObjetivos = async () => {
@@ -118,19 +344,15 @@ export default function ObjetivosPage() {
     setSalvando(true);
     setNotification(null);
     try {
-      const contasParaSalvar = Object.entries(percentuaisEditados).map(([id, pct]) => ({
-        contaId: Number(id),
+      const percentuais = Object.entries(percentuaisEditados).map(([id, pct]) => ({
+        dreId: Number(id),
         percentual: pct,
       }));
 
-      const resp = await fetch("/api/financeiro/objetivos/contas", {
+      const resp = await fetch("/api/financeiro/objetivos/dre", {
         method: "POST",
         headers: headersPadrao,
-        body: JSON.stringify({
-          tipo: tipoPlano,
-          ano: anoObjetivo,
-          contas: contasParaSalvar,
-        }),
+        body: JSON.stringify({ ano: anoObjetivo, percentuais }),
       });
 
       const json = await resp.json();
@@ -149,9 +371,10 @@ export default function ObjetivosPage() {
 
   const aplicarPercentualGlobal = () => {
     const valor = Number(pctGlobal) || 0;
+    const folhas = coletarFolhas(arvoreOriginal);
     const editados: Record<number, number> = {};
-    for (const c of contas) {
-      editados[c.contaId] = valor;
+    for (const id of folhas) {
+      editados[id] = valor;
     }
     setPercentuaisEditados(editados);
   };
@@ -167,216 +390,258 @@ export default function ObjetivosPage() {
         />
 
         <PaginaProtegida codigoTela={codigoTela}>
-        <main className="page-content-card">
-          {notification && <NotificationBar type={notification.type} message={notification.message} />}
+          <main className="page-content-card">
+            {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
-          <section className="panel">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-              <p style={{ color: "#6b7280", fontSize: "0.85rem", margin: 0 }}>
-                Defina metas baseadas na media do periodo com percentual de crescimento ou reducao por conta
-              </p>
-              <button
-                type="button"
-                className="button button-primary"
-                onClick={salvarObjetivos}
-                disabled={salvando || carregando}
+            <section className="panel">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 12,
+                }}
               >
-                {salvando ? "Salvando..." : "Salvar Objetivos"}
-              </button>
-            </div>
+                <p style={{ color: "#6b7280", fontSize: "0.85rem", margin: 0 }}>
+                  Defina metas baseadas na estrutura do DRE com percentual de crescimento ou reducao por linha
+                </p>
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={salvarObjetivos}
+                  disabled={salvando || carregando}
+                >
+                  {salvando ? "Salvando..." : "Salvar Objetivos"}
+                </button>
+              </div>
 
-            <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap", marginTop: 16, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
-              <div className="form-group" style={{ flex: "0 0 auto" }}>
-                <label>Base</label>
-                <div style={{ display: "flex", gap: 4 }}>
-                  <button
-                    type="button"
-                    className={tipoPlano === "PLANO_CONTAS" ? "button button-primary button-compact" : "button button-secondary button-compact"}
-                    onClick={() => setTipoPlano("PLANO_CONTAS")}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 16,
+                  alignItems: "flex-end",
+                  flexWrap: "wrap",
+                  marginTop: 16,
+                  paddingTop: 12,
+                  borderTop: "1px solid #e5e7eb",
+                }}
+              >
+                <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
+                  <label htmlFor="obj-mes-inicio">Mes inicio</label>
+                  <select
+                    id="obj-mes-inicio"
+                    className="form-input"
+                    value={mesInicio}
+                    onChange={(e) => setMesInicio(Number(e.target.value))}
                   >
-                    Plano de Contas
-                  </button>
-                  <button
-                    type="button"
-                    className={tipoPlano === "CENTRO_CUSTO" ? "button button-primary button-compact" : "button button-secondary button-compact"}
-                    onClick={() => setTipoPlano("CENTRO_CUSTO")}
-                  >
-                    Centro de Custo
-                  </button>
+                    {MESES_LABELS.map((m, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </div>
 
-              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
-                <label htmlFor="obj-mes-inicio">Mes inicio</label>
-                <select
-                  id="obj-mes-inicio"
-                  className="form-input"
-                  value={mesInicio}
-                  onChange={(e) => setMesInicio(Number(e.target.value))}
-                >
-                  {MESES_LABELS.map((m, i) => (
-                    <option key={i + 1} value={i + 1}>{m}</option>
-                  ))}
-                </select>
-              </div>
+                <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
+                  <label htmlFor="obj-mes-fim">Mes fim</label>
+                  <select
+                    id="obj-mes-fim"
+                    className="form-input"
+                    value={mesFim}
+                    onChange={(e) => setMesFim(Number(e.target.value))}
+                  >
+                    {MESES_LABELS.map((m, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
-                <label htmlFor="obj-mes-fim">Mes fim</label>
-                <select
-                  id="obj-mes-fim"
-                  className="form-input"
-                  value={mesFim}
-                  onChange={(e) => setMesFim(Number(e.target.value))}
-                >
-                  {MESES_LABELS.map((m, i) => (
-                    <option key={i + 1} value={i + 1}>{m}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 90 }}>
-                <label htmlFor="obj-ano">Ano</label>
-                <input
-                  id="obj-ano"
-                  type="number"
-                  className="form-input"
-                  value={anoObjetivo}
-                  onChange={(e) => setAnoObjetivo(Number(e.target.value))}
-                  style={{ width: 90 }}
-                />
-              </div>
-
-              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
-                <label htmlFor="obj-pct-global">% Global</label>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <div className="form-group" style={{ flex: "0 0 auto", minWidth: 90 }}>
+                  <label htmlFor="obj-ano-ref">Ano Ref.</label>
                   <input
-                    id="obj-pct-global"
+                    id="obj-ano-ref"
                     type="number"
                     className="form-input"
-                    style={{ width: 70, textAlign: "center" }}
-                    placeholder="0"
-                    value={pctGlobal}
-                    onChange={(e) => setPctGlobal(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        aplicarPercentualGlobal();
-                      }
-                    }}
+                    value={anoRef}
+                    onChange={(e) => setAnoRef(Number(e.target.value))}
+                    style={{ width: 90 }}
                   />
-                  <button
-                    type="button"
-                    className="button button-secondary button-compact"
-                    onClick={aplicarPercentualGlobal}
-                  >
-                    Aplicar
-                  </button>
                 </div>
+
+                <div className="form-group" style={{ flex: "0 0 auto", minWidth: 90 }}>
+                  <label htmlFor="obj-ano-objetivo">Ano Obj.</label>
+                  <input
+                    id="obj-ano-objetivo"
+                    type="number"
+                    className="form-input"
+                    value={anoObjetivo}
+                    onChange={(e) => setAnoObjetivo(Number(e.target.value))}
+                    style={{ width: 90 }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
+                  <label htmlFor="obj-pct-global">% Global</label>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <input
+                      id="obj-pct-global"
+                      type="number"
+                      className="form-input"
+                      style={{ width: 70, textAlign: "center" }}
+                      placeholder="0"
+                      value={pctGlobal}
+                      onChange={(e) => setPctGlobal(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          aplicarPercentualGlobal();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="button button-secondary button-compact"
+                      onClick={aplicarPercentualGlobal}
+                    >
+                      Aplicar
+                    </button>
+                  </div>
+                </div>
+
+                <span style={{ fontSize: "0.8rem", color: "#9ca3af", paddingBottom: 10 }}>
+                  {mesesRef} {mesesRef === 1 ? "mes" : "meses"}
+                </span>
               </div>
+            </section>
 
-              <span style={{ fontSize: "0.8rem", color: "#9ca3af", paddingBottom: 10 }}>
-                {mesesRef} {mesesRef === 1 ? "mes" : "meses"}
-              </span>
-            </div>
-          </section>
-
-          {/* Summary */}
-          <section className="summary-cards" style={{ marginTop: 20 }}>
-            <div className="summary-card">
-              <span className="summary-label">Media Mensal (periodo)</span>
-              <strong className="summary-value">{formatMoney(totalMedia)}</strong>
-            </div>
-            <div className="summary-card">
-              <span className="summary-label">Objetivo Mensal ({anoObjetivo})</span>
-              <strong className="summary-value" style={{ color: "#059669" }}>{formatMoney(totalObjetivo)}</strong>
-            </div>
-            <div className="summary-card">
-              <span className="summary-label">Diferenca</span>
-              <strong className="summary-value" style={{ color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}>
-                {formatMoney(totalObjetivo - totalMedia)}
-              </strong>
-            </div>
-          </section>
-
-          {/* Table */}
-          <section className="panel" style={{ marginTop: 20 }}>
-            {carregando ? (
-              <div className="empty-state">Carregando contas...</div>
-            ) : contasComObjetivo.length === 0 ? (
-              <div className="empty-state">
-                Nenhuma conta encontrada. Cadastre {tipoPlano === "PLANO_CONTAS" ? "o plano de contas" : "centros de custo"} primeiro.
+            {/* Summary */}
+            <section className="summary-cards" style={{ marginTop: 20 }}>
+              <div className="summary-card">
+                <span className="summary-label">Media Mensal (periodo)</span>
+                <strong className="summary-value">{formatMoney(totalMedia)}</strong>
               </div>
-            ) : (
-              <table className="data-table mobile-cards" style={{ tableLayout: "fixed", width: "100%" }}>
-                <colgroup>
-                  <col style={{ width: "auto" }} />
-                  <col style={{ width: 110 }} />
-                  <col style={{ width: 130 }} />
-                  <col style={{ width: 100 }} />
-                  <col style={{ width: 130 }} />
-                  <col style={{ width: 130 }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: "left" }}>Conta</th>
-                    <th style={{ textAlign: "center" }}>Natureza</th>
-                    <th style={{ textAlign: "right" }}>Media</th>
-                    <th style={{ textAlign: "center" }}>Cresc. %</th>
-                    <th style={{ textAlign: "right" }}>Objetivo</th>
-                    <th style={{ textAlign: "right" }}>Variacao</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {contasComObjetivo.map((conta) => {
-                    const variacao = conta.objetivoCalculado - conta.media;
-                    return (
-                      <tr key={conta.contaId}>
-                        <td data-label="Conta" style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{conta.nome}</td>
-                        <td data-label="Natureza" style={{ textAlign: "center" }}>
-                          <span
-                            className="badge"
+              <div className="summary-card">
+                <span className="summary-label">Objetivo Mensal ({anoObjetivo})</span>
+                <strong className="summary-value" style={{ color: "#059669" }}>
+                  {formatMoney(totalObjetivo)}
+                </strong>
+              </div>
+              <div className="summary-card">
+                <span className="summary-label">Diferenca</span>
+                <strong
+                  className="summary-value"
+                  style={{ color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}
+                >
+                  {formatMoney(totalObjetivo - totalMedia)}
+                </strong>
+              </div>
+            </section>
+
+            {/* DRE Tree */}
+            <section className="panel" style={{ marginTop: 20 }}>
+              {carregando ? (
+                <div className="empty-state">Carregando estrutura DRE...</div>
+              ) : arvoreCalculada.length === 0 ? (
+                <div className="empty-state">
+                  Nenhuma estrutura de DRE encontrada. Cadastre a estrutura do DRE e vincule contas primeiro.
+                </div>
+              ) : (
+                <>
+                  {/* Desktop: Table view */}
+                  <div className="dre-desktop-table" style={{ overflowX: "auto" }}>
+                    <table className="data-table" style={{ tableLayout: "auto", width: "100%" }}>
+                      <thead>
+                        <tr>
+                          <th style={{ textAlign: "left" }}>Estrutura DRE</th>
+                          <th style={{ textAlign: "right", width: 140 }}>Media Mensal</th>
+                          <th style={{ textAlign: "center", width: 100 }}>Cresc. %</th>
+                          <th style={{ textAlign: "right", width: 140 }}>Objetivo</th>
+                          <th style={{ textAlign: "right", width: 140 }}>Variacao</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {arvoreCalculada.map((node) => (
+                          <ObjetivoLinhaRow
+                            key={node.id}
+                            node={node}
+                            nivel={0}
+                            editados={percentuaisEditados}
+                            onChangePercent={handlePercentualChange}
+                          />
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr
+                          style={{
+                            fontWeight: 700,
+                            borderTop: "2px solid #e5e7eb",
+                            backgroundColor: "#f3f4f6",
+                          }}
+                        >
+                          <td style={{ paddingLeft: 8 }}>TOTAL</td>
+                          <td style={{ textAlign: "right" }}>{formatMoney(totalMedia)}</td>
+                          <td></td>
+                          <td style={{ textAlign: "right" }}>{formatMoney(totalObjetivo)}</td>
+                          <td
                             style={{
-                              backgroundColor: conta.natureza === "RECEITA" ? "#d1fae5" : conta.natureza === "DESPESA" ? "#fee2e2" : "#f3f4f6",
-                              color: conta.natureza === "RECEITA" ? "#065f46" : conta.natureza === "DESPESA" ? "#991b1b" : "#374151",
+                              textAlign: "right",
+                              color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626",
                             }}
                           >
-                            {conta.natureza}
+                            {totalObjetivo - totalMedia >= 0 ? "+" : ""}
+                            {formatMoney(totalObjetivo - totalMedia)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+
+                  {/* Mobile: Card view */}
+                  <div className="dre-mobile-cards">
+                    {arvoreCalculada.map((node) => (
+                      <ObjetivoLinhaCard
+                        key={node.id}
+                        node={node}
+                        nivel={0}
+                        editados={percentuaisEditados}
+                        onChangePercent={handlePercentualChange}
+                      />
+                    ))}
+
+                    <div className="dre-card-resultado">
+                      <div className="dre-card-header">
+                        <div style={{ flex: 1 }}>
+                          <div className="dre-card-title">TOTAL</div>
+                        </div>
+                        <div
+                          className="dre-card-total"
+                          style={{ color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}
+                        >
+                          {totalObjetivo - totalMedia >= 0 ? "+" : ""}
+                          {formatMoney(totalObjetivo - totalMedia)}
+                        </div>
+                      </div>
+                      <div className="dre-card-periodos">
+                        <div className="dre-card-periodo-item">
+                          <span className="dre-card-periodo-label">Media</span>
+                          <span className="dre-card-periodo-valor">{formatMoney(totalMedia)}</span>
+                        </div>
+                        <div className="dre-card-periodo-item">
+                          <span className="dre-card-periodo-label">Objetivo</span>
+                          <span className="dre-card-periodo-valor" style={{ fontWeight: 600, color: "#059669" }}>
+                            {formatMoney(totalObjetivo)}
                           </span>
-                        </td>
-                        <td data-label="Media" style={{ textAlign: "right" }}>{formatMoney(conta.media)}</td>
-                        <td data-label="Cresc. %" style={{ textAlign: "center" }}>
-                          <input
-                            type="number"
-                            className="form-input"
-                            style={{ width: "100%", maxWidth: 80, textAlign: "center", padding: "4px 8px", margin: "0 auto", display: "block" }}
-                            value={conta.percentualEditado}
-                            onChange={(e) => handlePercentualChange(conta.contaId, e.target.value)}
-                            step={1}
-                          />
-                        </td>
-                        <td data-label="Objetivo" style={{ textAlign: "right", fontWeight: 600 }}>{formatMoney(conta.objetivoCalculado)}</td>
-                        <td data-label="Variacao" style={{ textAlign: "right", color: variacao >= 0 ? "#059669" : "#dc2626" }}>
-                          {variacao >= 0 ? "+" : ""}{formatMoney(variacao)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{ fontWeight: 700, borderTop: "2px solid #e5e7eb", backgroundColor: "#f3f4f6" }}>
-                    <td data-label="" colSpan={2}>TOTAL</td>
-                    <td data-label="Media" style={{ textAlign: "right" }}>{formatMoney(totalMedia)}</td>
-                    <td data-label=""></td>
-                    <td data-label="Objetivo" style={{ textAlign: "right" }}>{formatMoney(totalObjetivo)}</td>
-                    <td data-label="Variacao" style={{ textAlign: "right", color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}>
-                      {totalObjetivo - totalMedia >= 0 ? "+" : ""}{formatMoney(totalObjetivo - totalMedia)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            )}
-          </section>
-        </main>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </section>
+          </main>
         </PaginaProtegida>
       </div>
     </LayoutShell>
