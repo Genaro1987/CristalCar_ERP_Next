@@ -180,6 +180,15 @@ export function PlanoContasContent() {
   const arvoreFiltrada = useMemo(() => filtrarArvore(arvoreCompleta, filtro), [arvoreCompleta, filtro]);
   const opcoesPai = useMemo(() => coletarOpcoes(arvoreCompleta), [arvoreCompleta]);
 
+  /** Dado um código como "1.1.2", infere o pai "1.1" buscando nas opções */
+  const inferirPaiPorCodigo = useCallback((codigo: string) => {
+    const partes = codigo.split(".");
+    if (partes.length < 2) return "";
+    const codigoPai = partes.slice(0, -1).join(".");
+    const pai = opcoesPai.find((op) => op.label.startsWith(codigoPai + " "));
+    return pai ? String(pai.id) : "";
+  }, [opcoesPai]);
+
   const handleEditar = (item: PlanoContaNode) => {
     setEditandoId(item.id);
     setSelecionado(item);
@@ -454,7 +463,11 @@ export function PlanoContasContent() {
                         className="form-input"
                         placeholder="Ex: 1.01.001"
                         value={form.codigo}
-                        onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))}
+                        onChange={(e) => {
+                          const novoCodigo = e.target.value;
+                          const paiInferido = inferirPaiPorCodigo(novoCodigo);
+                          setForm((f) => ({ ...f, codigo: novoCodigo, paiId: paiInferido }));
+                        }}
                       />
                     </div>
                     <div className="form-group">

@@ -4,7 +4,7 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { PaginaProtegida } from "@/components/PaginaProtegida";
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
@@ -116,6 +116,15 @@ export default function CentroCustoPage() {
 
   const arvoreFiltrada = useMemo(() => filtrarCentros(centros, filtro), [centros, filtro]);
   const opcoesPai = useMemo(() => coletarIds(centros), [centros]);
+
+  /** Dado um código como "01.02.03", infere o pai "01.02" buscando nas opções */
+  const inferirPaiPorCodigo = useCallback((codigo: string) => {
+    const partes = codigo.split(".");
+    if (partes.length < 2) return "";
+    const codigoPai = partes.slice(0, -1).join(".");
+    const pai = opcoesPai.find((op) => op.label.startsWith(codigoPai + " "));
+    return pai ? String(pai.id) : "";
+  }, [opcoesPai]);
 
   const handleEditar = (item: CentroCustoItem) => {
     setSelecionado(item);
@@ -377,7 +386,11 @@ export default function CentroCustoPage() {
                         className="form-input"
                         placeholder="02.04"
                         value={form.codigo}
-                        onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))}
+                        onChange={(e) => {
+                          const novoCodigo = e.target.value;
+                          const paiInferido = inferirPaiPorCodigo(novoCodigo);
+                          setForm((f) => ({ ...f, codigo: novoCodigo, paiId: paiInferido }));
+                        }}
                       />
                     </div>
                     <div className="form-group">
