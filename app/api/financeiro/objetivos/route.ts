@@ -113,6 +113,9 @@ export async function POST(request: NextRequest) {
       responsavel: responsavel ?? "",
       status: status === "inativo" ? "inativo" : "ativo",
       observacao: observacao || undefined,
+      tipoPeriodo: null,
+      refPeriodo: null,
+      valorTotal: 0,
     };
 
     return NextResponse.json({ success: true, data: objetivo }, { status: 201 });
@@ -175,6 +178,9 @@ export async function PUT(request: NextRequest) {
       responsavel: responsavel ?? "",
       status: status === "inativo" ? "inativo" : "ativo",
       observacao: observacao || undefined,
+      tipoPeriodo: null,
+      refPeriodo: null,
+      valorTotal: Number(meta ?? 0),
     };
 
     return NextResponse.json({ success: true, data: objetivo });
