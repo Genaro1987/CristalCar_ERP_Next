@@ -14,9 +14,9 @@ WHERE CT.MODULO = 'FINANCEIRO'
   AND SPT.PODE_ACESSAR = 1;
 
 -- Texto de ajuda
-INSERT OR IGNORE INTO CORE_AJUDA (TELA, TITULO, CONTEUDO)
-VALUES (
-  'FIN_REL_CAIXA',
-  'Relatorio de Caixa',
-  'Relatorio completo de movimentacao financeira com tres visoes: Agrupado (contas agrupadas por arvore do plano de contas com subtotais), Detalhado (lista completa de lancamentos com descricao, pessoa, placa e valor), Diario (resumo por dia com saldo acumulado). Utilize os filtros de data e busca para refinar os resultados.'
-);
+INSERT OR IGNORE INTO CORE_AJUDA_TELA (ID_TELA, OBJETIVO_TELA, ATIVA)
+SELECT T.ID_TELA,
+  'Relatorio completo de movimentacao financeira com tres visoes: Agrupado (contas agrupadas por arvore do plano de contas com subtotais), Detalhado (lista completa de lancamentos com descricao, pessoa, placa e valor), Diario (resumo por dia com saldo acumulado). Utilize os filtros de data e busca para refinar os resultados.',
+  1
+FROM CORE_TELA T
+WHERE T.CODIGO_TELA = 'FIN_REL_CAIXA';
