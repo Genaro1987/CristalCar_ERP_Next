@@ -312,37 +312,26 @@ export default function DrePage() {
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const [visao, setVisao] = useState<TipoVisao>("mensal");
-  const [mesesDisponiveis, setMesesDisponiveis] = useState<string[]>([]);
-  const [mesInicio, setMesInicio] = useState("");
-  const [mesFim, setMesFim] = useState("");
   const [linhas, setLinhas] = useState<DreLinha[]>([]);
   const [periodos, setPeriodos] = useState<PeriodoInfo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [ref100Codigo, setRef100Codigo] = useState<string | null>(null);
 
-  // Fetch available months
-  useEffect(() => {
-    if (!empresa?.id) return;
-    fetch("/api/financeiro/meses-disponiveis", {
-      headers: { "x-empresa-id": String(empresa.id) },
-    })
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.success && json.data?.length > 0) {
-          const meses = json.data as string[];
-          setMesesDisponiveis(meses);
-          // Default: first month of current year or first available
-          const anoAtual = new Date().getFullYear();
-          const mesAtualStr = `${anoAtual}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
-          const primeiroDoAno = meses.find((m) => m.startsWith(String(anoAtual))) ?? meses[0];
-          const ultimoDoAno = [...meses].reverse().find((m) => m.startsWith(String(anoAtual))) ?? meses[meses.length - 1];
+  // Generate selectable months (3 years back to end of current year)
+  const anoAtual = new Date().getFullYear();
+  const mesAtualNum = new Date().getMonth() + 1;
+  const mesesDisponiveis = useMemo(() => {
+    const lista: string[] = [];
+    for (let a = anoAtual - 2; a <= anoAtual; a++) {
+      for (let m = 1; m <= 12; m++) {
+        lista.push(`${a}-${String(m).padStart(2, "0")}`);
+      }
+    }
+    return lista;
+  }, [anoAtual]);
 
-          if (!mesInicio) setMesInicio(primeiroDoAno);
-          if (!mesFim) setMesFim(ultimoDoAno > mesAtualStr ? mesAtualStr : ultimoDoAno);
-        }
-      })
-      .catch(() => {});
-  }, [empresa?.id]);
+  const [mesInicio, setMesInicio] = useState(`${anoAtual}-01`);
+  const [mesFim, setMesFim] = useState(`${anoAtual}-${String(mesAtualNum).padStart(2, "0")}`);
 
   useEffect(() => {
     if (!empresa?.id || !mesInicio || !mesFim) return;

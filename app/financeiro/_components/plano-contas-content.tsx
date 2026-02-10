@@ -6,7 +6,7 @@ import { NotificationBar } from "@/components/NotificationBar";
 import { PaginaProtegida } from "@/components/PaginaProtegida";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 import { ModalConfirmacao } from "@/components/ModalConfirmacao";
 import { BarraFiltros, type FiltroPadrao } from "./financeiro-layout";
@@ -130,6 +130,7 @@ export function PlanoContasContent() {
   const [form, setForm] = useState<FormPlano>({ ...FORM_VAZIO });
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const formRef = useRef<HTMLElement>(null);
 
   const headersPadrao = useMemo<HeadersInit>(() => {
     const headers: Record<string, string> = {};
@@ -207,6 +208,7 @@ export function PlanoContasContent() {
     setEditandoId(null);
     setSelecionado(null);
     setForm({ ...FORM_VAZIO });
+    setTimeout(() => { formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 100);
   };
 
   const handleLimpar = () => {
@@ -443,7 +445,7 @@ export function PlanoContasContent() {
               </section>
 
               {/* RIGHT: Form */}
-              <section className="split-view-panel">
+              <section className="split-view-panel" ref={formRef}>
                 <header className="form-section-header">
                   <h2>{editandoId ? "Editar conta" : "Nova conta"}</h2>
                   <p>

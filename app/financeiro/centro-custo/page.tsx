@@ -4,7 +4,7 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { PaginaProtegida } from "@/components/PaginaProtegida";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
@@ -89,6 +89,7 @@ export default function CentroCustoPage() {
   const [form, setForm] = useState<FormCentro>({ ...FORM_VAZIO });
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const formRef = useRef<HTMLElement>(null);
 
   const headers = useMemo(() => {
     const h: Record<string, string> = {};
@@ -142,6 +143,7 @@ export default function CentroCustoPage() {
     setEditandoId(null);
     setSelecionado(null);
     setForm({ ...FORM_VAZIO });
+    setTimeout(() => { formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 100);
   };
 
   const handleLimpar = () => {
@@ -367,7 +369,7 @@ export default function CentroCustoPage() {
               </section>
 
               {/* RIGHT: Form */}
-              <section className="split-view-panel">
+              <section className="split-view-panel" ref={formRef}>
                 <header className="form-section-header">
                   <h2>{editandoId ? "Editar centro de custo" : "Novo centro de custo"}</h2>
                   <p>

@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
         SELECT
           ID_FUNCIONARIO,
           COMPETENCIA,
+          SALDO_ANTERIOR_MINUTOS,
           HORAS_EXTRAS_50_MINUTOS,
           HORAS_EXTRAS_100_MINUTOS,
           HORAS_DEVIDAS_MINUTOS,
@@ -187,6 +188,30 @@ export async function GET(request: NextRequest) {
       diasMap.set(d.ID_FUNCIONARIO, Number(d.DIAS_TRABALHADOS));
     }
 
+    // Fetch saldo from the most recent fechamento BEFORE mesInicio (for saldo inicial)
+    const competenciaInicio = `${ano}-${String(mesInicio).padStart(2, "0")}`;
+
+    const saldoAnteriorResult = await db.execute({
+      sql: `
+        SELECT ID_FUNCIONARIO, SALDO_FINAL_MINUTOS, COMPETENCIA
+        FROM RH_BANCO_HORAS_FECHAMENTO
+        WHERE ID_EMPRESA = ?
+          AND COMPETENCIA < ?
+          AND ID_FUNCIONARIO IN (${funcPlaceholders})
+        ORDER BY COMPETENCIA DESC
+      `,
+      args: [empresaId, competenciaInicio, ...funcIds],
+    });
+
+    const saldoAnteriorMap = new Map<string, number>();
+    for (const r of saldoAnteriorResult.rows as any[]) {
+      const funcId = r.ID_FUNCIONARIO;
+      // Only take the most recent (first encountered due to ORDER BY DESC)
+      if (!saldoAnteriorMap.has(funcId)) {
+        saldoAnteriorMap.set(funcId, Number(r.SALDO_FINAL_MINUTOS ?? 0));
+      }
+    }
+
     // Monthly breakdown per employee
     const mesesEvol: string[] = [];
     for (let m = mesInicio; m <= mesFim; m++) {
@@ -214,15 +239,23 @@ export async function GET(request: NextRequest) {
         totalDescontar += Number(f.VALOR_DESCONTAR ?? 0);
       }
 
-      // Monthly evolution with adjustments
+      // Monthly evolution with adjustments and saldo inicial
+      let saldoAcumulado = saldoAnteriorMap.get(id) ?? 0;
       const evolucaoComAjustes = mesesEvol.map((comp) => {
         const fechMes = fech.find((f: any) => f.COMPETENCIA === comp);
+        // Use SALDO_ANTERIOR_MINUTOS from fechamento if available (most accurate)
+        const saldoInicialMin = fechMes
+          ? Number(fechMes.SALDO_ANTERIOR_MINUTOS ?? saldoAcumulado)
+          : saldoAcumulado;
+        const saldoFinal = Number(fechMes?.SALDO_FINAL_MINUTOS ?? 0);
+        saldoAcumulado = saldoFinal;
         return {
           competencia: comp,
+          saldoInicialMin,
           extras50Min: Number(fechMes?.HORAS_EXTRAS_50_MINUTOS ?? 0),
           extras100Min: Number(fechMes?.HORAS_EXTRAS_100_MINUTOS ?? 0),
           devidasMin: Number(fechMes?.HORAS_DEVIDAS_MINUTOS ?? 0),
-          saldoMin: Number(fechMes?.SALDO_FINAL_MINUTOS ?? 0),
+          saldoMin: saldoFinal,
           ajustesMin: ajusteMap.get(id)?.porMes.get(comp) ?? 0,
         };
       });
@@ -236,6 +269,7 @@ export async function GET(request: NextRequest) {
         salarioBase: Number(func.SALARIO_BASE ?? 0),
         diasTrabalhados: diasMap.get(id) ?? 0,
         temPonto: (pontoCountMap.get(id) ?? 0) > 0,
+        temFechamento: fech.length > 0,
         ajustesMin: ajusteMap.get(id)?.total ?? 0,
         feriasCount: ocorr.get("FERIAS") ?? 0,
         faltasJustificadas: ocorr.get("FALTA_JUSTIFICADA") ?? 0,
