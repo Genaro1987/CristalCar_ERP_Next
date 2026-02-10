@@ -11,10 +11,13 @@ interface LancamentoDB {
   FIN_LANCAMENTO_STATUS: string;
   FIN_PLANO_CONTA_ID: number;
   FIN_CENTRO_CUSTO_ID: number | null;
+  FIN_LANCAMENTO_PESSOA_ID: number | null;
+  FIN_LANCAMENTO_PLACA: string | null;
   CONTA_CODIGO: string;
   CONTA_NOME: string;
   CENTRO_CUSTO_CODIGO: string | null;
   CENTRO_CUSTO_NOME: string | null;
+  PESSOA_NOME: string | null;
 }
 
 interface Lancamento {
@@ -25,6 +28,9 @@ interface Lancamento {
   contaId: number;
   centroCusto: string;
   centroCustoId: number | null;
+  pessoaId: number | null;
+  pessoaNome: string;
+  placa: string;
   valor: number;
   tipo: "Entrada" | "Saída";
   status: "confirmado" | "pendente";
@@ -42,6 +48,9 @@ function converterLancamento(reg: LancamentoDB): Lancamento {
       ? `${reg.CENTRO_CUSTO_CODIGO} ${reg.CENTRO_CUSTO_NOME}`
       : "-",
     centroCustoId: reg.FIN_CENTRO_CUSTO_ID,
+    pessoaId: reg.FIN_LANCAMENTO_PESSOA_ID ?? null,
+    pessoaNome: reg.PESSOA_NOME ?? "",
+    placa: reg.FIN_LANCAMENTO_PLACA ?? "",
     valor: reg.FIN_LANCAMENTO_VALOR,
     tipo: reg.FIN_LANCAMENTO_VALOR >= 0 ? "Entrada" : "Saída",
     status: reg.FIN_LANCAMENTO_STATUS === "confirmado" ? "confirmado" : "pendente",
@@ -72,13 +81,17 @@ export async function GET(request: NextRequest) {
             COALESCE(l.FIN_LANCAMENTO_STATUS, 'confirmado') as FIN_LANCAMENTO_STATUS,
             l.FIN_PLANO_CONTA_ID,
             l.FIN_CENTRO_CUSTO_ID,
+            l.FIN_LANCAMENTO_PESSOA_ID,
             pc.FIN_PLANO_CONTA_CODIGO as CONTA_CODIGO,
             pc.FIN_PLANO_CONTA_NOME as CONTA_NOME,
             cc.FIN_CENTRO_CUSTO_CODIGO as CENTRO_CUSTO_CODIGO,
-            cc.FIN_CENTRO_CUSTO_NOME as CENTRO_CUSTO_NOME
+            cc.FIN_CENTRO_CUSTO_NOME as CENTRO_CUSTO_NOME,
+            pes.CAD_PESSOA_NOME as PESSOA_NOME,
+            l.FIN_LANCAMENTO_PLACA
           FROM FIN_LANCAMENTO l
           INNER JOIN FIN_PLANO_CONTA pc ON pc.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID
           LEFT JOIN FIN_CENTRO_CUSTO cc ON cc.FIN_CENTRO_CUSTO_ID = l.FIN_CENTRO_CUSTO_ID
+          LEFT JOIN CAD_PESSOA pes ON pes.CAD_PESSOA_ID = l.FIN_LANCAMENTO_PESSOA_ID
           WHERE l.FIN_LANCAMENTO_ID = ? AND l.EMPRESA_ID = ?
         `,
         args: [id, empresaId],
@@ -108,13 +121,17 @@ export async function GET(request: NextRequest) {
         COALESCE(l.FIN_LANCAMENTO_STATUS, 'confirmado') as FIN_LANCAMENTO_STATUS,
         l.FIN_PLANO_CONTA_ID,
         l.FIN_CENTRO_CUSTO_ID,
+        l.FIN_LANCAMENTO_PESSOA_ID,
         pc.FIN_PLANO_CONTA_CODIGO as CONTA_CODIGO,
         pc.FIN_PLANO_CONTA_NOME as CONTA_NOME,
         cc.FIN_CENTRO_CUSTO_CODIGO as CENTRO_CUSTO_CODIGO,
-        cc.FIN_CENTRO_CUSTO_NOME as CENTRO_CUSTO_NOME
+        cc.FIN_CENTRO_CUSTO_NOME as CENTRO_CUSTO_NOME,
+        pes.CAD_PESSOA_NOME as PESSOA_NOME,
+        l.FIN_LANCAMENTO_PLACA
       FROM FIN_LANCAMENTO l
       INNER JOIN FIN_PLANO_CONTA pc ON pc.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID
       LEFT JOIN FIN_CENTRO_CUSTO cc ON cc.FIN_CENTRO_CUSTO_ID = l.FIN_CENTRO_CUSTO_ID
+      LEFT JOIN CAD_PESSOA pes ON pes.CAD_PESSOA_ID = l.FIN_LANCAMENTO_PESSOA_ID
       WHERE l.EMPRESA_ID = ?
     `;
 
@@ -152,7 +169,36 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { data, historico, contaId, centroCustoId, valor, documento, status } = body;
+  const { data, historico, contaId, centroCustoId, valor, documento, status, pessoaId, placa, lote } = body;
+
+  // Lançamento em lote (salário/férias)
+  if (Array.isArray(lote) && lote.length > 0) {
+    try {
+      const resultados: Lancamento[] = [];
+      for (const item of lote) {
+        const res = await db.execute({
+          sql: `INSERT INTO FIN_LANCAMENTO (FIN_LANCAMENTO_DATA, FIN_LANCAMENTO_HISTORICO, FIN_LANCAMENTO_VALOR, FIN_PLANO_CONTA_ID, FIN_CENTRO_CUSTO_ID, FIN_LANCAMENTO_DOCUMENTO, FIN_LANCAMENTO_STATUS, FIN_LANCAMENTO_PESSOA_ID, FIN_LANCAMENTO_PLACA, EMPRESA_ID)
+                VALUES (?, ?, ?, ?, ?, ?, 'confirmado', ?, ?, ?)`,
+          args: [item.data, item.historico, item.valor, item.contaId, item.centroCustoId || null, item.documento || null, item.pessoaId || null, item.placa || null, empresaId],
+        });
+        const insertId = Number(res.lastInsertRowid);
+        const reg = await db.execute({
+          sql: `SELECT l.*, pc.FIN_PLANO_CONTA_CODIGO as CONTA_CODIGO, pc.FIN_PLANO_CONTA_NOME as CONTA_NOME, cc.FIN_CENTRO_CUSTO_CODIGO as CENTRO_CUSTO_CODIGO, cc.FIN_CENTRO_CUSTO_NOME as CENTRO_CUSTO_NOME, pes.CAD_PESSOA_NOME as PESSOA_NOME
+                FROM FIN_LANCAMENTO l
+                INNER JOIN FIN_PLANO_CONTA pc ON pc.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID
+                LEFT JOIN FIN_CENTRO_CUSTO cc ON cc.FIN_CENTRO_CUSTO_ID = l.FIN_CENTRO_CUSTO_ID
+                LEFT JOIN CAD_PESSOA pes ON pes.CAD_PESSOA_ID = l.FIN_LANCAMENTO_PESSOA_ID
+                WHERE l.FIN_LANCAMENTO_ID = ?`,
+          args: [insertId],
+        });
+        if (reg.rows[0]) resultados.push(converterLancamento(reg.rows[0] as unknown as LancamentoDB));
+      }
+      return NextResponse.json({ success: true, data: resultados, lote: true }, { status: 201 });
+    } catch (error) {
+      console.error("Erro ao criar lançamentos em lote:", error);
+      return NextResponse.json({ success: false, error: "Erro ao criar lançamentos em lote" }, { status: 500 });
+    }
+  }
 
   if (!data || !historico || !contaId || valor === undefined) {
     return NextResponse.json(
@@ -172,10 +218,12 @@ export async function POST(request: NextRequest) {
           FIN_CENTRO_CUSTO_ID,
           FIN_LANCAMENTO_DOCUMENTO,
           FIN_LANCAMENTO_STATUS,
+          FIN_LANCAMENTO_PESSOA_ID,
+          FIN_LANCAMENTO_PLACA,
           EMPRESA_ID
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
-      args: [data, historico, valor, contaId, centroCustoId || null, documento || null, status || 'confirmado', empresaId],
+      args: [data, historico, valor, contaId, centroCustoId || null, documento || null, status || 'confirmado', pessoaId || null, placa || null, empresaId],
     });
 
     const lancamentoId = resultado.lastInsertRowid;
@@ -195,13 +243,16 @@ export async function POST(request: NextRequest) {
           l.FIN_LANCAMENTO_STATUS,
           l.FIN_PLANO_CONTA_ID,
           l.FIN_CENTRO_CUSTO_ID,
+          l.FIN_LANCAMENTO_PESSOA_ID,
           pc.FIN_PLANO_CONTA_CODIGO as CONTA_CODIGO,
           pc.FIN_PLANO_CONTA_NOME as CONTA_NOME,
           cc.FIN_CENTRO_CUSTO_CODIGO as CENTRO_CUSTO_CODIGO,
-          cc.FIN_CENTRO_CUSTO_NOME as CENTRO_CUSTO_NOME
+          cc.FIN_CENTRO_CUSTO_NOME as CENTRO_CUSTO_NOME,
+          pes.CAD_PESSOA_NOME as PESSOA_NOME
         FROM FIN_LANCAMENTO l
         INNER JOIN FIN_PLANO_CONTA pc ON pc.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID
         LEFT JOIN FIN_CENTRO_CUSTO cc ON cc.FIN_CENTRO_CUSTO_ID = l.FIN_CENTRO_CUSTO_ID
+        LEFT JOIN CAD_PESSOA pes ON pes.CAD_PESSOA_ID = l.FIN_LANCAMENTO_PESSOA_ID
         WHERE l.FIN_LANCAMENTO_ID = ?
       `,
       args: [lancamentoId],
@@ -230,7 +281,7 @@ export async function PUT(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { id, data, historico, contaId, centroCustoId, valor, documento, status } = body;
+  const { id, data, historico, contaId, centroCustoId, valor, documento, status, pessoaId, placa } = body;
 
   if (!id || !data || !historico || !contaId || valor === undefined) {
     return NextResponse.json(
@@ -251,6 +302,8 @@ export async function PUT(request: NextRequest) {
           FIN_CENTRO_CUSTO_ID = ?,
           FIN_LANCAMENTO_DOCUMENTO = ?,
           FIN_LANCAMENTO_STATUS = ?,
+          FIN_LANCAMENTO_PESSOA_ID = ?,
+          FIN_LANCAMENTO_PLACA = ?,
           FIN_LANCAMENTO_ATUALIZADO_EM = datetime('now')
         WHERE FIN_LANCAMENTO_ID = ? AND EMPRESA_ID = ?
       `,
@@ -262,6 +315,8 @@ export async function PUT(request: NextRequest) {
         centroCustoId || null,
         documento || null,
         status || "confirmado",
+        pessoaId || null,
+        placa || null,
         id,
         empresaId,
       ],
@@ -278,13 +333,16 @@ export async function PUT(request: NextRequest) {
           COALESCE(l.FIN_LANCAMENTO_STATUS, 'confirmado') as FIN_LANCAMENTO_STATUS,
           l.FIN_PLANO_CONTA_ID,
           l.FIN_CENTRO_CUSTO_ID,
+          l.FIN_LANCAMENTO_PESSOA_ID,
           pc.FIN_PLANO_CONTA_CODIGO as CONTA_CODIGO,
           pc.FIN_PLANO_CONTA_NOME as CONTA_NOME,
           cc.FIN_CENTRO_CUSTO_CODIGO as CENTRO_CUSTO_CODIGO,
-          cc.FIN_CENTRO_CUSTO_NOME as CENTRO_CUSTO_NOME
+          cc.FIN_CENTRO_CUSTO_NOME as CENTRO_CUSTO_NOME,
+          pes.CAD_PESSOA_NOME as PESSOA_NOME
         FROM FIN_LANCAMENTO l
         INNER JOIN FIN_PLANO_CONTA pc ON pc.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID
         LEFT JOIN FIN_CENTRO_CUSTO cc ON cc.FIN_CENTRO_CUSTO_ID = l.FIN_CENTRO_CUSTO_ID
+        LEFT JOIN CAD_PESSOA pes ON pes.CAD_PESSOA_ID = l.FIN_LANCAMENTO_PESSOA_ID
         WHERE l.FIN_LANCAMENTO_ID = ? AND l.EMPRESA_ID = ?
       `,
       args: [id, empresaId],

@@ -54,6 +54,12 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             requerEmpresa: true,
             codigoTela: "CAD006_SEG_PERFIL",
           },
+          {
+            label: "Clientes / Fornecedores",
+            rota: "/cadastros/pessoas",
+            requerEmpresa: true,
+            codigoTela: "CAD_PESSOA",
+          },
         ],
       },
       {
@@ -139,6 +145,12 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             rota: "/financeiro/dre",
             requerEmpresa: true,
             codigoTela: "FIN_DRE",
+          },
+          {
+            label: "Relatorio Caixa",
+            rota: "/financeiro/relatorio-caixa",
+            requerEmpresa: true,
+            codigoTela: "FIN_REL_CAIXA",
           },
           {
             label: "Extrato Pro-labore",
@@ -242,12 +254,6 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
       </div>
 
       <div className="sidebar-bottom">
-        {perfilNome && (
-          <div className="sidebar-perfil-indicator">
-            PERFIL ATIVO
-            <strong>{perfilNome}</strong>
-          </div>
-        )}
         <Link
           href="/ajuda"
           className={
@@ -256,6 +262,12 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
         >
           AJUDA
         </Link>
+        {perfilNome && (
+          <div className="sidebar-perfil-indicator">
+            PERFIL ATIVO
+            <strong>{perfilNome}</strong>
+          </div>
+        )}
       </div>
     </aside>
   );

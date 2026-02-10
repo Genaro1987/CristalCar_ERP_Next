@@ -304,14 +304,12 @@ export default function ResumoFuncionariosPage() {
                             </span>
                             <span className="resumo-metric-lbl">Devidas</span>
                           </div>
-                          {func.ajustesMin !== 0 && (
-                            <div className="resumo-metric">
-                              <span className="resumo-metric-val" style={{ color: func.ajustesMin > 0 ? "#2563eb" : "#dc2626" }}>
-                                {minParaHora(func.ajustesMin)}
-                              </span>
-                              <span className="resumo-metric-lbl">Ajustes</span>
-                            </div>
-                          )}
+                          <div className="resumo-metric">
+                            <span className="resumo-metric-val" style={{ color: func.ajustesMin > 0 ? "#2563eb" : func.ajustesMin < 0 ? "#dc2626" : "#9ca3af" }}>
+                              {minParaHora(func.ajustesMin)}
+                            </span>
+                            <span className="resumo-metric-lbl">Ajustes</span>
+                          </div>
                           <div className="resumo-metric">
                             <span className="resumo-metric-val" style={{ color: totalFaltas > 0 ? "#dc2626" : "#9ca3af" }}>
                               {totalFaltas}

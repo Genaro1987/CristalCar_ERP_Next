@@ -185,7 +185,7 @@ export default function ObjetivosPage() {
               </button>
             </div>
 
-            <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap", marginTop: 16, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
+            <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap", marginTop: 16, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
               <div className="form-group" style={{ flex: "0 0 auto" }}>
                 <label>Base</label>
                 <div style={{ display: "flex", gap: 4 }}>
@@ -206,14 +206,13 @@ export default function ObjetivosPage() {
                 </div>
               </div>
 
-              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 80 }}>
+              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
                 <label htmlFor="obj-mes-inicio">Mes inicio</label>
                 <select
                   id="obj-mes-inicio"
                   className="form-input"
                   value={mesInicio}
                   onChange={(e) => setMesInicio(Number(e.target.value))}
-                  style={{ padding: "6px 8px" }}
                 >
                   {MESES_LABELS.map((m, i) => (
                     <option key={i + 1} value={i + 1}>{m}</option>
@@ -221,14 +220,13 @@ export default function ObjetivosPage() {
                 </select>
               </div>
 
-              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 80 }}>
+              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
                 <label htmlFor="obj-mes-fim">Mes fim</label>
                 <select
                   id="obj-mes-fim"
                   className="form-input"
                   value={mesFim}
                   onChange={(e) => setMesFim(Number(e.target.value))}
-                  style={{ padding: "6px 8px" }}
                 >
                   {MESES_LABELS.map((m, i) => (
                     <option key={i + 1} value={i + 1}>{m}</option>
@@ -236,7 +234,7 @@ export default function ObjetivosPage() {
                 </select>
               </div>
 
-              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 80 }}>
+              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 90 }}>
                 <label htmlFor="obj-ano">Ano</label>
                 <input
                   id="obj-ano"
@@ -244,18 +242,18 @@ export default function ObjetivosPage() {
                   className="form-input"
                   value={anoObjetivo}
                   onChange={(e) => setAnoObjetivo(Number(e.target.value))}
-                  style={{ width: 80, padding: "6px 8px" }}
+                  style={{ width: 90 }}
                 />
               </div>
 
-              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 80 }}>
+              <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
                 <label htmlFor="obj-pct-global">% Global</label>
-                <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   <input
                     id="obj-pct-global"
                     type="number"
                     className="form-input"
-                    style={{ width: 65, textAlign: "center", padding: "6px 8px" }}
+                    style={{ width: 70, textAlign: "center" }}
                     placeholder="0"
                     value={pctGlobal}
                     onChange={(e) => setPctGlobal(e.target.value)}
@@ -276,7 +274,7 @@ export default function ObjetivosPage() {
                 </div>
               </div>
 
-              <span style={{ fontSize: "0.75rem", color: "#9ca3af", paddingBottom: 8 }}>
+              <span style={{ fontSize: "0.8rem", color: "#9ca3af", paddingBottom: 10 }}>
                 {mesesRef} {mesesRef === 1 ? "mes" : "meses"}
               </span>
             </div>
@@ -309,13 +307,21 @@ export default function ObjetivosPage() {
                 Nenhuma conta encontrada. Cadastre {tipoPlano === "PLANO_CONTAS" ? "o plano de contas" : "centros de custo"} primeiro.
               </div>
             ) : (
-              <table className="data-table mobile-cards">
+              <table className="data-table mobile-cards" style={{ tableLayout: "fixed", width: "100%" }}>
+                <colgroup>
+                  <col style={{ width: "auto" }} />
+                  <col style={{ width: 110 }} />
+                  <col style={{ width: 130 }} />
+                  <col style={{ width: 100 }} />
+                  <col style={{ width: 130 }} />
+                  <col style={{ width: 130 }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th style={{ textAlign: "left" }}>Conta</th>
-                    <th style={{ textAlign: "left" }}>Natureza</th>
+                    <th style={{ textAlign: "center" }}>Natureza</th>
                     <th style={{ textAlign: "right" }}>Media</th>
-                    <th style={{ textAlign: "center", width: 100 }}>Cresc. %</th>
+                    <th style={{ textAlign: "center" }}>Cresc. %</th>
                     <th style={{ textAlign: "right" }}>Objetivo</th>
                     <th style={{ textAlign: "right" }}>Variacao</th>
                   </tr>
@@ -325,8 +331,8 @@ export default function ObjetivosPage() {
                     const variacao = conta.objetivoCalculado - conta.media;
                     return (
                       <tr key={conta.contaId}>
-                        <td data-label="Conta" style={{ fontWeight: 600 }}>{conta.nome}</td>
-                        <td data-label="Natureza">
+                        <td data-label="Conta" style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{conta.nome}</td>
+                        <td data-label="Natureza" style={{ textAlign: "center" }}>
                           <span
                             className="badge"
                             style={{
@@ -337,19 +343,19 @@ export default function ObjetivosPage() {
                             {conta.natureza}
                           </span>
                         </td>
-                        <td data-label="Media">{formatMoney(conta.media)}</td>
-                        <td data-label="Cresc. %">
+                        <td data-label="Media" style={{ textAlign: "right" }}>{formatMoney(conta.media)}</td>
+                        <td data-label="Cresc. %" style={{ textAlign: "center" }}>
                           <input
                             type="number"
                             className="form-input"
-                            style={{ width: 70, textAlign: "center", padding: "4px 8px" }}
+                            style={{ width: "100%", maxWidth: 80, textAlign: "center", padding: "4px 8px", margin: "0 auto", display: "block" }}
                             value={conta.percentualEditado}
                             onChange={(e) => handlePercentualChange(conta.contaId, e.target.value)}
                             step={1}
                           />
                         </td>
-                        <td data-label="Objetivo" style={{ fontWeight: 600 }}>{formatMoney(conta.objetivoCalculado)}</td>
-                        <td data-label="Variacao" style={{ color: variacao >= 0 ? "#059669" : "#dc2626" }}>
+                        <td data-label="Objetivo" style={{ textAlign: "right", fontWeight: 600 }}>{formatMoney(conta.objetivoCalculado)}</td>
+                        <td data-label="Variacao" style={{ textAlign: "right", color: variacao >= 0 ? "#059669" : "#dc2626" }}>
                           {variacao >= 0 ? "+" : ""}{formatMoney(variacao)}
                         </td>
                       </tr>
@@ -359,10 +365,10 @@ export default function ObjetivosPage() {
                 <tfoot>
                   <tr style={{ fontWeight: 700, borderTop: "2px solid #e5e7eb", backgroundColor: "#f3f4f6" }}>
                     <td data-label="" colSpan={2}>TOTAL</td>
-                    <td data-label="Media">{formatMoney(totalMedia)}</td>
+                    <td data-label="Media" style={{ textAlign: "right" }}>{formatMoney(totalMedia)}</td>
                     <td data-label=""></td>
-                    <td data-label="Objetivo">{formatMoney(totalObjetivo)}</td>
-                    <td data-label="Variacao" style={{ color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}>
+                    <td data-label="Objetivo" style={{ textAlign: "right" }}>{formatMoney(totalObjetivo)}</td>
+                    <td data-label="Variacao" style={{ textAlign: "right", color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}>
                       {totalObjetivo - totalMedia >= 0 ? "+" : ""}{formatMoney(totalObjetivo - totalMedia)}
                     </td>
                   </tr>
