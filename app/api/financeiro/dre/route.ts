@@ -18,14 +18,24 @@ interface DreLinha {
 // ── Avaliador seguro de fórmulas (sem eval) ──
 // Suporta: +, -, *, /, parênteses, códigos de linhas DRE
 function avaliarFormula(formula: string, valoresPorCodigo: Map<string, number>): number {
+  // Track if any referenced DRE code has a non-zero value
+  let temValorReal = false;
+
   let expr = formula.replace(/[A-Za-z0-9_.]+/g, (token) => {
     // Primeiro tentar como código de linha DRE (ex: "1", "1.1", "6")
     const val = valoresPorCodigo.get(token);
-    if (val !== undefined) return String(val);
+    if (val !== undefined) {
+      if (val !== 0) temValorReal = true;
+      return String(val);
+    }
     // Se não for código e for número puro, manter como literal
     if (/^\d+(\.\d+)?$/.test(token)) return token;
     return "0";
   });
+
+  // Se nenhum código DRE referenciado tem valor real, retornar 0
+  // (evita que constantes literais nas fórmulas gerem valores sem lançamentos)
+  if (!temValorReal) return 0;
 
   expr = expr.replace(/\s+/g, "");
 

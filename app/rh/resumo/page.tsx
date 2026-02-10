@@ -10,6 +10,7 @@ import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 
 type EvolucaoMes = {
   competencia: string;
+  saldoInicialMin: number;
   extras50Min: number;
   extras100Min: number;
   devidasMin: number;
@@ -376,11 +377,12 @@ export default function ResumoFuncionariosPage() {
                                 <thead>
                                   <tr>
                                     <th>Mês</th>
+                                    <th>Saldo Ini.</th>
                                     <th>Extras 50%</th>
                                     <th>Extras 100%</th>
                                     <th>Devidas</th>
                                     <th>Ajustes</th>
-                                    <th>Saldo</th>
+                                    <th>Saldo Final</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -389,11 +391,12 @@ export default function ResumoFuncionariosPage() {
                                     return (
                                       <tr key={ev.competencia}>
                                         <td data-label="Mês"><strong>{MESES_LABELS[mesIdx]}</strong></td>
+                                        <td data-label="Saldo Ini." style={{ color: ev.saldoInicialMin >= 0 ? "#6b7280" : "#dc2626" }}>{minParaHora(ev.saldoInicialMin)}</td>
                                         <td data-label="Extras 50%" style={{ color: ev.extras50Min > 0 ? "#059669" : "#9ca3af" }}>{minParaHora(ev.extras50Min)}</td>
                                         <td data-label="Extras 100%" style={{ color: ev.extras100Min > 0 ? "#059669" : "#9ca3af" }}>{minParaHora(ev.extras100Min)}</td>
                                         <td data-label="Devidas" style={{ color: ev.devidasMin < 0 ? "#dc2626" : "#9ca3af" }}>{minParaHora(ev.devidasMin)}</td>
                                         <td data-label="Ajustes" style={{ color: ev.ajustesMin !== 0 ? "#2563eb" : "#9ca3af" }}>{minParaHora(ev.ajustesMin)}</td>
-                                        <td data-label="Saldo" style={{ fontWeight: 700, color: ev.saldoMin >= 0 ? "#059669" : "#dc2626" }}>{minParaHora(ev.saldoMin)}</td>
+                                        <td data-label="Saldo Final" style={{ fontWeight: 700, color: ev.saldoMin >= 0 ? "#059669" : "#dc2626" }}>{minParaHora(ev.saldoMin)}</td>
                                       </tr>
                                     );
                                   })}

@@ -187,6 +187,27 @@ export async function GET(request: NextRequest) {
       diasMap.set(d.ID_FUNCIONARIO, Number(d.DIAS_TRABALHADOS));
     }
 
+    // Fetch saldo from month before mesInicio (for saldo inicial)
+    const mesAnterior = mesInicio === 1
+      ? `${ano - 1}-12`
+      : `${ano}-${String(mesInicio - 1).padStart(2, "0")}`;
+
+    const saldoAnteriorResult = await db.execute({
+      sql: `
+        SELECT ID_FUNCIONARIO, SALDO_FINAL_MINUTOS
+        FROM RH_BANCO_HORAS_FECHAMENTO
+        WHERE ID_EMPRESA = ?
+          AND COMPETENCIA = ?
+          AND ID_FUNCIONARIO IN (${funcPlaceholders})
+      `,
+      args: [empresaId, mesAnterior, ...funcIds],
+    });
+
+    const saldoAnteriorMap = new Map<string, number>();
+    for (const r of saldoAnteriorResult.rows as any[]) {
+      saldoAnteriorMap.set(r.ID_FUNCIONARIO, Number(r.SALDO_FINAL_MINUTOS ?? 0));
+    }
+
     // Monthly breakdown per employee
     const mesesEvol: string[] = [];
     for (let m = mesInicio; m <= mesFim; m++) {
@@ -214,15 +235,20 @@ export async function GET(request: NextRequest) {
         totalDescontar += Number(f.VALOR_DESCONTAR ?? 0);
       }
 
-      // Monthly evolution with adjustments
+      // Monthly evolution with adjustments and saldo inicial
+      let saldoAcumulado = saldoAnteriorMap.get(id) ?? 0;
       const evolucaoComAjustes = mesesEvol.map((comp) => {
         const fechMes = fech.find((f: any) => f.COMPETENCIA === comp);
+        const saldoInicialMin = saldoAcumulado;
+        const saldoFinal = Number(fechMes?.SALDO_FINAL_MINUTOS ?? 0);
+        saldoAcumulado = saldoFinal;
         return {
           competencia: comp,
+          saldoInicialMin,
           extras50Min: Number(fechMes?.HORAS_EXTRAS_50_MINUTOS ?? 0),
           extras100Min: Number(fechMes?.HORAS_EXTRAS_100_MINUTOS ?? 0),
           devidasMin: Number(fechMes?.HORAS_DEVIDAS_MINUTOS ?? 0),
-          saldoMin: Number(fechMes?.SALDO_FINAL_MINUTOS ?? 0),
+          saldoMin: saldoFinal,
           ajustesMin: ajusteMap.get(id)?.porMes.get(comp) ?? 0,
         };
       });
