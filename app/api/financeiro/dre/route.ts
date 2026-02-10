@@ -9,6 +9,7 @@ interface DreLinha {
   codigo: string;
   natureza: "RECEITA" | "DESPESA" | "CALCULADO";
   formula?: string;
+  referencia100?: boolean;
   valor: number;
   colunas: Record<string, number>;
   filhos: DreLinha[];
@@ -16,10 +17,7 @@ interface DreLinha {
 
 // ── Avaliador seguro de fórmulas (sem eval) ──
 // Suporta: +, -, *, /, parênteses, códigos de linhas DRE
-// Ex: "(1 + 2) * 3 / 4 - 5"
 function avaliarFormula(formula: string, valoresPorCodigo: Map<string, number>): number {
-  // Substituir códigos de linhas por seus valores
-  // Códigos podem ser: "1", "1.1", "1.1.2", etc.
   let expr = formula.replace(/[A-Za-z0-9_.]+/g, (token) => {
     // Primeiro tentar como código de linha DRE (ex: "1", "1.1", "6")
     const val = valoresPorCodigo.get(token);
@@ -29,10 +27,8 @@ function avaliarFormula(formula: string, valoresPorCodigo: Map<string, number>):
     return "0";
   });
 
-  // Remover espaços
   expr = expr.replace(/\s+/g, "");
 
-  // Parser recursivo descendente com precedência de operadores
   let pos = 0;
 
   function peek(): string {
@@ -43,7 +39,6 @@ function avaliarFormula(formula: string, valoresPorCodigo: Map<string, number>):
     return expr[pos++];
   }
 
-  // Expressão: soma/subtração (menor precedência)
   function parseExpr(): number {
     let result = parseTerm();
     while (peek() === "+" || peek() === "-") {
@@ -54,7 +49,6 @@ function avaliarFormula(formula: string, valoresPorCodigo: Map<string, number>):
     return result;
   }
 
-  // Termo: multiplicação/divisão
   function parseTerm(): number {
     let result = parseFactor();
     while (peek() === "*" || peek() === "/") {
@@ -69,21 +63,17 @@ function avaliarFormula(formula: string, valoresPorCodigo: Map<string, number>):
     return result;
   }
 
-  // Fator: número, parênteses, ou número negativo
   function parseFactor(): number {
-    // Número negativo (unário)
     if (peek() === "-") {
       consume();
       return -parseFactor();
     }
-    // Parênteses
     if (peek() === "(") {
-      consume(); // "("
+      consume();
       const result = parseExpr();
-      if (peek() === ")") consume(); // ")"
+      if (peek() === ")") consume();
       return result;
     }
-    // Número
     let numStr = "";
     while (/[\d.]/.test(peek())) {
       numStr += consume();
@@ -99,7 +89,6 @@ function avaliarFormula(formula: string, valoresPorCodigo: Map<string, number>):
   }
 }
 
-// Resolve fórmulas CALCULADO após os valores normais serem computados
 function resolverFormulas(linhas: DreLinha[], valoresPorCodigo: Map<string, number>): void {
   for (const linha of linhas) {
     if (linha.natureza === "CALCULADO" && linha.formula) {
@@ -166,44 +155,104 @@ function somarFilhos(linha: DreLinha): DreLinha {
 
 type TipoVisao = "mensal" | "trimestral" | "semestral" | "anual";
 
-function gerarPeriodos(ano: number, visao: TipoVisao): { chave: string; label: string; inicio: string; fim: string }[] {
+function gerarPeriodosRange(
+  mesInicio: string,
+  mesFim: string,
+  visao: TipoVisao
+): { chave: string; label: string; inicio: string; fim: string }[] {
   const periodos: { chave: string; label: string; inicio: string; fim: string }[] = [];
 
+  const [anoIni, mesIni] = mesInicio.split("-").map(Number);
+  const [anoFin, mesFin] = mesFim.split("-").map(Number);
+
+  const mesesNome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
   if (visao === "mensal") {
-    const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    for (let m = 1; m <= 12; m++) {
+    let a = anoIni, m = mesIni;
+    while (a < anoFin || (a === anoFin && m <= mesFin)) {
       const mm = String(m).padStart(2, "0");
-      const ultimoDia = new Date(ano, m, 0).getDate();
+      const ultimoDia = new Date(a, m, 0).getDate();
+      const label = anoIni === anoFin ? mesesNome[m - 1] : `${mesesNome[m - 1]}/${String(a).slice(2)}`;
       periodos.push({
-        chave: `${ano}-${mm}`,
-        label: meses[m - 1],
-        inicio: `${ano}-${mm}-01`,
-        fim: `${ano}-${mm}-${ultimoDia}`,
+        chave: `${a}-${mm}`,
+        label,
+        inicio: `${a}-${mm}-01`,
+        fim: `${a}-${mm}-${ultimoDia}`,
       });
+      m++;
+      if (m > 12) { m = 1; a++; }
     }
   } else if (visao === "trimestral") {
-    const labels = ["1T", "2T", "3T", "4T"];
-    for (let t = 0; t < 4; t++) {
-      const mesInicio = t * 3 + 1;
-      const mesFim = t * 3 + 3;
-      const mmInicio = String(mesInicio).padStart(2, "0");
-      const mmFim = String(mesFim).padStart(2, "0");
-      const ultimoDia = new Date(ano, mesFim, 0).getDate();
+    // Start from the trimester containing mesInicio
+    let a = anoIni;
+    let tInicio = Math.ceil(mesIni / 3);
+    const tFim = Math.ceil(mesFin / 3);
+    const aFim = anoFin;
+
+    let t = tInicio;
+    while (a < aFim || (a === aFim && t <= tFim)) {
+      const mIni = (t - 1) * 3 + 1;
+      const mFin = t * 3;
+      const mmIni = String(mIni).padStart(2, "0");
+      const mmFin = String(mFin).padStart(2, "0");
+      const ultimoDia = new Date(a, mFin, 0).getDate();
+      const label = anoIni === anoFin ? `${t}T` : `${t}T/${String(a).slice(2)}`;
       periodos.push({
-        chave: `${ano}-T${t + 1}`,
-        label: labels[t],
-        inicio: `${ano}-${mmInicio}-01`,
-        fim: `${ano}-${mmFim}-${ultimoDia}`,
+        chave: `${a}-T${t}`,
+        label,
+        inicio: `${a}-${mmIni}-01`,
+        fim: `${a}-${mmFin}-${ultimoDia}`,
       });
+      t++;
+      if (t > 4) { t = 1; a++; }
     }
   } else if (visao === "semestral") {
-    periodos.push({ chave: `${ano}-S1`, label: "1S", inicio: `${ano}-01-01`, fim: `${ano}-06-30` });
-    periodos.push({ chave: `${ano}-S2`, label: "2S", inicio: `${ano}-07-01`, fim: `${ano}-12-31` });
+    let a = anoIni;
+    let sInicio = mesIni <= 6 ? 1 : 2;
+    const sFim = mesFin <= 6 ? 1 : 2;
+    const aFim = anoFin;
+
+    let s = sInicio;
+    while (a < aFim || (a === aFim && s <= sFim)) {
+      const mIni = s === 1 ? 1 : 7;
+      const mFin = s === 1 ? 6 : 12;
+      const mmIni = String(mIni).padStart(2, "0");
+      const ultimoDia = new Date(a, mFin, 0).getDate();
+      const label = anoIni === anoFin ? `${s}S` : `${s}S/${String(a).slice(2)}`;
+      periodos.push({
+        chave: `${a}-S${s}`,
+        label,
+        inicio: `${a}-${mmIni}-01`,
+        fim: `${a}-${String(mFin).padStart(2, "0")}-${ultimoDia}`,
+      });
+      s++;
+      if (s > 2) { s = 1; a++; }
+    }
   } else {
-    periodos.push({ chave: `${ano}`, label: String(ano), inicio: `${ano}-01-01`, fim: `${ano}-12-31` });
+    // anual
+    for (let a = anoIni; a <= anoFin; a++) {
+      periodos.push({
+        chave: `${a}`,
+        label: String(a),
+        inicio: `${a}-01-01`,
+        fim: `${a}-12-31`,
+      });
+    }
   }
 
   return periodos;
+}
+
+// Find the referencia100 code from the tree
+function encontrarRef100(linhas: DreLinha[]): string | null {
+  for (const linha of linhas) {
+    if (linha.referencia100) return linha.codigo;
+    if (linha.filhos.length > 0) {
+      const found = encontrarRef100(linha.filhos);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 
 export async function GET(request: NextRequest) {
@@ -213,11 +262,13 @@ export async function GET(request: NextRequest) {
   }
 
   const params = request.nextUrl.searchParams;
+  const mesInicio = params.get("mesInicio");
+  const mesFim = params.get("mesFim");
+  const visao = (params.get("visao") as TipoVisao | null) ?? "mensal";
+
+  // Fallback: dataInicio/dataFim for backward compat
   const dataInicio = params.get("dataInicio");
   const dataFim = params.get("dataFim");
-  const visao = (params.get("visao") as TipoVisao | null) ?? null;
-  const anoParam = params.get("ano");
-  const ano = anoParam ? Number(anoParam) : new Date().getFullYear();
 
   try {
     const linhasResult = await db.execute({
@@ -229,7 +280,8 @@ export async function GET(request: NextRequest) {
           FIN_ESTRUTURA_DRE_CODIGO,
           FIN_ESTRUTURA_DRE_NATUREZA,
           COALESCE(FIN_ESTRUTURA_DRE_ORDEM, 0) as FIN_ESTRUTURA_DRE_ORDEM,
-          FIN_ESTRUTURA_DRE_FORMULA
+          FIN_ESTRUTURA_DRE_FORMULA,
+          COALESCE(FIN_ESTRUTURA_DRE_REFERENCIA_100, 0) as FIN_ESTRUTURA_DRE_REFERENCIA_100
         FROM FIN_ESTRUTURA_DRE
         WHERE EMPRESA_ID = ?
         ORDER BY FIN_ESTRUTURA_DRE_ORDEM ASC
@@ -255,9 +307,13 @@ export async function GET(request: NextRequest) {
       contasPorLinha.get(linhaId)!.push(Number(row.FIN_PLANO_CONTA_ID));
     });
 
-    // Period-based view (mensal, trimestral, semestral, anual)
-    if (visao) {
-      const periodos = gerarPeriodos(ano, visao);
+    // Period-based view with month range
+    if (mesInicio && mesFim) {
+      const periodos = gerarPeriodosRange(mesInicio, mesFim, visao);
+
+      if (periodos.length === 0) {
+        return NextResponse.json({ success: true, data: [], periodos: [] });
+      }
 
       const lancResult = await db.execute({
         sql: `
@@ -313,6 +369,7 @@ export async function GET(request: NextRequest) {
           codigo: String(linha.FIN_ESTRUTURA_DRE_CODIGO || ""),
           natureza: nat,
           formula: linha.FIN_ESTRUTURA_DRE_FORMULA || undefined,
+          referencia100: Number(linha.FIN_ESTRUTURA_DRE_REFERENCIA_100) === 1,
           valor: totalGeral,
           colunas,
           filhos: [],
@@ -321,8 +378,7 @@ export async function GET(request: NextRequest) {
 
       const arvore = construirArvore(linhas).map(somarFilhos);
 
-      // Resolver fórmulas CALCULADO usando valores já computados
-      // Montar mapa código → valor por período
+      // Resolver fórmulas CALCULADO
       const valoresPorCodigoPeriodo = new Map<string, Map<string, number>>();
       for (const p of periodos) {
         valoresPorCodigoPeriodo.set(p.chave, new Map());
@@ -340,10 +396,14 @@ export async function GET(request: NextRequest) {
       coletarValoresPeriodo(arvore);
       resolverFormulasPorPeriodo(arvore, valoresPorCodigoPeriodo, periodos.map((p) => p.chave));
 
+      // Find ref100 code
+      const ref100Codigo = encontrarRef100(arvore);
+
       return NextResponse.json({
         success: true,
         data: arvore,
         periodos: periodos.map((p) => ({ chave: p.chave, label: p.label })),
+        referencia100Codigo: ref100Codigo,
       });
     }
 
@@ -384,6 +444,7 @@ export async function GET(request: NextRequest) {
         codigo: String(linha.FIN_ESTRUTURA_DRE_CODIGO || ""),
         natureza: nat,
         formula: linha.FIN_ESTRUTURA_DRE_FORMULA || undefined,
+        referencia100: Number(linha.FIN_ESTRUTURA_DRE_REFERENCIA_100) === 1,
         valor: total,
         colunas: {},
         filhos: [],
@@ -392,7 +453,6 @@ export async function GET(request: NextRequest) {
 
     const arvore = construirArvore(linhas).map(somarFilhos);
 
-    // Resolver fórmulas CALCULADO
     const valoresPorCodigo = new Map<string, number>();
     const coletarValores = (items: DreLinha[]) => {
       for (const item of items) {
@@ -405,7 +465,9 @@ export async function GET(request: NextRequest) {
     coletarValores(arvore);
     resolverFormulas(arvore, valoresPorCodigo);
 
-    return NextResponse.json({ success: true, data: arvore });
+    const ref100Codigo = encontrarRef100(arvore);
+
+    return NextResponse.json({ success: true, data: arvore, referencia100Codigo: ref100Codigo });
   } catch (error) {
     console.error("Erro ao buscar DRE:", error);
     return NextResponse.json(

@@ -147,6 +147,12 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             codigoTela: "FIN_DRE",
           },
           {
+            label: "Relatorio Caixa",
+            rota: "/financeiro/relatorio-caixa",
+            requerEmpresa: true,
+            codigoTela: "FIN_REL_CAIXA",
+          },
+          {
             label: "Extrato Pro-labore",
             rota: "/financeiro/extrato-prolabore",
             requerEmpresa: true,

@@ -34,7 +34,11 @@ type Alertas = { entradasPeriodo: number; saidasPeriodo: number; vencidos: numbe
 interface ContaAnalise {
   contaId: number;
   conta: string;
+  contaCodigo: string;
   natureza: string;
+  paiId: number | null;
+  grupoPaiNome: string | null;
+  grupoPaiCodigo: string | null;
   meses: Record<string, number>;
   total: number;
   media: number;
@@ -50,8 +54,21 @@ interface EvolucaoMes {
 interface ContaOpcao {
   id: number;
   nome: string;
+  codigo: string;
   natureza: string;
+  paiId: number | null;
   origem: string;
+}
+
+interface LancamentoItem {
+  id: number;
+  data: string;
+  descricao: string;
+  valor: number;
+  placa: string;
+  contaId: number;
+  contaNome: string;
+  pessoaNome: string;
 }
 
 const CORES = [
@@ -166,6 +183,28 @@ function RenderChart({
   return <div style={{ height }}><Bar data={{ labels, datasets: barDatasets }} options={options} /></div>;
 }
 
+// Group accounts by root parent for tree view
+function agruparPorPai(contas: ContaAnalise[]): { grupo: string; contas: ContaAnalise[]; total: number }[] {
+  const grupos = new Map<string, { contas: ContaAnalise[]; total: number }>();
+
+  for (const conta of contas) {
+    const grupoKey = conta.grupoPaiNome
+      ? `${conta.grupoPaiCodigo ?? ""} ${conta.grupoPaiNome}`
+      : conta.conta;
+
+    if (!grupos.has(grupoKey)) {
+      grupos.set(grupoKey, { contas: [], total: 0 });
+    }
+    const g = grupos.get(grupoKey)!;
+    g.contas.push(conta);
+    g.total += conta.total;
+  }
+
+  return Array.from(grupos.entries())
+    .map(([grupo, data]) => ({ grupo, contas: data.contas, total: data.total }))
+    .sort((a, b) => b.total - a.total);
+}
+
 export default function FinanceiroDashboardPage() {
   useRequerEmpresaSelecionada();
   const { empresa } = useEmpresaSelecionada();
@@ -191,6 +230,8 @@ export default function FinanceiroDashboardPage() {
   const [chartTypeDespesas, setChartTypeDespesas] = useState<ChartType>("bar");
   const [carregandoReceitas, setCarregandoReceitas] = useState(false);
   const [carregandoDespesas, setCarregandoDespesas] = useState(false);
+  const [buscaReceitas, setBuscaReceitas] = useState("");
+  const [buscaDespesas, setBuscaDespesas] = useState("");
 
   const [evolucao, setEvolucao] = useState<EvolucaoMes[]>([]);
 
@@ -200,6 +241,19 @@ export default function FinanceiroDashboardPage() {
   const [chartTypeGraficos, setChartTypeGraficos] = useState<ChartType>("line");
   const [carregandoGraficos, setCarregandoGraficos] = useState(false);
   const [filtroOrigem, setFiltroOrigem] = useState<"TODOS" | "PLANO_CONTAS" | "DRE">("TODOS");
+  const [buscaCruzamento, setBuscaCruzamento] = useState("");
+
+  // Edit modal
+  const [lancamentoEditando, setLancamentoEditando] = useState<LancamentoItem | null>(null);
+  const [editForm, setEditForm] = useState({ descricao: "", valor: "", placa: "" });
+  const [salvandoEdit, setSalvandoEdit] = useState(false);
+
+  // Lancamento listing
+  const [lancamentos, setLancamentos] = useState<LancamentoItem[]>([]);
+  const [buscaLancamentos, setBuscaLancamentos] = useState("");
+  const [contaIdFiltro, setContaIdFiltro] = useState<number | null>(null);
+  const [carregandoLancamentos, setCarregandoLancamentos] = useState(false);
+  const [mostrarLancamentos, setMostrarLancamentos] = useState(false);
 
   const headers = useMemo(() => {
     const h: Record<string, string> = {};
@@ -265,6 +319,18 @@ export default function FinanceiroDashboardPage() {
       .then((d) => { setCruzamentoData(d); setCarregandoGraficos(false); });
   }, [empresa?.id, activeTab, contasSelecionadas, fetchAnalise]);
 
+  // Load lancamentos for detail view
+  const carregarLancamentos = useCallback(async (busca?: string, contaId?: number | null) => {
+    if (!empresa?.id) return;
+    setCarregandoLancamentos(true);
+    const extra: Record<string, string> = {};
+    if (busca && busca.trim().length >= 3) extra.busca = busca.trim();
+    if (contaId) extra.contaId = String(contaId);
+    const data = await fetchAnalise("lancamentos", extra);
+    if (data) setLancamentos(data);
+    setCarregandoLancamentos(false);
+  }, [empresa?.id, fetchAnalise]);
+
   const carteiraSelecionada = useMemo(
     () => carteira[0] || { empresa: "", saldo: 0, entradas: 0, saidas: 0 },
     [carteira]
@@ -280,14 +346,89 @@ export default function FinanceiroDashboardPage() {
   })();
 
   const contasFiltradas = useMemo(() => {
-    if (filtroOrigem === "TODOS") return contasDisponiveis;
-    return contasDisponiveis.filter((c) => c.origem === filtroOrigem);
-  }, [contasDisponiveis, filtroOrigem]);
+    let lista = contasDisponiveis;
+    if (filtroOrigem !== "TODOS") {
+      lista = lista.filter((c) => c.origem === filtroOrigem);
+    }
+    if (buscaCruzamento.trim().length >= 3) {
+      const b = buscaCruzamento.toLowerCase();
+      lista = lista.filter((c) => `${c.codigo} ${c.nome}`.toLowerCase().includes(b));
+    }
+    return lista;
+  }, [contasDisponiveis, filtroOrigem, buscaCruzamento]);
+
+  // Group cruzamento accounts by parent
+  const contasAgrupadasCruz = useMemo(() => {
+    const grupos = new Map<string, ContaOpcao[]>();
+    for (const c of contasFiltradas) {
+      let parentLabel = "";
+      if (c.paiId) {
+        const parent = contasDisponiveis.find((p) => p.id === c.paiId && p.origem === c.origem);
+        parentLabel = parent ? `${parent.codigo} ${parent.nome}` : "Outros";
+      }
+      const groupKey = c.paiId ? parentLabel : `${c.codigo} ${c.nome}`;
+      if (!grupos.has(groupKey)) grupos.set(groupKey, []);
+      grupos.get(groupKey)!.push(c);
+    }
+    return Array.from(grupos.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [contasFiltradas, contasDisponiveis]);
 
   const toggleConta = (id: number) => {
     setContasSelecionadas((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
+  };
+
+  const handleEditarLancamento = (lanc: LancamentoItem) => {
+    setLancamentoEditando(lanc);
+    setEditForm({
+      descricao: lanc.descricao,
+      valor: String(Math.abs(lanc.valor)),
+      placa: lanc.placa,
+    });
+  };
+
+  const handleSalvarEdit = async () => {
+    if (!lancamentoEditando || !empresa?.id) return;
+    setSalvandoEdit(true);
+    try {
+      const valorNum = parseFloat(editForm.valor.replace(",", "."));
+      const valorFinal = lancamentoEditando.valor >= 0 ? Math.abs(valorNum) : -Math.abs(valorNum);
+
+      const resp = await fetch(`/api/financeiro/lancamentos?id=${lancamentoEditando.id}`, {
+        method: "PUT",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data: lancamentoEditando.data,
+          descricao: editForm.descricao,
+          valor: valorFinal,
+          planoContaId: lancamentoEditando.contaId,
+          placa: editForm.placa,
+        }),
+      });
+      const json = await resp.json();
+      if (json.success) {
+        setLancamentoEditando(null);
+        if (mostrarLancamentos) carregarLancamentos(buscaLancamentos, contaIdFiltro);
+        if (activeTab === "receitas") {
+          setCarregandoReceitas(true);
+          fetchAnalise("receitas").then((d) => { setReceitasData(d); setCarregandoReceitas(false); });
+        } else if (activeTab === "despesas") {
+          setCarregandoDespesas(true);
+          fetchAnalise("despesas").then((d) => { setDespesasData(d); setCarregandoDespesas(false); });
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
+    } finally {
+      setSalvandoEdit(false);
+    }
+  };
+
+  const handleVerLancamentos = (contaId?: number) => {
+    setContaIdFiltro(contaId ?? null);
+    setMostrarLancamentos(true);
+    carregarLancamentos(buscaLancamentos, contaId ?? null);
   };
 
   const tabs: { id: TabId; label: string }[] = [
@@ -304,12 +445,21 @@ export default function FinanceiroDashboardPage() {
     setChartType: (t: ChartType) => void,
     titulo: string,
     cor: string,
+    busca: string,
+    setBusca: (s: string) => void,
   ) {
     if (carregando) return <div className="empty-state">Carregando dados...</div>;
     if (!data) return <div className="empty-state">Nenhum dado encontrado no periodo.</div>;
 
     const { contas, mesesLabels, totalGeral, mediaGeral, topConta } = data;
+    const contasTyped = (contas ?? []) as ContaAnalise[];
     const isPie = chartType === "pie" || chartType === "doughnut";
+
+    const contasFilt = busca.trim().length >= 3
+      ? contasTyped.filter((c) => `${c.contaCodigo} ${c.conta}`.toLowerCase().includes(busca.toLowerCase()))
+      : contasTyped;
+
+    const grupos = agruparPorPai(contasFilt);
 
     return (
       <>
@@ -329,7 +479,7 @@ export default function FinanceiroDashboardPage() {
           </div>
           <div className="summary-card">
             <span className="summary-label">Contas Ativas</span>
-            <strong className="summary-value">{contas?.length ?? 0}</strong>
+            <strong className="summary-value">{contasTyped.length}</strong>
           </div>
         </section>
 
@@ -341,15 +491,15 @@ export default function FinanceiroDashboardPage() {
           {isPie ? (
             <RenderChart
               tipo={chartType}
-              labels={(contas ?? []).map((c: any) => c.conta)}
-              datasets={[{ label: titulo, data: (contas ?? []).map((c: any) => c.total) }]}
+              labels={contasFilt.map((c) => c.conta)}
+              datasets={[{ label: titulo, data: contasFilt.map((c) => c.total) }]}
               height={350}
             />
           ) : (
             <RenderChart
               tipo={chartType}
               labels={mesesLabels ?? []}
-              datasets={(contas ?? []).slice(0, 8).map((c: any, i: number) => ({
+              datasets={contasFilt.slice(0, 8).map((c, i) => ({
                 label: c.conta,
                 data: (data.meses ?? []).map((m: string) => c.meses?.[m] ?? 0),
                 backgroundColor: CORES[i % CORES.length],
@@ -361,7 +511,26 @@ export default function FinanceiroDashboardPage() {
         </section>
 
         <section className="panel" style={{ marginTop: 16 }}>
-          <h3 style={{ margin: "0 0 12px", fontSize: "0.95rem", fontWeight: 600 }}>Detalhamento por conta</h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+            <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600 }}>Detalhamento por conta</h3>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input
+                className="form-input"
+                placeholder="Buscar conta..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                style={{ width: 200, fontSize: "0.82rem", padding: "6px 10px" }}
+              />
+              <button
+                type="button"
+                className="button button-secondary button-compact"
+                onClick={() => handleVerLancamentos()}
+                style={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}
+              >
+                Ver Lancamentos
+              </button>
+            </div>
+          </div>
           <div style={{ overflowX: "auto" }}>
             <table className="data-table mobile-cards">
               <thead>
@@ -369,25 +538,52 @@ export default function FinanceiroDashboardPage() {
                   <th style={{ textAlign: "left" }}>Conta</th>
                   <th style={{ textAlign: "right" }}>Total</th>
                   <th style={{ textAlign: "right" }}>Media</th>
-                  <th style={{ textAlign: "right" }}>% Participacao</th>
+                  <th style={{ textAlign: "right" }}>% Part.</th>
+                  <th style={{ textAlign: "center", width: 60 }}>Det.</th>
                 </tr>
               </thead>
               <tbody>
-                {(contas ?? []).map((c: any) => (
-                  <tr key={c.contaId}>
-                    <td data-label="Conta" style={{ fontWeight: 600 }}>{c.conta}</td>
-                    <td data-label="Total" style={{ color: cor }}>{formatMoney(c.total)}</td>
-                    <td data-label="Media">{formatMoney(c.media)}</td>
-                    <td data-label="% Part.">{totalGeral > 0 ? ((c.total / totalGeral) * 100).toFixed(1) : "0"}%</td>
-                  </tr>
+                {grupos.map((g) => (
+                  <React.Fragment key={g.grupo}>
+                    {g.contas.length > 1 && (
+                      <tr style={{ backgroundColor: "#f1f5f9", fontWeight: 700 }}>
+                        <td style={{ paddingLeft: 8 }}>{g.grupo}</td>
+                        <td style={{ textAlign: "right", color: cor }}>{formatMoney(g.total)}</td>
+                        <td style={{ textAlign: "right" }}></td>
+                        <td style={{ textAlign: "right" }}>{totalGeral > 0 ? ((g.total / totalGeral) * 100).toFixed(1) : "0"}%</td>
+                        <td></td>
+                      </tr>
+                    )}
+                    {g.contas.map((c) => (
+                      <tr key={c.contaId}>
+                        <td data-label="Conta" style={{ fontWeight: g.contas.length > 1 ? 400 : 600, paddingLeft: g.contas.length > 1 ? 24 : 8 }}>
+                          {c.contaCodigo ? `${c.contaCodigo} ` : ""}{c.conta}
+                        </td>
+                        <td data-label="Total" style={{ textAlign: "right", color: cor }}>{formatMoney(c.total)}</td>
+                        <td data-label="Media" style={{ textAlign: "right" }}>{formatMoney(c.media)}</td>
+                        <td data-label="% Part." style={{ textAlign: "right" }}>{totalGeral > 0 ? ((c.total / totalGeral) * 100).toFixed(1) : "0"}%</td>
+                        <td style={{ textAlign: "center" }}>
+                          <button
+                            type="button"
+                            className="button button-secondary button-compact"
+                            style={{ fontSize: "0.7rem", padding: "2px 6px" }}
+                            onClick={() => handleVerLancamentos(c.contaId)}
+                          >
+                            Ver
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
                 ))}
               </tbody>
               <tfoot>
                 <tr style={{ fontWeight: 700, borderTop: "2px solid #e5e7eb", backgroundColor: "#f3f4f6" }}>
                   <td>TOTAL</td>
-                  <td style={{ color: cor }}>{formatMoney(totalGeral)}</td>
-                  <td>{formatMoney(mediaGeral)}</td>
-                  <td>100%</td>
+                  <td style={{ textAlign: "right", color: cor }}>{formatMoney(totalGeral)}</td>
+                  <td style={{ textAlign: "right" }}>{formatMoney(mediaGeral)}</td>
+                  <td style={{ textAlign: "right" }}>100%</td>
+                  <td></td>
                 </tr>
               </tfoot>
             </table>
@@ -439,7 +635,7 @@ export default function FinanceiroDashboardPage() {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => { setActiveTab(tab.id); setMostrarLancamentos(false); }}
                 style={{
                   padding: "10px 20px",
                   fontSize: "0.85rem",
@@ -543,9 +739,87 @@ export default function FinanceiroDashboardPage() {
               </div>
             )}
 
-            {activeTab === "receitas" && renderAnaliseTab(receitasData, carregandoReceitas, chartTypeReceitas, setChartTypeReceitas, "Receitas", "#059669")}
+            {activeTab === "receitas" && !mostrarLancamentos && renderAnaliseTab(receitasData, carregandoReceitas, chartTypeReceitas, setChartTypeReceitas, "Receitas", "#059669", buscaReceitas, setBuscaReceitas)}
 
-            {activeTab === "despesas" && renderAnaliseTab(despesasData, carregandoDespesas, chartTypeDespesas, setChartTypeDespesas, "Despesas", "#dc2626")}
+            {activeTab === "despesas" && !mostrarLancamentos && renderAnaliseTab(despesasData, carregandoDespesas, chartTypeDespesas, setChartTypeDespesas, "Despesas", "#dc2626", buscaDespesas, setBuscaDespesas)}
+
+            {/* Lancamentos detail view */}
+            {mostrarLancamentos && (activeTab === "receitas" || activeTab === "despesas") && (
+              <section className="panel">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600 }}>
+                      Lancamentos {contaIdFiltro ? "(conta filtrada)" : ""}
+                    </h3>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#6b7280" }}>
+                      Clique em um lancamento para editar
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input
+                      className="form-input"
+                      placeholder="Buscar descricao, placa, pessoa..."
+                      value={buscaLancamentos}
+                      onChange={(e) => {
+                        setBuscaLancamentos(e.target.value);
+                        if (e.target.value.trim().length >= 3 || e.target.value.trim().length === 0) {
+                          carregarLancamentos(e.target.value, contaIdFiltro);
+                        }
+                      }}
+                      style={{ width: 280, fontSize: "0.82rem", padding: "6px 10px" }}
+                    />
+                    <button
+                      type="button"
+                      className="button button-secondary button-compact"
+                      onClick={() => { setMostrarLancamentos(false); setContaIdFiltro(null); }}
+                    >
+                      Voltar
+                    </button>
+                  </div>
+                </div>
+
+                {carregandoLancamentos ? (
+                  <div className="empty-state">Carregando lancamentos...</div>
+                ) : lancamentos.length === 0 ? (
+                  <div className="empty-state">Nenhum lancamento encontrado.</div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table className="data-table mobile-cards">
+                      <thead>
+                        <tr>
+                          <th style={{ textAlign: "left" }}>Data</th>
+                          <th style={{ textAlign: "left" }}>Descricao</th>
+                          <th style={{ textAlign: "left" }}>Conta</th>
+                          <th style={{ textAlign: "left" }}>Pessoa</th>
+                          <th style={{ textAlign: "left" }}>Placa</th>
+                          <th style={{ textAlign: "right" }}>Valor</th>
+                          <th style={{ width: 50 }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lancamentos.map((l) => (
+                          <tr key={l.id} style={{ cursor: "pointer" }} onClick={() => handleEditarLancamento(l)}>
+                            <td data-label="Data">{l.data}</td>
+                            <td data-label="Descricao" style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.descricao}</td>
+                            <td data-label="Conta">{l.contaNome}</td>
+                            <td data-label="Pessoa">{l.pessoaNome || "-"}</td>
+                            <td data-label="Placa">{l.placa || "-"}</td>
+                            <td data-label="Valor" style={{ textAlign: "right", color: l.valor >= 0 ? "#059669" : "#dc2626", fontWeight: 600 }}>
+                              {formatMoney(Math.abs(l.valor))}
+                            </td>
+                            <td>
+                              <button type="button" className="button button-secondary button-compact" style={{ fontSize: "0.7rem", padding: "2px 6px" }}>
+                                Editar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            )}
 
             {activeTab === "graficos" && (
               <>
@@ -560,7 +834,7 @@ export default function FinanceiroDashboardPage() {
                     <ChartTypeSelector value={chartTypeGraficos} onChange={setChartTypeGraficos} />
                   </div>
 
-                  <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
                     {(["TODOS", "PLANO_CONTAS", "DRE"] as const).map((f) => (
                       <button
                         key={f}
@@ -572,35 +846,67 @@ export default function FinanceiroDashboardPage() {
                         {f === "TODOS" ? "Todas" : f === "PLANO_CONTAS" ? "Plano de Contas" : "DRE"}
                       </button>
                     ))}
+                    <input
+                      className="form-input"
+                      placeholder="Buscar conta (min. 3 caracteres)..."
+                      value={buscaCruzamento}
+                      onChange={(e) => setBuscaCruzamento(e.target.value)}
+                      style={{ flex: 1, minWidth: 200, fontSize: "0.82rem", padding: "6px 10px" }}
+                    />
                   </div>
 
-                  <div style={{ maxHeight: 200, overflowY: "auto", border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
-                    {contasFiltradas.length === 0 ? (
-                      <p style={{ color: "#6b7280", fontSize: "0.85rem", textAlign: "center", padding: 12 }}>Nenhuma conta disponivel.</p>
+                  <div style={{ maxHeight: 280, overflowY: "auto", border: "1px solid #e5e7eb", borderRadius: 8, padding: 0 }}>
+                    {contasAgrupadasCruz.length === 0 ? (
+                      <p style={{ color: "#6b7280", fontSize: "0.85rem", textAlign: "center", padding: 12 }}>
+                        {buscaCruzamento.trim().length > 0 && buscaCruzamento.trim().length < 3 ? "Digite pelo menos 3 caracteres" : "Nenhuma conta disponivel."}
+                      </p>
                     ) : (
-                      contasFiltradas.map((c) => (
-                        <label key={`${c.origem}-${c.id}`} style={{ display: "flex", gap: 8, alignItems: "center", padding: "4px 0", cursor: "pointer", fontSize: "0.85rem" }}>
-                          <input
-                            type="checkbox"
-                            checked={contasSelecionadas.includes(c.id)}
-                            onChange={() => toggleConta(c.id)}
-                          />
-                          <span style={{ fontWeight: 500 }}>{c.nome}</span>
-                          <span className="badge" style={{
-                            backgroundColor: c.natureza === "RECEITA" ? "#d1fae5" : c.natureza === "DESPESA" ? "#fee2e2" : "#f3f4f6",
-                            color: c.natureza === "RECEITA" ? "#065f46" : c.natureza === "DESPESA" ? "#991b1b" : "#374151",
-                            fontSize: "0.7rem",
-                          }}>
-                            {c.natureza}
-                          </span>
-                          <span style={{ fontSize: "0.7rem", color: "#9ca3af" }}>{c.origem === "DRE" ? "DRE" : "Fin"}</span>
-                        </label>
+                      contasAgrupadasCruz.map(([grupo, items]) => (
+                        <div key={grupo}>
+                          {items.length > 0 && items[0].paiId && (
+                            <div style={{ padding: "6px 12px", backgroundColor: "#f1f5f9", fontWeight: 600, fontSize: "0.82rem", borderBottom: "1px solid #e5e7eb" }}>
+                              {grupo}
+                            </div>
+                          )}
+                          {items.map((c) => (
+                            <label
+                              key={`${c.origem}-${c.id}`}
+                              style={{
+                                display: "flex",
+                                gap: 8,
+                                alignItems: "center",
+                                padding: "6px 12px",
+                                paddingLeft: c.paiId ? 28 : 12,
+                                cursor: "pointer",
+                                fontSize: "0.82rem",
+                                borderBottom: "1px solid #f3f4f6",
+                                backgroundColor: contasSelecionadas.includes(c.id) ? "#eff6ff" : "transparent",
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={contasSelecionadas.includes(c.id)}
+                                onChange={() => toggleConta(c.id)}
+                              />
+                              <span style={{ fontWeight: 500, minWidth: 50, color: "#6b7280", fontSize: "0.75rem" }}>{c.codigo}</span>
+                              <span style={{ fontWeight: 500, flex: 1 }}>{c.nome}</span>
+                              <span className="badge" style={{
+                                backgroundColor: c.natureza === "RECEITA" ? "#d1fae5" : c.natureza === "DESPESA" ? "#fee2e2" : "#f3f4f6",
+                                color: c.natureza === "RECEITA" ? "#065f46" : c.natureza === "DESPESA" ? "#991b1b" : "#374151",
+                                fontSize: "0.65rem",
+                              }}>
+                                {c.natureza}
+                              </span>
+                              <span style={{ fontSize: "0.65rem", color: "#9ca3af" }}>{c.origem === "DRE" ? "DRE" : "Fin"}</span>
+                            </label>
+                          ))}
+                        </div>
                       ))
                     )}
                   </div>
 
                   {contasSelecionadas.length > 0 && (
-                    <div style={{ marginTop: 4, fontSize: "0.75rem", color: "#6b7280" }}>
+                    <div style={{ marginTop: 6, fontSize: "0.75rem", color: "#6b7280" }}>
                       {contasSelecionadas.length} conta(s) selecionada(s)
                       <button
                         type="button"
@@ -658,9 +964,9 @@ export default function FinanceiroDashboardPage() {
                             <tr key={s.contaId}>
                               <td data-label="Conta" style={{ fontWeight: 600, color: CORES[i % CORES.length] }}>{s.nome}</td>
                               {s.valores.map((v: number, j: number) => (
-                                <td key={j} data-label={cruzamentoData.mesesLabels[j]}>{formatMoney(v)}</td>
+                                <td key={j} data-label={cruzamentoData.mesesLabels[j]} style={{ textAlign: "right" }}>{formatMoney(v)}</td>
                               ))}
-                              <td data-label="Total" style={{ fontWeight: 700 }}>
+                              <td data-label="Total" style={{ textAlign: "right", fontWeight: 700 }}>
                                 {formatMoney(s.valores.reduce((a: number, b: number) => a + b, 0))}
                               </td>
                             </tr>
@@ -683,6 +989,61 @@ export default function FinanceiroDashboardPage() {
           </div>
         </main>
         </PaginaProtegida>
+
+        {/* Edit Modal */}
+        {lancamentoEditando && (
+          <div className="modal-overlay" onClick={() => setLancamentoEditando(null)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
+              <div className="modal-header">
+                <h3>Editar Lancamento</h3>
+                <button type="button" className="modal-close" onClick={() => setLancamentoEditando(null)}>&times;</button>
+              </div>
+              <div className="modal-body">
+                <div style={{ marginBottom: 12, padding: "8px 12px", backgroundColor: "#f9fafb", borderRadius: 8, fontSize: "0.82rem" }}>
+                  <div><strong>Data:</strong> {lancamentoEditando.data}</div>
+                  <div><strong>Conta:</strong> {lancamentoEditando.contaNome}</div>
+                  {lancamentoEditando.pessoaNome && <div><strong>Pessoa:</strong> {lancamentoEditando.pessoaNome}</div>}
+                </div>
+                <div className="form-group">
+                  <label>Descricao</label>
+                  <input
+                    className="form-input"
+                    value={editForm.descricao}
+                    onChange={(e) => setEditForm((f) => ({ ...f, descricao: e.target.value }))}
+                  />
+                </div>
+                <div className="form-grid two-columns">
+                  <div className="form-group">
+                    <label>Valor (R$)</label>
+                    <input
+                      className="form-input"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editForm.valor}
+                      onChange={(e) => setEditForm((f) => ({ ...f, valor: e.target.value }))}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Placa</label>
+                    <input
+                      className="form-input"
+                      value={editForm.placa}
+                      onChange={(e) => setEditForm((f) => ({ ...f, placa: e.target.value.toUpperCase() }))}
+                      maxLength={10}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="button button-secondary" onClick={() => setLancamentoEditando(null)}>Cancelar</button>
+                <button type="button" className="button button-primary" disabled={salvandoEdit} onClick={handleSalvarEdit}>
+                  {salvandoEdit ? "Salvando..." : "Salvar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </LayoutShell>
   );
