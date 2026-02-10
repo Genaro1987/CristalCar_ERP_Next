@@ -21,11 +21,11 @@ function avaliarFormula(formula: string, valoresPorCodigo: Map<string, number>):
   // Substituir códigos de linhas por seus valores
   // Códigos podem ser: "1", "1.1", "1.1.2", etc.
   let expr = formula.replace(/[A-Za-z0-9_.]+/g, (token) => {
-    // Se for número puro, manter
-    if (/^\d+(\.\d+)?$/.test(token)) return token;
-    // Se for código de linha DRE, substituir pelo valor
+    // Primeiro tentar como código de linha DRE (ex: "1", "1.1", "6")
     const val = valoresPorCodigo.get(token);
     if (val !== undefined) return String(val);
+    // Se não for código e for número puro, manter como literal
+    if (/^\d+(\.\d+)?$/.test(token)) return token;
     return "0";
   });
 

@@ -248,12 +248,6 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
       </div>
 
       <div className="sidebar-bottom">
-        {perfilNome && (
-          <div className="sidebar-perfil-indicator">
-            PERFIL ATIVO
-            <strong>{perfilNome}</strong>
-          </div>
-        )}
         <Link
           href="/ajuda"
           className={
@@ -262,6 +256,12 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
         >
           AJUDA
         </Link>
+        {perfilNome && (
+          <div className="sidebar-perfil-indicator">
+            PERFIL ATIVO
+            <strong>{perfilNome}</strong>
+          </div>
+        )}
       </div>
     </aside>
   );
