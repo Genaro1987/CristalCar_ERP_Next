@@ -329,15 +329,16 @@ export default function ObjetivosPage() {
 
         // Extract saved percentages from tree (leaf nodes)
         const editados: Record<number, number> = {};
-        function extrairPcts(nodes: DreNode[]) {
-          for (const n of nodes) {
+        const extrairPcts = (nodes: DreNode[]) => {
+          for (let i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
             if (n.filhos.length === 0) {
               editados[n.id] = n.percentual;
             } else {
               extrairPcts(n.filhos);
             }
           }
-        }
+        };
         extrairPcts(dados);
         setPercentuaisEditados(editados);
       }
