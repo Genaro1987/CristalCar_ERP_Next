@@ -64,7 +64,8 @@ async function runMigrations() {
       .filter(Boolean);
 
     console.log(`Aplicando migracao: ${nome}`);
-    for (const statement of statements) {
+    for (let idx = 0; idx < statements.length; idx++) {
+      const statement = statements[idx];
       try {
         await db.execute(statement);
       } catch (err) {
@@ -74,11 +75,17 @@ async function runMigrations() {
           normalizedStmt.includes("ADD COLUMN");
         const isRenameEmpresaId =
           normalizedStmt.includes("RENAME COLUMN EMPRESA_ID TO ID_EMPRESA");
+        const isCreateIndex =
+          normalizedStmt.startsWith("CREATE") &&
+          normalizedStmt.includes("INDEX");
         const message = err?.message || "";
         const isDuplicateColumn = /duplicate column name|already exists/i.test(
           message
         );
         const isMissingColumn = /no such column/i.test(message);
+        const isNoSuchColumn = /has no column named|no such column/i.test(
+          message
+        );
 
         if (isAddColumn && isDuplicateColumn) {
           const match = statement.match(
@@ -97,6 +104,15 @@ async function runMigrations() {
           continue;
         }
 
+        if (isCreateIndex && isNoSuchColumn) {
+          console.warn(
+            `Coluna não encontrada para criar índice, ignorando: ${message}`
+          );
+          continue;
+        }
+
+        console.error(`Erro na migracao ${nome}, statement ${idx + 1}/${statements.length}:`);
+        console.error(`SQL: ${statement.substring(0, 300)}`);
         throw err;
       }
     }
