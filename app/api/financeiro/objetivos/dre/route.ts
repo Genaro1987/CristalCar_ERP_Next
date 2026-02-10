@@ -153,14 +153,23 @@ export async function POST(request: NextRequest) {
   if (!empresaId) return respostaEmpresaNaoSelecionada();
 
   const body = await request.json();
-  const { ano, percentuais: pcts } = body as { ano: number; percentuais: { dreId: number; percentual: number }[] };
+  const { ano, percentuais: pcts, tipoPeriodo, refPeriodo, valorTotal, periodoLabel } = body as {
+    ano: number;
+    percentuais: { dreId: number; percentual: number }[];
+    tipoPeriodo?: string;
+    refPeriodo?: string;
+    valorTotal?: number;
+    periodoLabel?: string;
+  };
 
   if (!ano || !Array.isArray(pcts)) {
-    return NextResponse.json({ success: false, error: "Dados inválidos" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "Dados invalidos" }, { status: 400 });
   }
 
   try {
-    for (const p of pcts) {
+    // Save percentages per DRE line
+    for (let i = 0; i < pcts.length; i++) {
+      const p = pcts[i];
       await db.execute({
         sql: `INSERT INTO FIN_OBJETIVO_CONTA (ID_EMPRESA, FIN_OBJETIVO_TIPO, FIN_CONTA_ID, FIN_OBJETIVO_PERCENTUAL, FIN_OBJETIVO_ANO)
               VALUES (?, 'ESTRUTURA_DRE', ?, ?, ?)
@@ -169,6 +178,44 @@ export async function POST(request: NextRequest) {
         args: [empresaId, p.dreId, p.percentual, ano],
       });
     }
+
+    // Create/update FIN_OBJETIVO parent record for integration with Objetivos Semanais
+    if (tipoPeriodo && refPeriodo) {
+      const titulo = `Objetivo ${periodoLabel || refPeriodo}`;
+      const periodoDb = tipoPeriodo === "mensal" ? "Mensal" : tipoPeriodo === "trimestral" ? "Trimestral" : "Anual";
+
+      // Check if objective already exists for this period
+      const existente = await db.execute({
+        sql: `SELECT FIN_OBJETIVO_ID FROM FIN_OBJETIVO
+              WHERE ID_EMPRESA = ? AND FIN_OBJETIVO_TIPO_PERIODO = ? AND FIN_OBJETIVO_REF_PERIODO = ?`,
+        args: [empresaId, tipoPeriodo, refPeriodo],
+      });
+
+      if (existente.rows.length > 0) {
+        // Update existing
+        const id = (existente.rows[0] as any).FIN_OBJETIVO_ID;
+        await db.execute({
+          sql: `UPDATE FIN_OBJETIVO SET
+                  FIN_OBJETIVO_TITULO = ?,
+                  FIN_OBJETIVO_META = ?,
+                  FIN_OBJETIVO_VALOR_TOTAL = ?,
+                  FIN_OBJETIVO_ATUALIZADO_EM = datetime('now')
+                WHERE FIN_OBJETIVO_ID = ? AND ID_EMPRESA = ?`,
+          args: [titulo, valorTotal ?? 0, valorTotal ?? 0, id, empresaId],
+        });
+      } else {
+        // Insert new
+        await db.execute({
+          sql: `INSERT INTO FIN_OBJETIVO (
+                  FIN_OBJETIVO_TITULO, FIN_OBJETIVO_PERIODO, FIN_OBJETIVO_META,
+                  FIN_OBJETIVO_STATUS, ID_EMPRESA,
+                  FIN_OBJETIVO_TIPO_PERIODO, FIN_OBJETIVO_REF_PERIODO, FIN_OBJETIVO_VALOR_TOTAL
+                ) VALUES (?, ?, ?, 'ativo', ?, ?, ?, ?)`,
+          args: [titulo, periodoDb, valorTotal ?? 0, empresaId, tipoPeriodo, refPeriodo, valorTotal ?? 0],
+        });
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Erro ao salvar objetivos DRE:", error);

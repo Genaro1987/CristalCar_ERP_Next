@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
         SELECT
           ID_FUNCIONARIO,
           COMPETENCIA,
+          SALDO_ANTERIOR_MINUTOS,
           HORAS_EXTRAS_50_MINUTOS,
           HORAS_EXTRAS_100_MINUTOS,
           HORAS_DEVIDAS_MINUTOS,
@@ -187,25 +188,28 @@ export async function GET(request: NextRequest) {
       diasMap.set(d.ID_FUNCIONARIO, Number(d.DIAS_TRABALHADOS));
     }
 
-    // Fetch saldo from month before mesInicio (for saldo inicial)
-    const mesAnterior = mesInicio === 1
-      ? `${ano - 1}-12`
-      : `${ano}-${String(mesInicio - 1).padStart(2, "0")}`;
+    // Fetch saldo from the most recent fechamento BEFORE mesInicio (for saldo inicial)
+    const competenciaInicio = `${ano}-${String(mesInicio).padStart(2, "0")}`;
 
     const saldoAnteriorResult = await db.execute({
       sql: `
-        SELECT ID_FUNCIONARIO, SALDO_FINAL_MINUTOS
+        SELECT ID_FUNCIONARIO, SALDO_FINAL_MINUTOS, COMPETENCIA
         FROM RH_BANCO_HORAS_FECHAMENTO
         WHERE ID_EMPRESA = ?
-          AND COMPETENCIA = ?
+          AND COMPETENCIA < ?
           AND ID_FUNCIONARIO IN (${funcPlaceholders})
+        ORDER BY COMPETENCIA DESC
       `,
-      args: [empresaId, mesAnterior, ...funcIds],
+      args: [empresaId, competenciaInicio, ...funcIds],
     });
 
     const saldoAnteriorMap = new Map<string, number>();
     for (const r of saldoAnteriorResult.rows as any[]) {
-      saldoAnteriorMap.set(r.ID_FUNCIONARIO, Number(r.SALDO_FINAL_MINUTOS ?? 0));
+      const funcId = r.ID_FUNCIONARIO;
+      // Only take the most recent (first encountered due to ORDER BY DESC)
+      if (!saldoAnteriorMap.has(funcId)) {
+        saldoAnteriorMap.set(funcId, Number(r.SALDO_FINAL_MINUTOS ?? 0));
+      }
     }
 
     // Monthly breakdown per employee
@@ -239,7 +243,10 @@ export async function GET(request: NextRequest) {
       let saldoAcumulado = saldoAnteriorMap.get(id) ?? 0;
       const evolucaoComAjustes = mesesEvol.map((comp) => {
         const fechMes = fech.find((f: any) => f.COMPETENCIA === comp);
-        const saldoInicialMin = saldoAcumulado;
+        // Use SALDO_ANTERIOR_MINUTOS from fechamento if available (most accurate)
+        const saldoInicialMin = fechMes
+          ? Number(fechMes.SALDO_ANTERIOR_MINUTOS ?? saldoAcumulado)
+          : saldoAcumulado;
         const saldoFinal = Number(fechMes?.SALDO_FINAL_MINUTOS ?? 0);
         saldoAcumulado = saldoFinal;
         return {

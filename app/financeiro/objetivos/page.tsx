@@ -21,16 +21,76 @@ interface DreNode {
   filhos: DreNode[];
 }
 
+type TipoPeriodo = "mensal" | "trimestral" | "semestral" | "anual";
+
 function formatMoney(val: number): string {
   return val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 const MESES_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+const TIPO_PERIODO_LABELS: Record<TipoPeriodo, string> = {
+  mensal: "Mensal",
+  trimestral: "Trimestral",
+  semestral: "Semestral",
+  anual: "Anual",
+};
+
+function mesesNoPeriodo(tipo: TipoPeriodo): number {
+  if (tipo === "mensal") return 1;
+  if (tipo === "trimestral") return 3;
+  if (tipo === "semestral") return 6;
+  return 12;
+}
+
+function gerarOpcoesPeriodo(tipo: TipoPeriodo, ano: number): { valor: string; label: string }[] {
+  if (tipo === "mensal") {
+    return MESES_LABELS.map((m, i) => ({
+      valor: `${ano}-${String(i + 1).padStart(2, "0")}`,
+      label: `${m}/${ano}`,
+    }));
+  }
+  if (tipo === "trimestral") {
+    return [
+      { valor: `${ano}-T1`, label: `1o Trim/${ano} (Jan-Mar)` },
+      { valor: `${ano}-T2`, label: `2o Trim/${ano} (Abr-Jun)` },
+      { valor: `${ano}-T3`, label: `3o Trim/${ano} (Jul-Set)` },
+      { valor: `${ano}-T4`, label: `4o Trim/${ano} (Out-Dez)` },
+    ];
+  }
+  if (tipo === "semestral") {
+    return [
+      { valor: `${ano}-S1`, label: `1o Sem/${ano} (Jan-Jun)` },
+      { valor: `${ano}-S2`, label: `2o Sem/${ano} (Jul-Dez)` },
+    ];
+  }
+  return [{ valor: `${ano}`, label: `Ano ${ano}` }];
+}
+
+function labelPeriodo(tipo: TipoPeriodo, ref: string): string {
+  if (tipo === "mensal") {
+    const parts = ref.split("-");
+    if (parts.length === 2) {
+      const m = Number(parts[1]) - 1;
+      return `${MESES_LABELS[m] ?? ""}/${parts[0]}`;
+    }
+  }
+  if (tipo === "trimestral") {
+    const parts = ref.split("-");
+    if (parts.length === 2) return `${parts[1].replace("T", "")}o Trimestre/${parts[0]}`;
+  }
+  if (tipo === "semestral") {
+    const parts = ref.split("-");
+    if (parts.length === 2) return `${parts[1].replace("S", "")}o Semestre/${parts[0]}`;
+  }
+  return `Ano ${ref}`;
+}
+
 /* ── Collect all leaf IDs from tree ── */
 function coletarFolhas(nodes: DreNode[]): number[] {
   const ids: number[] = [];
-  for (const n of nodes) {
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
     if (n.filhos.length === 0) {
       ids.push(n.id);
     } else {
@@ -41,21 +101,22 @@ function coletarFolhas(nodes: DreNode[]): number[] {
 }
 
 /* ── Apply edited percentages and recalculate tree ── */
-function recalcularArvore(node: DreNode, editados: Record<number, number>): DreNode {
+function recalcularArvore(node: DreNode, editados: Record<number, number>, multiplicador: number): DreNode {
   if (node.filhos.length === 0) {
     const pct = editados[node.id] ?? node.percentual;
-    const objetivo = node.media * (1 + pct / 100);
-    return { ...node, percentual: pct, objetivo };
+    const mediaPeriodo = node.media * multiplicador;
+    const objetivo = mediaPeriodo * (1 + pct / 100);
+    return { ...node, percentual: pct, media: mediaPeriodo, objetivo };
   }
 
-  const filhosRecalc = node.filhos.map((f) => recalcularArvore(f, editados));
+  const filhosRecalc = node.filhos.map((f) => recalcularArvore(f, editados, multiplicador));
   const mediaFilhos = filhosRecalc.reduce((acc, f) => acc + f.media, 0);
   const objetivoFilhos = filhosRecalc.reduce((acc, f) => acc + f.objetivo, 0);
 
   return {
     ...node,
     filhos: filhosRecalc,
-    media: node.filhos.length > 0 ? mediaFilhos : node.media,
+    media: node.filhos.length > 0 ? mediaFilhos : node.media * multiplicador,
     objetivo: node.filhos.length > 0 ? objetivoFilhos : node.objetivo,
   };
 }
@@ -209,7 +270,7 @@ function ObjetivoLinhaCard({
 
         <div className="dre-card-periodos">
           <div className="dre-card-periodo-item">
-            <span className="dre-card-periodo-label">Media</span>
+            <span className="dre-card-periodo-label">Base</span>
             <span className="dre-card-periodo-valor">{formatMoney(node.media)}</span>
           </div>
           {isFolha && (
@@ -283,10 +344,17 @@ export default function ObjetivosPage() {
 
   const mesAtual = new Date().getMonth() + 1;
   const anoAtual = new Date().getFullYear();
+
+  // Reference period (for media calculation)
   const [mesInicio, setMesInicio] = useState(Math.max(1, mesAtual - 2));
   const [mesFim, setMesFim] = useState(mesAtual);
   const [anoRef, setAnoRef] = useState(anoAtual);
+
+  // Objective period configuration
+  const [tipoPeriodo, setTipoPeriodo] = useState<TipoPeriodo>("mensal");
   const [anoObjetivo, setAnoObjetivo] = useState(anoAtual);
+  const [refPeriodo, setRefPeriodo] = useState("");
+
   const [arvoreOriginal, setArvoreOriginal] = useState<DreNode[]>([]);
   const [percentuaisEditados, setPercentuaisEditados] = useState<Record<number, number>>({});
   const [carregando, setCarregando] = useState(true);
@@ -295,6 +363,27 @@ export default function ObjetivosPage() {
     null
   );
   const [pctGlobal, setPctGlobal] = useState("");
+
+  const multiplicador = mesesNoPeriodo(tipoPeriodo);
+
+  const opcoesPeriodo = useMemo(() => gerarOpcoesPeriodo(tipoPeriodo, anoObjetivo), [tipoPeriodo, anoObjetivo]);
+
+  // Set default period when type or year changes
+  useEffect(() => {
+    const opcoes = gerarOpcoesPeriodo(tipoPeriodo, anoObjetivo);
+    if (tipoPeriodo === "mensal") {
+      const mesAtualRef = `${anoObjetivo}-${String(mesAtual).padStart(2, "0")}`;
+      const temMesAtual = opcoes.some((o) => o.valor === mesAtualRef);
+      setRefPeriodo(temMesAtual ? mesAtualRef : opcoes[0]?.valor ?? "");
+    } else {
+      setRefPeriodo(opcoes[0]?.valor ?? "");
+    }
+  }, [tipoPeriodo, anoObjetivo, mesAtual]);
+
+  const periodoLabel = useMemo(() => {
+    if (!refPeriodo) return "";
+    return labelPeriodo(tipoPeriodo, refPeriodo);
+  }, [tipoPeriodo, refPeriodo]);
 
   const mesesRef = useMemo(() => {
     if (mesFim >= mesInicio) return mesFim - mesInicio + 1;
@@ -327,7 +416,6 @@ export default function ObjetivosPage() {
         const dados: DreNode[] = json.data ?? [];
         setArvoreOriginal(dados);
 
-        // Extract saved percentages from tree (leaf nodes)
         const editados: Record<number, number> = {};
         const extrairPcts = (nodes: DreNode[]) => {
           for (let i = 0; i < nodes.length; i++) {
@@ -353,12 +441,11 @@ export default function ObjetivosPage() {
     carregarDados();
   }, [carregarDados]);
 
-  // Recalculate tree with edited percentages
+  // Recalculate tree with edited percentages and period multiplier
   const arvoreCalculada = useMemo(() => {
-    return arvoreOriginal.map((n) => recalcularArvore(n, percentuaisEditados));
-  }, [arvoreOriginal, percentuaisEditados]);
+    return arvoreOriginal.map((n) => recalcularArvore(n, percentuaisEditados, multiplicador));
+  }, [arvoreOriginal, percentuaisEditados, multiplicador]);
 
-  // Totals from root nodes
   const totalMedia = useMemo(() => arvoreCalculada.reduce((acc, n) => acc + n.media, 0), [arvoreCalculada]);
   const totalObjetivo = useMemo(
     () => arvoreCalculada.reduce((acc, n) => acc + n.objetivo, 0),
@@ -372,13 +459,12 @@ export default function ObjetivosPage() {
 
   const handleValorChange = (id: number, valorStr: string, media: number) => {
     const valorObj = valorStr === "" || valorStr === "-" ? 0 : Number(valorStr);
-    // Reverse: objetivo = media * (1 + pct/100) → pct = ((objetivo / media) - 1) * 100
     const pct = media !== 0 ? ((valorObj / media) - 1) * 100 : 0;
     setPercentuaisEditados((prev) => ({ ...prev, [id]: Math.round(pct * 100) / 100 }));
   };
 
   const salvarObjetivos = async () => {
-    if (!empresa?.id) return;
+    if (!empresa?.id || !refPeriodo) return;
     setSalvando(true);
     setNotification(null);
     try {
@@ -390,14 +476,21 @@ export default function ObjetivosPage() {
       const resp = await fetch("/api/financeiro/objetivos/dre", {
         method: "POST",
         headers: headersPadrao,
-        body: JSON.stringify({ ano: anoObjetivo, percentuais }),
+        body: JSON.stringify({
+          ano: anoObjetivo,
+          percentuais,
+          tipoPeriodo,
+          refPeriodo,
+          valorTotal: totalObjetivo,
+          periodoLabel,
+        }),
       });
 
       const json = await resp.json();
       if (json?.success) {
-        setNotification({ type: "success", message: "Objetivos salvos com sucesso!" });
+        setNotification({ type: "success", message: `Objetivo ${TIPO_PERIODO_LABELS[tipoPeriodo]} para ${periodoLabel} salvo com sucesso!` });
       } else {
-        setNotification({ type: "error", message: "Erro ao salvar objetivos" });
+        setNotification({ type: "error", message: json?.error ?? "Erro ao salvar objetivos" });
       }
     } catch (err) {
       console.error("Erro ao salvar:", err);
@@ -411,8 +504,8 @@ export default function ObjetivosPage() {
     const valor = Number(pctGlobal) || 0;
     const folhas = coletarFolhas(arvoreOriginal);
     const editados: Record<number, number> = {};
-    for (const id of folhas) {
-      editados[id] = valor;
+    for (let i = 0; i < folhas.length; i++) {
+      editados[folhas[i]] = valor;
     }
     setPercentuaisEditados(editados);
   };
@@ -431,138 +524,138 @@ export default function ObjetivosPage() {
           <main className="page-content-card">
             {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
+            {/* Period type and specific period - CLEAR */}
             <section className="panel">
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: 12,
-                }}
-              >
-                <p style={{ color: "#6b7280", fontSize: "0.85rem", margin: 0 }}>
-                  Defina metas baseadas na estrutura do DRE com percentual de crescimento ou reducao por linha
-                </p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+                <div>
+                  <h2 style={{ margin: "0 0 4px 0", fontSize: "1.1rem", color: "#111827" }}>
+                    Objetivo {TIPO_PERIODO_LABELS[tipoPeriodo]}
+                    {periodoLabel ? ` - ${periodoLabel}` : ""}
+                  </h2>
+                  <p style={{ color: "#6b7280", fontSize: "0.85rem", margin: 0 }}>
+                    Defina o objetivo para o periodo selecionado. Informe o % ou o valor desejado por linha.
+                  </p>
+                </div>
                 <button
                   type="button"
                   className="button button-primary"
                   onClick={salvarObjetivos}
-                  disabled={salvando || carregando}
+                  disabled={salvando || carregando || !refPeriodo}
                 >
-                  {salvando ? "Salvando..." : "Salvar Objetivos"}
+                  {salvando ? "Salvando..." : "Salvar Objetivo"}
                 </button>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: 16,
-                  alignItems: "flex-end",
-                  flexWrap: "wrap",
-                  marginTop: 16,
-                  paddingTop: 12,
-                  borderTop: "1px solid #e5e7eb",
-                }}
-              >
-                <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
-                  <label htmlFor="obj-mes-inicio">Mes inicio</label>
-                  <select
-                    id="obj-mes-inicio"
-                    className="form-input"
-                    value={mesInicio}
-                    onChange={(e) => setMesInicio(Number(e.target.value))}
-                  >
-                    {MESES_LABELS.map((m, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Period type buttons */}
+              <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
+                <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
+                  <div className="form-group" style={{ flex: "0 0 auto" }}>
+                    <label>Tipo de Periodo</label>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      {(["mensal", "trimestral", "semestral", "anual"] as TipoPeriodo[]).map((tp) => (
+                        <button
+                          key={tp}
+                          type="button"
+                          className={tipoPeriodo === tp ? "button button-primary button-compact" : "button button-secondary button-compact"}
+                          onClick={() => setTipoPeriodo(tp)}
+                        >
+                          {TIPO_PERIODO_LABELS[tp]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
-                  <label htmlFor="obj-mes-fim">Mes fim</label>
-                  <select
-                    id="obj-mes-fim"
-                    className="form-input"
-                    value={mesFim}
-                    onChange={(e) => setMesFim(Number(e.target.value))}
-                  >
-                    {MESES_LABELS.map((m, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group" style={{ flex: "0 0 auto", minWidth: 90 }}>
-                  <label htmlFor="obj-ano-ref">Ano Ref.</label>
-                  <input
-                    id="obj-ano-ref"
-                    type="number"
-                    className="form-input"
-                    value={anoRef}
-                    onChange={(e) => setAnoRef(Number(e.target.value))}
-                    style={{ width: 90 }}
-                  />
-                </div>
-
-                <div className="form-group" style={{ flex: "0 0 auto", minWidth: 90 }}>
-                  <label htmlFor="obj-ano-objetivo">Ano Obj.</label>
-                  <input
-                    id="obj-ano-objetivo"
-                    type="number"
-                    className="form-input"
-                    value={anoObjetivo}
-                    onChange={(e) => setAnoObjetivo(Number(e.target.value))}
-                    style={{ width: 90 }}
-                  />
-                </div>
-
-                <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
-                  <label htmlFor="obj-pct-global">% Global</label>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <div className="form-group" style={{ flex: "0 0 auto", minWidth: 90 }}>
+                    <label htmlFor="obj-ano-objetivo">Ano</label>
                     <input
-                      id="obj-pct-global"
+                      id="obj-ano-objetivo"
                       type="number"
                       className="form-input"
-                      style={{ width: 70, textAlign: "center" }}
-                      placeholder="0"
-                      value={pctGlobal}
-                      onChange={(e) => setPctGlobal(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          aplicarPercentualGlobal();
-                        }
-                      }}
+                      value={anoObjetivo}
+                      onChange={(e) => setAnoObjetivo(Number(e.target.value))}
+                      style={{ width: 90 }}
                     />
-                    <button
-                      type="button"
-                      className="button button-secondary button-compact"
-                      onClick={aplicarPercentualGlobal}
-                    >
-                      Aplicar
-                    </button>
                   </div>
-                </div>
 
-                <span style={{ fontSize: "0.8rem", color: "#9ca3af", paddingBottom: 10 }}>
-                  {mesesRef} {mesesRef === 1 ? "mes" : "meses"}
+                  {tipoPeriodo !== "anual" && (
+                    <div className="form-group" style={{ flex: "0 0 auto", minWidth: 180 }}>
+                      <label htmlFor="obj-periodo">Periodo</label>
+                      <select
+                        id="obj-periodo"
+                        className="form-input"
+                        value={refPeriodo}
+                        onChange={(e) => setRefPeriodo(e.target.value)}
+                      >
+                        {opcoesPeriodo.map((op) => (
+                          <option key={op.valor} value={op.valor}>
+                            {op.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Reference period (for media) */}
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed #e5e7eb" }}>
+                <span style={{ fontSize: "0.8rem", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" }}>
+                  Base de referencia (media mensal)
                 </span>
+                <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap", marginTop: 8 }}>
+                  <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
+                    <label htmlFor="obj-mes-inicio">Mes inicio</label>
+                    <select id="obj-mes-inicio" className="form-input" value={mesInicio} onChange={(e) => setMesInicio(Number(e.target.value))}>
+                      {MESES_LABELS.map((m, i) => (
+                        <option key={i + 1} value={i + 1}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
+                    <label htmlFor="obj-mes-fim">Mes fim</label>
+                    <select id="obj-mes-fim" className="form-input" value={mesFim} onChange={(e) => setMesFim(Number(e.target.value))}>
+                      {MESES_LABELS.map((m, i) => (
+                        <option key={i + 1} value={i + 1}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ flex: "0 0 auto", minWidth: 90 }}>
+                    <label htmlFor="obj-ano-ref">Ano Ref.</label>
+                    <input id="obj-ano-ref" type="number" className="form-input" value={anoRef} onChange={(e) => setAnoRef(Number(e.target.value))} style={{ width: 90 }} />
+                  </div>
+                  <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
+                    <label htmlFor="obj-pct-global">% Global</label>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <input
+                        id="obj-pct-global"
+                        type="number"
+                        className="form-input"
+                        style={{ width: 70, textAlign: "center" }}
+                        placeholder="0"
+                        value={pctGlobal}
+                        onChange={(e) => setPctGlobal(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.preventDefault(); aplicarPercentualGlobal(); }
+                        }}
+                      />
+                      <button type="button" className="button button-secondary button-compact" onClick={aplicarPercentualGlobal}>Aplicar</button>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: "0.8rem", color: "#9ca3af", paddingBottom: 10 }}>
+                    {mesesRef} {mesesRef === 1 ? "mes" : "meses"} de ref. | Objetivo: {multiplicador} {multiplicador === 1 ? "mes" : "meses"}
+                  </span>
+                </div>
               </div>
             </section>
 
             {/* Summary */}
             <section className="summary-cards" style={{ marginTop: 20 }}>
               <div className="summary-card">
-                <span className="summary-label">Media Mensal (periodo)</span>
+                <span className="summary-label">Base ({TIPO_PERIODO_LABELS[tipoPeriodo]})</span>
                 <strong className="summary-value">{formatMoney(totalMedia)}</strong>
               </div>
               <div className="summary-card">
-                <span className="summary-label">Objetivo Mensal ({anoObjetivo})</span>
+                <span className="summary-label">Objetivo ({periodoLabel || TIPO_PERIODO_LABELS[tipoPeriodo]})</span>
                 <strong className="summary-value" style={{ color: "#059669" }}>
                   {formatMoney(totalObjetivo)}
                 </strong>
@@ -594,7 +687,7 @@ export default function ObjetivosPage() {
                       <thead>
                         <tr>
                           <th style={{ textAlign: "left" }}>Estrutura DRE</th>
-                          <th style={{ textAlign: "right", width: 140 }}>Media Mensal</th>
+                          <th style={{ textAlign: "right", width: 150 }}>Base ({TIPO_PERIODO_LABELS[tipoPeriodo]})</th>
                           <th style={{ textAlign: "center", width: 100 }}>Cresc. %</th>
                           <th style={{ textAlign: "right", width: 150 }}>Objetivo R$</th>
                           <th style={{ textAlign: "right", width: 140 }}>Variacao</th>
@@ -613,23 +706,12 @@ export default function ObjetivosPage() {
                         ))}
                       </tbody>
                       <tfoot>
-                        <tr
-                          style={{
-                            fontWeight: 700,
-                            borderTop: "2px solid #e5e7eb",
-                            backgroundColor: "#f3f4f6",
-                          }}
-                        >
+                        <tr style={{ fontWeight: 700, borderTop: "2px solid #e5e7eb", backgroundColor: "#f3f4f6" }}>
                           <td style={{ paddingLeft: 8 }}>TOTAL</td>
                           <td style={{ textAlign: "right" }}>{formatMoney(totalMedia)}</td>
                           <td style={{ textAlign: "center", color: "#9ca3af", fontSize: "0.82rem" }}>--</td>
                           <td style={{ textAlign: "right", fontWeight: 700 }}>{formatMoney(totalObjetivo)}</td>
-                          <td
-                            style={{
-                              textAlign: "right",
-                              color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626",
-                            }}
-                          >
+                          <td style={{ textAlign: "right", color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}>
                             {totalObjetivo - totalMedia >= 0 ? "+" : ""}
                             {formatMoney(totalObjetivo - totalMedia)}
                           </td>
@@ -656,17 +738,14 @@ export default function ObjetivosPage() {
                         <div style={{ flex: 1 }}>
                           <div className="dre-card-title">TOTAL</div>
                         </div>
-                        <div
-                          className="dre-card-total"
-                          style={{ color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}
-                        >
+                        <div className="dre-card-total" style={{ color: totalObjetivo - totalMedia >= 0 ? "#059669" : "#dc2626" }}>
                           {totalObjetivo - totalMedia >= 0 ? "+" : ""}
                           {formatMoney(totalObjetivo - totalMedia)}
                         </div>
                       </div>
                       <div className="dre-card-periodos">
                         <div className="dre-card-periodo-item">
-                          <span className="dre-card-periodo-label">Media</span>
+                          <span className="dre-card-periodo-label">Base</span>
                           <span className="dre-card-periodo-valor">{formatMoney(totalMedia)}</span>
                         </div>
                         <div className="dre-card-periodo-item">

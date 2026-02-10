@@ -10,6 +10,9 @@ interface ObjetivoFinanceiro {
   responsavel: string;
   status: "ativo" | "inativo";
   observacao?: string;
+  tipoPeriodo: string | null;
+  refPeriodo: string | null;
+  valorTotal: number;
 }
 
 export async function GET(request: NextRequest) {
@@ -28,10 +31,13 @@ export async function GET(request: NextRequest) {
           FIN_OBJETIVO_META,
           FIN_OBJETIVO_RESPONSAVEL,
           FIN_OBJETIVO_STATUS,
-          FIN_OBJETIVO_OBSERVACAO
+          FIN_OBJETIVO_OBSERVACAO,
+          FIN_OBJETIVO_TIPO_PERIODO,
+          FIN_OBJETIVO_REF_PERIODO,
+          FIN_OBJETIVO_VALOR_TOTAL
         FROM FIN_OBJETIVO
         WHERE ID_EMPRESA = ?
-        ORDER BY FIN_OBJETIVO_TITULO ASC
+        ORDER BY FIN_OBJETIVO_CRIADO_EM DESC
       `,
       args: [empresaId],
     });
@@ -44,7 +50,10 @@ export async function GET(request: NextRequest) {
       responsavel: row.FIN_OBJETIVO_RESPONSAVEL ?? "",
       status: row.FIN_OBJETIVO_STATUS === "inativo" ? "inativo" : "ativo",
       observacao: row.FIN_OBJETIVO_OBSERVACAO || undefined,
-    })) satisfies ObjetivoFinanceiro[];
+      tipoPeriodo: row.FIN_OBJETIVO_TIPO_PERIODO || null,
+      refPeriodo: row.FIN_OBJETIVO_REF_PERIODO || null,
+      valorTotal: Number(row.FIN_OBJETIVO_VALOR_TOTAL ?? 0),
+    }));
 
     return NextResponse.json({ success: true, data: objetivos });
   } catch (error) {
