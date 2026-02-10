@@ -7,10 +7,128 @@ interface DreLinha {
   paiId: number | null;
   nome: string;
   codigo: string;
-  natureza: "RECEITA" | "DESPESA" | "OUTROS";
+  natureza: "RECEITA" | "DESPESA" | "CALCULADO";
+  formula?: string;
   valor: number;
   colunas: Record<string, number>;
   filhos: DreLinha[];
+}
+
+// ── Avaliador seguro de fórmulas (sem eval) ──
+// Suporta: +, -, *, /, parênteses, códigos de linhas DRE
+// Ex: "(1 + 2) * 3 / 4 - 5"
+function avaliarFormula(formula: string, valoresPorCodigo: Map<string, number>): number {
+  // Substituir códigos de linhas por seus valores
+  // Códigos podem ser: "1", "1.1", "1.1.2", etc.
+  let expr = formula.replace(/[A-Za-z0-9_.]+/g, (token) => {
+    // Se for número puro, manter
+    if (/^\d+(\.\d+)?$/.test(token)) return token;
+    // Se for código de linha DRE, substituir pelo valor
+    const val = valoresPorCodigo.get(token);
+    if (val !== undefined) return String(val);
+    return "0";
+  });
+
+  // Remover espaços
+  expr = expr.replace(/\s+/g, "");
+
+  // Parser recursivo descendente com precedência de operadores
+  let pos = 0;
+
+  function peek(): string {
+    return pos < expr.length ? expr[pos] : "";
+  }
+
+  function consume(): string {
+    return expr[pos++];
+  }
+
+  // Expressão: soma/subtração (menor precedência)
+  function parseExpr(): number {
+    let result = parseTerm();
+    while (peek() === "+" || peek() === "-") {
+      const op = consume();
+      const right = parseTerm();
+      result = op === "+" ? result + right : result - right;
+    }
+    return result;
+  }
+
+  // Termo: multiplicação/divisão
+  function parseTerm(): number {
+    let result = parseFactor();
+    while (peek() === "*" || peek() === "/") {
+      const op = consume();
+      const right = parseFactor();
+      if (op === "*") {
+        result *= right;
+      } else {
+        result = right !== 0 ? result / right : 0;
+      }
+    }
+    return result;
+  }
+
+  // Fator: número, parênteses, ou número negativo
+  function parseFactor(): number {
+    // Número negativo (unário)
+    if (peek() === "-") {
+      consume();
+      return -parseFactor();
+    }
+    // Parênteses
+    if (peek() === "(") {
+      consume(); // "("
+      const result = parseExpr();
+      if (peek() === ")") consume(); // ")"
+      return result;
+    }
+    // Número
+    let numStr = "";
+    while (/[\d.]/.test(peek())) {
+      numStr += consume();
+    }
+    return numStr ? parseFloat(numStr) : 0;
+  }
+
+  try {
+    const result = parseExpr();
+    return isFinite(result) ? result : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Resolve fórmulas CALCULADO após os valores normais serem computados
+function resolverFormulas(linhas: DreLinha[], valoresPorCodigo: Map<string, number>): void {
+  for (const linha of linhas) {
+    if (linha.natureza === "CALCULADO" && linha.formula) {
+      linha.valor = avaliarFormula(linha.formula, valoresPorCodigo);
+    }
+    if (linha.filhos.length > 0) {
+      resolverFormulas(linha.filhos, valoresPorCodigo);
+    }
+  }
+}
+
+function resolverFormulasPorPeriodo(linhas: DreLinha[], valoresPorCodigoPeriodo: Map<string, Map<string, number>>, periodos: string[]): void {
+  for (const linha of linhas) {
+    if (linha.natureza === "CALCULADO" && linha.formula) {
+      let totalGeral = 0;
+      for (const chave of periodos) {
+        const mapa = valoresPorCodigoPeriodo.get(chave);
+        if (mapa) {
+          const val = avaliarFormula(linha.formula, mapa);
+          linha.colunas[chave] = val;
+          totalGeral += val;
+        }
+      }
+      linha.valor = totalGeral;
+    }
+    if (linha.filhos.length > 0) {
+      resolverFormulasPorPeriodo(linha.filhos, valoresPorCodigoPeriodo, periodos);
+    }
+  }
 }
 
 function construirArvore(linhas: DreLinha[]): DreLinha[] {
@@ -110,7 +228,8 @@ export async function GET(request: NextRequest) {
           FIN_ESTRUTURA_DRE_NOME,
           FIN_ESTRUTURA_DRE_CODIGO,
           FIN_ESTRUTURA_DRE_NATUREZA,
-          COALESCE(FIN_ESTRUTURA_DRE_ORDEM, 0) as FIN_ESTRUTURA_DRE_ORDEM
+          COALESCE(FIN_ESTRUTURA_DRE_ORDEM, 0) as FIN_ESTRUTURA_DRE_ORDEM,
+          FIN_ESTRUTURA_DRE_FORMULA
         FROM FIN_ESTRUTURA_DRE
         WHERE EMPRESA_ID = ?
         ORDER BY FIN_ESTRUTURA_DRE_ORDEM ASC
@@ -172,30 +291,55 @@ export async function GET(request: NextRequest) {
       }
 
       const linhas: DreLinha[] = (linhasResult.rows ?? []).map((linha: any) => {
+        const nat = linha.FIN_ESTRUTURA_DRE_NATUREZA;
+        const isCalculado = nat === "CALCULADO";
         const contas = contasPorLinha.get(Number(linha.FIN_ESTRUTURA_DRE_ID)) ?? [];
         const colunas: Record<string, number> = {};
         let totalGeral = 0;
 
-        for (const p of periodos) {
-          const mapaPeriodo = totaisPorPeriodo.get(p.chave)!;
-          const total = contas.reduce((acc, contaId) => acc + (mapaPeriodo.get(contaId) ?? 0), 0);
-          colunas[p.chave] = total;
-          totalGeral += total;
+        if (!isCalculado) {
+          for (const p of periodos) {
+            const mapaPeriodo = totaisPorPeriodo.get(p.chave)!;
+            const total = contas.reduce((acc, contaId) => acc + (mapaPeriodo.get(contaId) ?? 0), 0);
+            colunas[p.chave] = total;
+            totalGeral += total;
+          }
         }
 
         return {
           id: Number(linha.FIN_ESTRUTURA_DRE_ID),
           paiId: linha.FIN_ESTRUTURA_DRE_PAI_ID,
           nome: linha.FIN_ESTRUTURA_DRE_NOME,
-          codigo: linha.FIN_ESTRUTURA_DRE_CODIGO,
-          natureza: linha.FIN_ESTRUTURA_DRE_NATUREZA,
+          codigo: String(linha.FIN_ESTRUTURA_DRE_CODIGO || ""),
+          natureza: nat,
+          formula: linha.FIN_ESTRUTURA_DRE_FORMULA || undefined,
           valor: totalGeral,
           colunas,
           filhos: [],
-        } satisfies DreLinha;
+        } as DreLinha;
       });
 
       const arvore = construirArvore(linhas).map(somarFilhos);
+
+      // Resolver fórmulas CALCULADO usando valores já computados
+      // Montar mapa código → valor por período
+      const valoresPorCodigoPeriodo = new Map<string, Map<string, number>>();
+      for (const p of periodos) {
+        valoresPorCodigoPeriodo.set(p.chave, new Map());
+      }
+      const coletarValoresPeriodo = (items: DreLinha[]) => {
+        for (const item of items) {
+          if (item.codigo && item.natureza !== "CALCULADO") {
+            for (const p of periodos) {
+              valoresPorCodigoPeriodo.get(p.chave)!.set(item.codigo, item.colunas[p.chave] ?? 0);
+            }
+          }
+          if (item.filhos.length > 0) coletarValoresPeriodo(item.filhos);
+        }
+      };
+      coletarValoresPeriodo(arvore);
+      resolverFormulasPorPeriodo(arvore, valoresPorCodigoPeriodo, periodos.map((p) => p.chave));
+
       return NextResponse.json({
         success: true,
         data: arvore,
@@ -229,21 +373,38 @@ export async function GET(request: NextRequest) {
     });
 
     const linhas = (linhasResult.rows ?? []).map((linha: any) => {
+      const nat = linha.FIN_ESTRUTURA_DRE_NATUREZA;
+      const isCalculado = nat === "CALCULADO";
       const contas = contasPorLinha.get(Number(linha.FIN_ESTRUTURA_DRE_ID)) ?? [];
-      const total = contas.reduce((acc, contaId) => acc + (totaisConta.get(contaId) ?? 0), 0);
+      const total = isCalculado ? 0 : contas.reduce((acc, contaId) => acc + (totaisConta.get(contaId) ?? 0), 0);
       return {
         id: Number(linha.FIN_ESTRUTURA_DRE_ID),
         paiId: linha.FIN_ESTRUTURA_DRE_PAI_ID,
         nome: linha.FIN_ESTRUTURA_DRE_NOME,
-        codigo: linha.FIN_ESTRUTURA_DRE_CODIGO,
-        natureza: linha.FIN_ESTRUTURA_DRE_NATUREZA,
+        codigo: String(linha.FIN_ESTRUTURA_DRE_CODIGO || ""),
+        natureza: nat,
+        formula: linha.FIN_ESTRUTURA_DRE_FORMULA || undefined,
         valor: total,
         colunas: {},
         filhos: [],
-      } satisfies DreLinha;
+      } as DreLinha;
     });
 
     const arvore = construirArvore(linhas).map(somarFilhos);
+
+    // Resolver fórmulas CALCULADO
+    const valoresPorCodigo = new Map<string, number>();
+    const coletarValores = (items: DreLinha[]) => {
+      for (const item of items) {
+        if (item.codigo && item.natureza !== "CALCULADO") {
+          valoresPorCodigo.set(item.codigo, item.valor);
+        }
+        if (item.filhos.length > 0) coletarValores(item.filhos);
+      }
+    };
+    coletarValores(arvore);
+    resolverFormulas(arvore, valoresPorCodigo);
+
     return NextResponse.json({ success: true, data: arvore });
   } catch (error) {
     console.error("Erro ao buscar DRE:", error);

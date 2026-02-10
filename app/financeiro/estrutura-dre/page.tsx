@@ -15,7 +15,7 @@ interface LinhaDre {
   id: string;
   nome: string;
   codigo: string;
-  natureza: "RECEITA" | "DESPESA" | "OUTROS";
+  natureza: "RECEITA" | "DESPESA" | "CALCULADO";
   status: "ativo" | "inativo";
   tipo?: string;
   descricao?: string;
@@ -34,7 +34,7 @@ interface PlanoContaOption {
 interface FormDre {
   nome: string;
   codigo: string;
-  natureza: "RECEITA" | "DESPESA" | "OUTROS";
+  natureza: "RECEITA" | "DESPESA" | "CALCULADO";
   tipo: string;
   descricao: string;
   formula: string;
@@ -147,7 +147,9 @@ export default function EstruturaDrePage() {
         if (resposta.ok) {
           const dados = await resposta.json();
           if (dados.success) {
-            const opcoes = (dados.data ?? []).map((item: any) => ({
+            const opcoes = (dados.data ?? [])
+            .filter((item: any) => item.FIN_PLANO_CONTA_VISIVEL_DRE === 1)
+            .map((item: any) => ({
               id: item.FIN_PLANO_CONTA_ID,
               label: `${item.FIN_PLANO_CONTA_CODIGO} ${item.FIN_PLANO_CONTA_NOME}`,
               codigo: item.FIN_PLANO_CONTA_CODIGO,
@@ -210,7 +212,7 @@ export default function EstruturaDrePage() {
             natureza: form.natureza,
             tipo: form.tipo,
             descricao: form.descricao,
-            formula: form.tipo === "Calculado" ? form.formula : null,
+            formula: form.natureza === "CALCULADO" ? form.formula : null,
             referencia100: form.referencia100 === 1,
             ativo: form.ativo,
           }),
@@ -233,7 +235,7 @@ export default function EstruturaDrePage() {
             natureza: form.natureza,
             tipo: form.tipo,
             descricao: form.descricao,
-            formula: form.tipo === "Calculado" ? form.formula : null,
+            formula: form.natureza === "CALCULADO" ? form.formula : null,
             referencia100: form.referencia100 === 1,
             paiId: form.paiId ? Number(form.paiId) : null,
           }),
@@ -519,11 +521,11 @@ export default function EstruturaDrePage() {
                         id="dre-linha-natureza"
                         className="form-input"
                         value={form.natureza}
-                        onChange={(e) => setForm((f) => ({ ...f, natureza: e.target.value as any }))}
+                        onChange={(e) => setForm((f) => ({ ...f, natureza: e.target.value as any, ...(e.target.value === "CALCULADO" ? { tipo: "Calculado" } : f.tipo === "Calculado" ? { tipo: "Fixo" } : {}) }))}
                       >
                         <option value="RECEITA">Receita</option>
                         <option value="DESPESA">Despesa</option>
-                        <option value="OUTROS">Outros</option>
+                        <option value="CALCULADO">Calculado</option>
                       </select>
                     </div>
                     <div className="form-group">
@@ -531,7 +533,8 @@ export default function EstruturaDrePage() {
                       <select
                         id="dre-linha-tipo"
                         className="form-input"
-                        value={form.tipo}
+                        value={form.natureza === "CALCULADO" ? "Calculado" : form.tipo}
+                        disabled={form.natureza === "CALCULADO"}
                         onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value }))}
                       >
                         <option value="Fixo">Fixo</option>
@@ -576,18 +579,18 @@ export default function EstruturaDrePage() {
                       <div className="form-group" />
                     </div>
                   )}
-                  {form.tipo === "Calculado" && (
+                  {form.natureza === "CALCULADO" && (
                     <div className="form-group">
                       <label htmlFor="dre-linha-formula">Formula</label>
                       <input
                         id="dre-linha-formula"
                         className="form-input"
-                        placeholder="Ex: 1 - 2 - 3 (use os codigos das linhas)"
+                        placeholder="Ex: (1 + 2) - 3 * 4 / 5"
                         value={form.formula}
                         onChange={(e) => setForm((f) => ({ ...f, formula: e.target.value }))}
                       />
                       <small style={{ color: "#6b7280", fontSize: "0.78rem", marginTop: 4, display: "block" }}>
-                        Use os codigos das linhas do DRE separados por operadores (+, -, *, /). Ex: 1 - 2 - 3
+                        Use codigos das linhas com operadores: + - * / e parenteses ( ) para prioridade. Ex: (1 + 2) - 3
                       </small>
                     </div>
                   )}

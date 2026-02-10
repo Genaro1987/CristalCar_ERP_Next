@@ -77,12 +77,12 @@ export default function BancoHorasPage() {
   const [ano, setAno] = useState(compAtual.ano);
   const [mes, setMes] = useState("");
   const [periodosDisponiveis, setPeriodosDisponiveis] = useState<PeriodoOption[]>([]);
-  const [zerarBanco, setZerarBanco] = useState(false);
+  const [zerarBanco, setZerarBanco] = useState(true);
   const [tipoOperacaoBanco, setTipoOperacaoBanco] = useState<
     "ENVIAR_HORAS_PARA_BANCO" | "USAR_HORAS_DO_BANCO" | ""
   >("");
   const [horasBancoQuantidade, setHorasBancoQuantidade] = useState("");
-  const [zerarBancoAoFinal, setZerarBancoAoFinal] = useState(false);
+  const [zerarBancoAoFinal, setZerarBancoAoFinal] = useState(true);
   const [ajusteHoras, setAjusteHoras] = useState("");
   const [ajusteData, setAjusteData] = useState("");
   const [ajusteTipo, setAjusteTipo] = useState<"CREDITO" | "DEBITO">("CREDITO");
@@ -90,6 +90,8 @@ export default function BancoHorasPage() {
   const [situacaoPeriodo, setSituacaoPeriodo] = useState<string | null>(null);
   const [atualizandoPeriodo, setAtualizandoPeriodo] = useState(false);
   const [confirmarExclusao, setConfirmarExclusao] = useState<number | null>(null);
+
+  const periodoFechado = situacaoPeriodo === "FECHADO";
 
   const empresaId = empresa?.id ?? null;
 
@@ -170,13 +172,26 @@ export default function BancoHorasPage() {
   const horasDevidas = resumo?.devidasMin ?? 0;
   const valorHora = resumo?.funcionario.valorHora ?? 0;
 
+  // Valores brutos na base (sem multiplicador) para comparação justa
+  const valorSaldoAnterior = (saldoAnteriorHoras / 60) * valorHora;
+  const valorExtras50Base = (extras50Horas / 60) * valorHora;
+  const valorExtras100Base = (extras100Horas / 60) * valorHora;
+  const valorDevidoBruto = (horasDevidas / 60) * valorHora; // já negativo
+
+  // Compensação (vem do backend)
+  const comp = resumo?.compensacao ?? { consumo100Min: 0, consumo50Min: 0, consumoSaldoAnteriorMin: 0, saldoAnteriorRestanteMin: saldoAnteriorHoras };
+
+  // Valores líquidos após compensação
+  const horasPagar50 = resumo?.horasPagar50Min ?? 0;
+  const horasPagar100 = resumo?.horasPagar100Min ?? 0;
+  const horasDescontar = resumo?.horasDescontarMin ?? 0;
+  const valorPagar50 = (horasPagar50 / 60) * valorHora * 1.5;
+  const valorPagar100 = (horasPagar100 / 60) * valorHora * 2;
+  const valorDescontar = (horasDescontar / 60) * valorHora;
+
   // horasDevidas já vem como valor negativo, então somamos ao invés de subtrair
   const saldoMesHoras = saldoAnteriorHoras + extras50Horas + extras100Horas + horasDevidas;
-  const saldoMesValor =
-    saldoAnteriorHoras * (valorHora / 60) +
-    (extras50Horas / 60) * valorHora +
-    (extras100Horas / 60) * valorHora +
-    (horasDevidas / 60) * valorHora;
+  const saldoMesValor = valorPagar50 + valorPagar100 - valorDescontar;
 
   const horasMovimentacao = parseHoraParaMinutos(horasBancoQuantidade) ?? 0;
 
@@ -189,21 +204,26 @@ export default function BancoHorasPage() {
     let saldoFinal = saldoPeriodoHoras;
     let saldoBanco = saldoAnteriorHoras;
 
+    // Operações manuais de banco
     if (tipoOperacaoBanco && horasMovimentacao > 0) {
       if (tipoOperacaoBanco === "ENVIAR_HORAS_PARA_BANCO") {
-        // Envia horas do período para o banco (credita no banco, reduz pagável)
-        saldoFinal = saldoPeriodoHoras - horasMovimentacao;
-        saldoBanco = saldoAnteriorHoras + horasMovimentacao;
+        saldoFinal -= horasMovimentacao;
+        saldoBanco += horasMovimentacao;
       } else {
-        // Usa horas do banco para abater (debita do banco, aumenta pagável)
-        saldoFinal = saldoPeriodoHoras + horasMovimentacao;
-        saldoBanco = saldoAnteriorHoras - horasMovimentacao;
+        saldoFinal += horasMovimentacao;
+        saldoBanco -= horasMovimentacao;
       }
     }
 
-    if (zerarBancoAoFinal && saldoBanco !== 0) {
+    if (zerarBancoAoFinal) {
+      // Zerar: despeja todo o banco no pagamento/desconto
       saldoFinal += saldoBanco;
       saldoBanco = 0;
+    } else {
+      // Não zerar: banco absorve o saldo do mês (funciona como acumulador)
+      // Ex: banco 2h + mês -00:24 → banco 01:36, pagar 0
+      saldoBanco += saldoFinal;
+      saldoFinal = 0;
     }
 
     return { saldoFinalParaPagarHoras: saldoFinal, saldoBancoFinalHoras: saldoBanco };
@@ -572,17 +592,12 @@ export default function BancoHorasPage() {
                 <section className="panel banco-horas-panel">
                   <header className="form-section-header">
                     <h2>RESUMO DO MES</h2>
-                    <p>Sequência em horas e valores para acompanhamento mensal.</p>
+                    <p>Movimentacao do periodo e saldo em horas e valores.</p>
                   </header>
 
                   <div style={{ display: "grid", gap: "12px", borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
-                    <div className="banco-horas-summary-grid">
-                      <div className="form-group">
-                        <label>SALDO ANTERIOR</label>
-                        <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>
-                          {minutosParaHora(saldoAnteriorHoras)}
-                        </div>
-                      </div>
+                    {/* Linha 1: Movimentação do mês em horas */}
+                    <div className="banco-horas-summary-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
                       <div className="form-group">
                         <label>EXTRAS 50%</label>
                         <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669" }}>
@@ -602,42 +617,37 @@ export default function BancoHorasPage() {
                         </div>
                       </div>
                       <div className="form-group">
-                        <label>SALDO DO MES (HORAS)</label>
+                        <label>SALDO DO MES</label>
                         <div className="form-input" style={{ backgroundColor: "#fff3cd", fontWeight: 700 }}>
-                          {minutosParaHora(saldoMesHoras)}
+                          {minutosParaHora(saldoPeriodoHoras)}
                         </div>
                       </div>
                     </div>
 
-                    <div className="banco-horas-summary-grid">
-                      <div className="form-group">
-                        <label>SALDO ANTERIOR (VALOR)</label>
-                        <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>
-                          {formatarMoeda((saldoAnteriorHoras / 60) * valorHora)}
-                        </div>
-                      </div>
+                    {/* Linha 2: Movimentação do mês em valores */}
+                    <div className="banco-horas-summary-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
                       <div className="form-group">
                         <label>EXTRAS 50% (VALOR)</label>
                         <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669" }}>
-                          {formatarMoeda((extras50Horas / 60) * valorHora)}
+                          {formatarMoeda(valorExtras50Base)}
                         </div>
                       </div>
                       <div className="form-group">
                         <label>EXTRAS 100% (VALOR)</label>
                         <div className="form-input" style={{ backgroundColor: "#f0fdf4", color: "#059669" }}>
-                          {formatarMoeda((extras100Horas / 60) * valorHora)}
+                          {formatarMoeda(valorExtras100Base)}
                         </div>
                       </div>
                       <div className="form-group">
                         <label>VALOR DEVIDO</label>
                         <div className="form-input" style={{ backgroundColor: "#fef2f2", color: "#dc2626" }}>
-                          {formatarMoeda((horasDevidas / 60) * valorHora)}
+                          {formatarMoeda(valorDevidoBruto)}
                         </div>
                       </div>
                       <div className="form-group">
                         <label>SALDO DO MES (VALOR)</label>
                         <div className="form-input" style={{ backgroundColor: "#fff3cd", fontWeight: 700 }}>
-                          {formatarMoeda(saldoMesValor)}
+                          {formatarMoeda((saldoPeriodoHoras / 60) * valorHora)}
                         </div>
                       </div>
                     </div>
@@ -649,25 +659,46 @@ export default function BancoHorasPage() {
                 <section className="panel banco-horas-panel">
                   <header className="form-section-header">
                     <h2>ACOES FINAIS</h2>
-                    <p>HORAS PARA BANCO DE HORAS e fechamento técnico.</p>
+                    <p>Composicao do saldo, banco de horas e fechamento.</p>
                   </header>
 
-                  <div className="form" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
-                    <div className="banco-horas-card-grid">
-                      <div className="form-group">
-                        <label>SALDO DO PERÍODO</label>
-                        <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
-                          {minutosParaHora(saldoPeriodoHoras)}
-                        </div>
+                  <div className="form" style={{ borderTop: "1px solid #e5e7eb", paddingTop: "12px", opacity: periodoFechado ? 0.6 : 1 }}>
+                    {periodoFechado && (
+                      <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#991b1b", fontWeight: 600 }}>
+                        Periodo fechado - reabra o periodo para efetuar alteracoes.
                       </div>
+                    )}
+                    {/* Linha 1: Saldo anterior + Saldo do mês → Saldo total */}
+                    <div className="banco-horas-card-grid" style={{ gridTemplateColumns: "1fr auto 1fr auto 1fr" }}>
                       <div className="form-group">
-                        <label>SALDO BANCO ANTERIOR</label>
-                        <div className="form-input" style={{ backgroundColor: "#f9fafb" }}>
+                        <label>SALDO ANTERIOR</label>
+                        <div className="form-input" style={{ backgroundColor: "#f3f4f6" }}>
                           {minutosParaHora(saldoAnteriorHoras)}
                         </div>
+                        <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>{formatarMoeda(valorSaldoAnterior)}</small>
                       </div>
+                      <div style={{ display: "flex", alignItems: "center", paddingTop: 8, fontWeight: 700, fontSize: "1.2rem", color: "#6b7280" }}>+</div>
                       <div className="form-group">
-                        <label>TIPO DE OPERAÇÃO</label>
+                        <label>SALDO DO MES</label>
+                        <div className="form-input" style={{ backgroundColor: saldoPeriodoHoras >= 0 ? "#f0fdf4" : "#fef2f2", color: saldoPeriodoHoras >= 0 ? "#059669" : "#dc2626" }}>
+                          {minutosParaHora(saldoPeriodoHoras)}
+                        </div>
+                        <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>{formatarMoeda((saldoPeriodoHoras / 60) * valorHora)}</small>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", paddingTop: 8, fontWeight: 700, fontSize: "1.2rem", color: "#6b7280" }}>=</div>
+                      <div className="form-group">
+                        <label>SALDO TOTAL</label>
+                        <div className="form-input" style={{ backgroundColor: "#fff3cd", fontWeight: 700 }}>
+                          {minutosParaHora(saldoAnteriorHoras + saldoPeriodoHoras)}
+                        </div>
+                        <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>{formatarMoeda(((saldoAnteriorHoras + saldoPeriodoHoras) / 60) * valorHora)}</small>
+                      </div>
+                    </div>
+
+                    {/* Linha 2: Operação de banco */}
+                    <div className="banco-horas-card-grid" style={{ marginTop: 12 }}>
+                      <div className="form-group">
+                        <label>TIPO DE OPERACAO</label>
                         <select
                           value={tipoOperacaoBanco}
                           onChange={(e) =>
@@ -676,15 +707,13 @@ export default function BancoHorasPage() {
                             )
                           }
                           className="form-input"
+                          disabled={periodoFechado}
                         >
                           <option value="">Selecione</option>
                           <option value="ENVIAR_HORAS_PARA_BANCO">Enviar horas para banco (credito)</option>
                           <option value="USAR_HORAS_DO_BANCO">Usar horas do banco (abater)</option>
                         </select>
                       </div>
-                    </div>
-
-                    <div className="banco-horas-card-grid">
                       <div className="form-group">
                         <label>HORAS BANCO (HH:MM)</label>
                         <input
@@ -697,39 +726,62 @@ export default function BancoHorasPage() {
                           min="00:01"
                           max="23:59"
                           step={60}
+                          disabled={periodoFechado}
                         />
                         {tipoOperacaoBanco && horasMovimentacao <= 0 && (
                           <p className="error-text">Informe um valor de horas maior que zero.</p>
                         )}
                       </div>
                       <div className="form-group">
+                        <label>&nbsp;</label>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "8px 14px",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: 8,
+                            backgroundColor: zerarBancoAoFinal ? "#fff7ed" : "#f9fafb",
+                            minHeight: 42,
+                            cursor: periodoFechado ? "not-allowed" : "pointer",
+                          }}
+                          onClick={() => { if (!periodoFechado) { setZerarBancoAoFinal(!zerarBancoAoFinal); setZerarBanco(!zerarBancoAoFinal); } }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={zerarBancoAoFinal}
+                            onChange={(e) => {
+                              setZerarBancoAoFinal(e.target.checked);
+                              setZerarBanco(e.target.checked);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            disabled={periodoFechado}
+                            style={{ width: 18, height: 18, accentColor: "#f97316", flexShrink: 0 }}
+                          />
+                          <span style={{ fontWeight: 600, fontSize: "0.85rem" }}>ZERAR SALDO DO BANCO</span>
+                        </div>
+                        <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>
+                          {zerarBancoAoFinal ? "Saldo sera zerado e convertido em pagamento/desconto" : "Saldo sera mantido para o proximo periodo"}
+                        </small>
+                      </div>
+                    </div>
+
+                    {/* Linha 3: Resultados finais */}
+                    <div className="banco-horas-card-grid" style={{ marginTop: 12 }}>
+                      <div className="form-group">
                         <label>SALDO PARA PAGAR/DESCONTAR</label>
-                        <div className="form-input" style={{ backgroundColor: "#fff7ed", fontWeight: 600 }}>
+                        <div className="form-input" style={{ backgroundColor: saldoFinalParaPagarHoras >= 0 ? "#f0fdf4" : "#fef2f2", fontWeight: 600, color: saldoFinalParaPagarHoras >= 0 ? "#059669" : "#dc2626" }}>
                           {minutosParaHora(saldoFinalParaPagarHoras)}
                         </div>
+                        <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>{formatarMoeda((saldoFinalParaPagarHoras / 60) * valorHora)}</small>
                       </div>
                       <div className="form-group">
                         <label>SALDO FINAL DO BANCO</label>
                         <div className="form-input" style={{ backgroundColor: "#fff7ed", fontWeight: 600 }}>
                           {minutosParaHora(saldoBancoFinalHoras)}
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="banco-horas-card-grid">
-                      <div className="form-group">
-                        <label>ZERAR BANCO AO FINAL DO MES</label>
-                        <button
-                          type="button"
-                          className="button button-primary"
-                          style={{ backgroundColor: "#f97316", borderColor: "#ea580c" }}
-                          onClick={() => {
-                            setZerarBancoAoFinal((prev) => !prev);
-                            setZerarBanco((prev) => !prev);
-                          }}
-                        >
-                          {zerarBancoAoFinal ? "Cancelar zeragem de banco" : "Zerar banco ao final do mes"}
-                        </button>
+                        <small style={{ color: "#6b7280", fontSize: "0.75rem" }}>{formatarMoeda((saldoBancoFinalHoras / 60) * valorHora)}</small>
                       </div>
                     </div>
                   </div>
@@ -821,7 +873,7 @@ export default function BancoHorasPage() {
                               </td>
                               <td>{mov.observacao ?? "-"}</td>
                               <td>
-                                {mov.tipo === "AJUSTE_MANUAL" && (
+                                {mov.tipo === "AJUSTE_MANUAL" && !periodoFechado && (
                                   <button
                                     onClick={() => setConfirmarExclusao(mov.id)}
                                     className="button-icon-only"
@@ -839,75 +891,85 @@ export default function BancoHorasPage() {
                     </div>
                   )}
 
-                  <div className="form-section-header" style={{ marginTop: "16px" }}>
-                    <h3>INCLUIR AJUSTE MANUAL</h3>
-                  </div>
+                  {!periodoFechado && (
+                    <>
+                      <div className="form-section-header" style={{ marginTop: "16px" }}>
+                        <h3>INCLUIR AJUSTE MANUAL</h3>
+                      </div>
 
-                  <div className="banco-horas-card-grid">
-                    <div className="form-group">
-                      <label htmlFor="ajusteData">DATA</label>
-                      <input
-                        id="ajusteData"
-                        type="date"
-                        value={ajusteData}
-                        onChange={(e) => setAjusteData(e.target.value)}
-                        min={mes ? `${ano}-${mes.padStart(2, "0")}-01` : undefined}
-                        max={mes ? `${ano}-${mes.padStart(2, "0")}-${String(new Date(ano, Number(mes), 0).getDate()).padStart(2, "0")}` : undefined}
-                        className="form-input"
-                      />
+                      <div className="banco-horas-card-grid">
+                        <div className="form-group">
+                          <label htmlFor="ajusteData">DATA</label>
+                          <input
+                            id="ajusteData"
+                            type="date"
+                            value={ajusteData}
+                            onChange={(e) => setAjusteData(e.target.value)}
+                            min={mes ? `${ano}-${mes.padStart(2, "0")}-01` : undefined}
+                            max={mes ? `${ano}-${mes.padStart(2, "0")}-${String(new Date(ano, Number(mes), 0).getDate()).padStart(2, "0")}` : undefined}
+                            className="form-input"
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="ajusteTipo">TIPO</label>
+                          <select
+                            id="ajusteTipo"
+                            value={ajusteTipo}
+                            onChange={(e) => setAjusteTipo(e.target.value as "CREDITO" | "DEBITO")}
+                            className="form-input"
+                          >
+                            <option value="CREDITO">CREDITO</option>
+                            <option value="DEBITO">DEBITO</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="ajusteHoras">HORAS (HH:MM)</label>
+                          <input
+                            id="ajusteHoras"
+                            type="time"
+                            value={ajusteHoras}
+                            onChange={(e) => setAjusteHoras(e.target.value)}
+                            className="form-input"
+                            placeholder="Ex: 02:30"
+                            step={60}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="ajusteObs">OBSERVACAO</label>
+                        <input
+                          id="ajusteObs"
+                          type="text"
+                          value={ajusteObs}
+                          onChange={(e) => setAjusteObs(e.target.value)}
+                          className="form-input"
+                          placeholder="Motivo do ajuste"
+                        />
+                      </div>
+
+                      <div className="form-actions">
+                        <div className="button-row">
+                          <button
+                            onClick={incluirAjuste}
+                            className="button button-primary"
+                            disabled={loading}
+                            style={{ backgroundColor: "#f97316", borderColor: "#ea580c" }}
+                          >
+                            Incluir Ajuste Manual
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {periodoFechado && (
+                    <div style={{ marginTop: 16, padding: "12px 14px", backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, fontSize: "0.85rem", color: "#991b1b", fontWeight: 600 }}>
+                      Periodo fechado - reabra o periodo para incluir ajustes ou alterar dados.
                     </div>
-
-                    <div className="form-group">
-                      <label htmlFor="ajusteTipo">TIPO</label>
-                      <select
-                        id="ajusteTipo"
-                        value={ajusteTipo}
-                        onChange={(e) => setAjusteTipo(e.target.value as "CREDITO" | "DEBITO")}
-                        className="form-input"
-                      >
-                        <option value="CREDITO">CREDITO</option>
-                        <option value="DEBITO">DEBITO</option>
-                      </select>
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="ajusteHoras">HORAS (HH:MM)</label>
-                      <input
-                        id="ajusteHoras"
-                        type="time"
-                        value={ajusteHoras}
-                        onChange={(e) => setAjusteHoras(e.target.value)}
-                        className="form-input"
-                        placeholder="Ex: 02:30"
-                        step={60}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="ajusteObs">OBSERVACAO</label>
-                    <input
-                      id="ajusteObs"
-                      type="text"
-                      value={ajusteObs}
-                      onChange={(e) => setAjusteObs(e.target.value)}
-                      className="form-input"
-                      placeholder="Motivo do ajuste"
-                    />
-                  </div>
-
-                  <div className="form-actions">
-                    <div className="button-row">
-                      <button
-                        onClick={incluirAjuste}
-                        className="button button-primary"
-                        disabled={loading}
-                        style={{ backgroundColor: "#f97316", borderColor: "#ea580c" }}
-                      >
-                        Incluir Ajuste Manual
-                      </button>
-                    </div>
-                  </div>
+                  )}
                 </section>
               </>
             )}

@@ -14,7 +14,7 @@ interface DreLinha {
   id: number;
   nome: string;
   codigo: string;
-  natureza: "RECEITA" | "DESPESA" | "OUTROS";
+  natureza: "RECEITA" | "DESPESA" | "CALCULADO";
   valor: number;
   colunas?: Record<string, number>;
   filhos?: DreLinha[];

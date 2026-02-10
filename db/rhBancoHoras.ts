@@ -109,6 +109,17 @@ export interface ResumoBancoHorasMes {
   horasPagar100Min: number;
   horasDescontarMin: number;
   saldoFinalBancoMin: number;
+  /** Detalhamento da compensação extras vs faltas */
+  compensacao: {
+    /** Minutos de 100% usados para abater faltas */
+    consumo100Min: number;
+    /** Minutos de 50% usados para abater faltas */
+    consumo50Min: number;
+    /** Minutos do saldo anterior usados para abater faltas */
+    consumoSaldoAnteriorMin: number;
+    /** Saldo anterior restante após compensação */
+    saldoAnteriorRestanteMin: number;
+  };
   dias: ResumoBancoHorasDia[];
   movimentos: MovimentoBancoHoras[];
 }
@@ -700,22 +711,37 @@ export async function calcularBancoHorasMes(
   let horasPagar100Min = Math.max(0, extras100Min);
   let horasDescontarMin = Math.abs(Math.min(0, devidasMin));
 
+  // Detalhamento da compensação
+  let consumo100Min = 0;
+  let consumo50Min = 0;
+  let consumoSaldoAnteriorMin = 0;
+  let saldoAnteriorRestanteMin = saldoAnterior;
+
   if (params.politicaFaltas === "COMPENSAR_COM_HORAS_EXTRAS") {
     let debito = horasDescontarMin;
-    let extraUtilDisponivel = horasPagar50Min;
     let extra100Disponivel = horasPagar100Min;
+    let extraUtilDisponivel = horasPagar50Min;
+    let saldoAntDisponivel = Math.max(0, saldoAnterior);
 
-    const consumoUtil = Math.min(extraUtilDisponivel, debito);
-    extraUtilDisponivel -= consumoUtil;
-    debito -= consumoUtil;
+    // 1) Primeiro: abater com extras 100% (mais caras)
+    consumo100Min = Math.min(extra100Disponivel, debito);
+    extra100Disponivel -= consumo100Min;
+    debito -= consumo100Min;
 
-    const consumo100 = Math.min(extra100Disponivel, debito);
-    extra100Disponivel -= consumo100;
-    debito -= consumo100;
+    // 2) Depois: abater com extras 50%
+    consumo50Min = Math.min(extraUtilDisponivel, debito);
+    extraUtilDisponivel -= consumo50Min;
+    debito -= consumo50Min;
+
+    // 3) Por último: abater com saldo anterior (se positivo)
+    consumoSaldoAnteriorMin = Math.min(saldoAntDisponivel, debito);
+    saldoAntDisponivel -= consumoSaldoAnteriorMin;
+    debito -= consumoSaldoAnteriorMin;
 
     horasPagar50Min = extraUtilDisponivel;
     horasPagar100Min = extra100Disponivel;
     horasDescontarMin = debito;
+    saldoAnteriorRestanteMin = saldoAnterior - consumoSaldoAnteriorMin;
   }
 
   const saldoFinalBancoMin = params.zerarBancoNoMes ? 0 : saldoTecnicoMin;
@@ -754,6 +780,12 @@ export async function calcularBancoHorasMes(
     horasPagar100Min,
     horasDescontarMin,
     saldoFinalBancoMin,
+    compensacao: {
+      consumo100Min,
+      consumo50Min,
+      consumoSaldoAnteriorMin,
+      saldoAnteriorRestanteMin,
+    },
     dias: diasResumo,
     movimentos,
   };

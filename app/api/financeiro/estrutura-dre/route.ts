@@ -28,7 +28,7 @@ interface EstruturaDreDB {
   FIN_ESTRUTURA_DRE_PAI_ID: number | null;
   FIN_ESTRUTURA_DRE_NOME: string;
   FIN_ESTRUTURA_DRE_CODIGO: string;
-  FIN_ESTRUTURA_DRE_NATUREZA: "RECEITA" | "DESPESA" | "OUTROS";
+  FIN_ESTRUTURA_DRE_NATUREZA: "RECEITA" | "DESPESA" | "CALCULADO";
   FIN_ESTRUTURA_DRE_ATIVO: 0 | 1;
   FIN_ESTRUTURA_DRE_ORDEM: number;
   FIN_ESTRUTURA_DRE_TIPO: string | null;
@@ -41,7 +41,7 @@ interface LinhaDre {
   id: string;
   nome: string;
   codigo: string;
-  natureza: "RECEITA" | "DESPESA" | "OUTROS";
+  natureza: "RECEITA" | "DESPESA" | "CALCULADO";
   status: "ativo" | "inativo";
   tipo?: string;
   descricao?: string;

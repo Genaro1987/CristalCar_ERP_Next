@@ -426,10 +426,6 @@ export function exportarExcel(dados: DadosExportacao[]) {
     const saldoTecnico =
       r.saldoAnteriorMin + extras50 + extras100 + devidas + r.ajustesManuaisMin + r.fechamentosMin;
     const saldoFinal = d.zerarBanco ? 0 : saldoTecnico;
-    const horasPagar50 = Math.max(0, extras50);
-    const horasPagar100 = Math.max(0, extras100);
-    const horasDescontar = Math.abs(Math.min(0, devidas));
-
     dadosResumo.push([
       r.funcionario.nome,
       `${String(r.competencia.mes).padStart(2, "0")}/${r.competencia.ano}`,
@@ -439,9 +435,9 @@ export function exportarExcel(dados: DadosExportacao[]) {
       minutosParaHora(devidas),
       minutosParaHora(r.ajustesManuaisMin),
       minutosParaHora(saldoFinal),
-      minutosParaHora(horasPagar50),
-      minutosParaHora(horasPagar100),
-      minutosParaHora(horasDescontar),
+      minutosParaHora(r.horasPagar50Min),
+      minutosParaHora(r.horasPagar100Min),
+      minutosParaHora(r.horasDescontarMin),
     ]);
   });
 
@@ -484,10 +480,9 @@ export function exportarExcel(dados: DadosExportacao[]) {
 
   dados.forEach((d) => {
     const r = d.resumo;
-    const totais = resumirTotaisDias(r.dias);
-    const horasPagar50 = Math.max(0, totais.extras50Min);
-    const horasPagar100 = Math.max(0, totais.extras100Min);
-    const horasDescontar = Math.abs(Math.min(0, totais.devidasMin));
+    const horasPagar50 = r.horasPagar50Min;
+    const horasPagar100 = r.horasPagar100Min;
+    const horasDescontar = r.horasDescontarMin;
     const valorPagar50 = minutesToDecimal(horasPagar50) * r.funcionario.valorHora * 1.5;
     const valorPagar100 = minutesToDecimal(horasPagar100) * r.funcionario.valorHora * 2;
     const valorDescontar = minutesToDecimal(horasDescontar) * r.funcionario.valorHora;
