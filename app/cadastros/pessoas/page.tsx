@@ -22,7 +22,11 @@ interface Pessoa {
   CAD_PESSOA_EMAIL: string | null;
   CAD_PESSOA_OBSERVACAO: string | null;
   CAD_PESSOA_ATIVO: number;
+  CAD_PESSOA_CONTA_RECEITA_ID: number | null;
+  CAD_PESSOA_CONTA_DESPESA_ID: number | null;
 }
+
+type PlanoContaOpt = { id: number; label: string; natureza: string };
 
 interface FormPessoa {
   nome: string;
@@ -36,6 +40,8 @@ interface FormPessoa {
   email: string;
   observacao: string;
   ativo: number;
+  contaReceitaId: string;
+  contaDespesaId: string;
 }
 
 const FORM_VAZIO: FormPessoa = {
@@ -50,6 +56,8 @@ const FORM_VAZIO: FormPessoa = {
   email: "",
   observacao: "",
   ativo: 1,
+  contaReceitaId: "",
+  contaDespesaId: "",
 };
 
 const TIPO_LABELS: Record<string, string> = {
@@ -72,6 +80,7 @@ export default function PessoasPage() {
   const [filtroTipo, setFiltroTipo] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "ativos" | "inativos">("ativos");
   const [confirmExcluir, setConfirmExcluir] = useState<{ item: Pessoa; msg: string } | null>(null);
+  const [planoContas, setPlanoContas] = useState<PlanoContaOpt[]>([]);
 
   const headers = useMemo(() => {
     const h: Record<string, string> = { "Content-Type": "application/json" };
@@ -94,6 +103,21 @@ export default function PessoasPage() {
   }, [empresa?.id, headers]);
 
   useEffect(() => { carregarPessoas(); }, [carregarPessoas]);
+
+  // Carregar plano de contas para conta padrão
+  useEffect(() => {
+    if (!empresa?.id) return;
+    fetch("/api/financeiro/plano-contas", { headers }).then(async (res) => {
+      const json = await res.json();
+      if (json.success) {
+        setPlanoContas((json.data ?? []).map((i: any) => ({
+          id: i.FIN_PLANO_CONTA_ID,
+          label: `${i.FIN_PLANO_CONTA_CODIGO} ${i.FIN_PLANO_CONTA_NOME}`,
+          natureza: i.FIN_PLANO_CONTA_NATUREZA,
+        })));
+      }
+    }).catch(() => {});
+  }, [empresa?.id, headers]);
 
   const pessoasFiltradas = useMemo(() => {
     const b = busca.toLowerCase().trim();
@@ -123,6 +147,8 @@ export default function PessoasPage() {
       email: p.CAD_PESSOA_EMAIL ?? "",
       observacao: p.CAD_PESSOA_OBSERVACAO ?? "",
       ativo: p.CAD_PESSOA_ATIVO,
+      contaReceitaId: p.CAD_PESSOA_CONTA_RECEITA_ID ? String(p.CAD_PESSOA_CONTA_RECEITA_ID) : "",
+      contaDespesaId: p.CAD_PESSOA_CONTA_DESPESA_ID ? String(p.CAD_PESSOA_CONTA_DESPESA_ID) : "",
     });
   };
 
@@ -313,6 +339,29 @@ export default function PessoasPage() {
                       </select>
                     </div>
                   </div>
+
+                  {(form.tipo === "CLIENTE" || form.tipo === "AMBOS") && (
+                    <div className="form-group">
+                      <label htmlFor="pes-conta-rec">Conta padrao (Receita)</label>
+                      <select id="pes-conta-rec" className="form-input" value={form.contaReceitaId} onChange={(e) => setForm((f) => ({ ...f, contaReceitaId: e.target.value }))}>
+                        <option value="">Nenhuma</option>
+                        {planoContas.filter((c) => c.natureza === "RECEITA").map((c) => (
+                          <option key={c.id} value={c.id}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {(form.tipo === "FORNECEDOR" || form.tipo === "AMBOS") && (
+                    <div className="form-group">
+                      <label htmlFor="pes-conta-desp">Conta padrao (Despesa)</label>
+                      <select id="pes-conta-desp" className="form-input" value={form.contaDespesaId} onChange={(e) => setForm((f) => ({ ...f, contaDespesaId: e.target.value }))}>
+                        <option value="">Nenhuma</option>
+                        {planoContas.filter((c) => c.natureza === "DESPESA").map((c) => (
+                          <option key={c.id} value={c.id}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="form-group">
                     <label htmlFor="pes-end">Endereco</label>

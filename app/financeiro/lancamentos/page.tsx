@@ -19,16 +19,29 @@ type Lancamento = {
   centroCustoId: number | null;
   pessoaId: number | null;
   pessoaNome: string;
+  placa: string;
   valor: number;
   tipo: "Entrada" | "Saída";
   status: "confirmado" | "pendente";
   documento?: string;
 };
 
-type PlanoContaOption = { id: number; label: string };
+type PlanoContaOption = { id: number; label: string; natureza: string };
 type CentroCustoOption = { id: number; label: string };
-type PessoaOption = { id: number; nome: string; tipo: string };
-type FuncionarioOption = { id: string; nome: string };
+type PessoaOption = { id: number; nome: string; tipo: string; contaReceitaId: number | null; contaDespesaId: number | null };
+type FuncionarioOption = { id: string; nome: string; salarioBase: number };
+
+/** Retorna o dia útil anterior (pula fins de semana) */
+function obterDiaUtilAnterior(): string {
+  const hoje = new Date();
+  const dia = hoje.getDay(); // 0=Dom, 1=Seg...6=Sab
+  let offset = 1;
+  if (dia === 0) offset = 2; // Domingo → Sexta
+  if (dia === 1) offset = 3; // Segunda → Sexta
+  const anterior = new Date(hoje);
+  anterior.setDate(hoje.getDate() - offset);
+  return anterior.toISOString().split("T")[0];
+}
 
 export default function LancamentosPage() {
   useRequerEmpresaSelecionada();
@@ -46,6 +59,8 @@ export default function LancamentosPage() {
   const [busca, setBusca] = useState("");
   const [planoContas, setPlanoContas] = useState<PlanoContaOption[]>([]);
   const [centrosCusto, setCentrosCusto] = useState<CentroCustoOption[]>([]);
+  const [pessoas, setPessoas] = useState<PessoaOption[]>([]);
+  const [funcionarios, setFuncionarios] = useState<FuncionarioOption[]>([]);
   const [notification, setNotification] = useState<{
     type: "success" | "error" | "info";
     message: string;
@@ -53,18 +68,22 @@ export default function LancamentosPage() {
 
   // Form state
   const [selecionado, setSelecionado] = useState<Lancamento | null>(null);
-  const [formData, setFormData] = useState("");
+  const [formData, setFormData] = useState(obterDiaUtilAnterior);
   const [formHistorico, setFormHistorico] = useState("");
   const [formContaId, setFormContaId] = useState("");
   const [formCentroId, setFormCentroId] = useState("");
   const [formValor, setFormValor] = useState("");
-  const [formTipo, setFormTipo] = useState<"Entrada" | "Saída">("Entrada");
+  const [formTipo, setFormTipo] = useState<"Entrada" | "Saída">("Saída");
   const [formDocumento, setFormDocumento] = useState("");
-  const [formStatus, setFormStatus] = useState<"confirmado" | "pendente">("confirmado");
   const [formPessoaId, setFormPessoaId] = useState("");
+  const [formPlaca, setFormPlaca] = useState("");
   const [salvando, setSalvando] = useState(false);
-  const [pessoas, setPessoas] = useState<PessoaOption[]>([]);
-  const [funcionarios, setFuncionarios] = useState<FuncionarioOption[]>([]);
+
+  // Modal lote salário/férias
+  const [modalLote, setModalLote] = useState(false);
+  const [loteFuncs, setLoteFuncs] = useState<{ id: string; nome: string; selecionado: boolean; valor: string }[]>([]);
+  const [loteContaId, setLoteContaId] = useState("");
+  const [loteSalvando, setLoteSalvando] = useState(false);
 
   const headersPadrao = useMemo<HeadersInit>(() => {
     const h: Record<string, string> = {};
@@ -72,18 +91,18 @@ export default function LancamentosPage() {
     return h;
   }, [empresa?.id]);
 
-  const limparForm = () => {
+  const limparForm = useCallback(() => {
     setSelecionado(null);
-    setFormData("");
+    setFormData(obterDiaUtilAnterior());
     setFormHistorico("");
     setFormContaId("");
     setFormCentroId("");
     setFormValor("");
-    setFormTipo("Entrada");
+    setFormTipo("Saída");
     setFormDocumento("");
-    setFormStatus("confirmado");
     setFormPessoaId("");
-  };
+    setFormPlaca("");
+  }, []);
 
   const preencherForm = (item: Lancamento) => {
     setSelecionado(item);
@@ -94,8 +113,8 @@ export default function LancamentosPage() {
     setFormValor(String(Math.abs(item.valor)));
     setFormTipo(item.tipo);
     setFormDocumento(item.documento ?? "");
-    setFormStatus(item.status);
     setFormPessoaId(item.pessoaId ? String(item.pessoaId) : "");
+    setFormPlaca(item.placa ?? "");
   };
 
   // Buscar lançamentos
@@ -137,6 +156,7 @@ export default function LancamentosPage() {
               (json.data ?? []).map((i: any) => ({
                 id: i.FIN_PLANO_CONTA_ID,
                 label: `${i.FIN_PLANO_CONTA_CODIGO} ${i.FIN_PLANO_CONTA_NOME}`,
+                natureza: i.FIN_PLANO_CONTA_NATUREZA,
               }))
             );
         }
@@ -157,13 +177,27 @@ export default function LancamentosPage() {
             setPessoas(
               (json.data ?? [])
                 .filter((p: any) => p.CAD_PESSOA_ATIVO === 1)
-                .map((p: any) => ({ id: p.CAD_PESSOA_ID, nome: p.CAD_PESSOA_NOME, tipo: p.CAD_PESSOA_TIPO }))
+                .map((p: any) => ({
+                  id: p.CAD_PESSOA_ID,
+                  nome: p.CAD_PESSOA_NOME,
+                  tipo: p.CAD_PESSOA_TIPO,
+                  contaReceitaId: p.CAD_PESSOA_CONTA_RECEITA_ID ?? null,
+                  contaDespesaId: p.CAD_PESSOA_CONTA_DESPESA_ID ?? null,
+                }))
             );
         }
         if (funcRes.ok) {
           const json = await funcRes.json();
           if (json?.data)
-            setFuncionarios((json.data ?? []).map((f: any) => ({ id: f.ID_FUNCIONARIO, nome: f.NOME_COMPLETO })));
+            setFuncionarios(
+              (json.data ?? [])
+                .filter((f: any) => f.ATIVO === 1)
+                .map((f: any) => ({
+                  id: String(f.ID_FUNCIONARIO),
+                  nome: f.NOME_COMPLETO,
+                  salarioBase: Number(f.SALARIO_BASE) || 0,
+                }))
+            );
         }
       } catch (e) {
         console.error("Erro ao carregar opções:", e);
@@ -171,6 +205,15 @@ export default function LancamentosPage() {
     };
     carregar();
   }, [empresa?.id, headersPadrao]);
+
+  // Plano de contas filtrado por natureza (Entrada=RECEITA, Saída=DESPESA)
+  const planoContasFiltrados = useMemo(() => {
+    return planoContas.filter((c) => {
+      if (formTipo === "Entrada") return c.natureza === "RECEITA";
+      if (formTipo === "Saída") return c.natureza === "DESPESA";
+      return true;
+    });
+  }, [planoContas, formTipo]);
 
   // Pessoa filtrada por tipo (Entrada=CLIENTE, Saída=FORNECEDOR)
   const pessoasFiltradas = useMemo(() => {
@@ -191,11 +234,33 @@ export default function LancamentosPage() {
     return nome.includes("SALÁRIO") || nome.includes("SALARIO") || nome.includes("FÉRIAS") || nome.includes("FERIAS");
   }, [formContaId, planoContas]);
 
+  // Ao mudar tipo, limpar conta se não bater com a natureza
+  useEffect(() => {
+    if (!formContaId) return;
+    const conta = planoContas.find((c) => String(c.id) === formContaId);
+    if (!conta) return;
+    if (formTipo === "Entrada" && conta.natureza !== "RECEITA") setFormContaId("");
+    if (formTipo === "Saída" && conta.natureza !== "DESPESA") setFormContaId("");
+  }, [formTipo, formContaId, planoContas]);
+
+  // Ao selecionar pessoa, auto-preencher conta padrão
+  const handlePessoaChange = useCallback((pessoaIdStr: string) => {
+    setFormPessoaId(pessoaIdStr);
+    if (!pessoaIdStr) return;
+    const pessoa = pessoas.find((p) => String(p.id) === pessoaIdStr);
+    if (!pessoa) return;
+    if (formTipo === "Entrada" && pessoa.contaReceitaId) {
+      setFormContaId(String(pessoa.contaReceitaId));
+    } else if (formTipo === "Saída" && pessoa.contaDespesaId) {
+      setFormContaId(String(pessoa.contaDespesaId));
+    }
+  }, [pessoas, formTipo]);
+
   // Filtro local
   const dadosFiltrados = useMemo(() => {
     const b = busca.trim().toLowerCase();
     return lancamentos.filter((item) => {
-      if (b && !`${item.historico} ${item.conta} ${item.centroCusto}`.toLowerCase().includes(b))
+      if (b && !`${item.historico} ${item.conta} ${item.centroCusto} ${item.pessoaNome} ${item.placa}`.toLowerCase().includes(b))
         return false;
       return true;
     });
@@ -206,7 +271,7 @@ export default function LancamentosPage() {
     []
   );
 
-  // Salvar
+  // Salvar lançamento individual
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!empresa?.id) return;
@@ -220,8 +285,9 @@ export default function LancamentosPage() {
       centroCustoId: Number(formCentroId) || null,
       valor: valorFinal,
       documento: formDocumento,
-      status: formStatus,
+      status: "confirmado",
       pessoaId: Number(formPessoaId) || null,
+      placa: formPlaca || null,
     };
 
     setSalvando(true);
@@ -243,12 +309,74 @@ export default function LancamentosPage() {
       } else {
         setNotification({ type: "error", message: json.error || "Erro ao salvar" });
       }
-    } catch (err) {
+    } catch {
       setNotification({ type: "error", message: "Erro de conexão" });
     } finally {
       setSalvando(false);
     }
   };
+
+  // Abrir modal de lançamento em lote (salário/férias)
+  const abrirModalLote = () => {
+    setLoteFuncs(
+      funcionarios.map((f) => ({
+        id: f.id,
+        nome: f.nome,
+        selecionado: true,
+        valor: String(f.salarioBase || ""),
+      }))
+    );
+    setLoteContaId(formContaId);
+    setModalLote(true);
+  };
+
+  // Salvar lote
+  const handleSalvarLote = async () => {
+    if (!empresa?.id) return;
+    const selecionados = loteFuncs.filter((f) => f.selecionado && Number(f.valor) > 0);
+    if (selecionados.length === 0) {
+      setNotification({ type: "error", message: "Selecione ao menos um funcionário com valor" });
+      return;
+    }
+
+    setLoteSalvando(true);
+    try {
+      const lote = selecionados.map((f) => ({
+        data: formData,
+        historico: f.nome,
+        contaId: Number(loteContaId),
+        centroCustoId: Number(formCentroId) || null,
+        valor: -(Number(f.valor) || 0), // salário/férias = saída (negativo)
+        documento: formDocumento,
+        pessoaId: null,
+        placa: null,
+      }));
+
+      const res = await fetch("/api/financeiro/lancamentos", {
+        method: "POST",
+        headers: { ...headersPadrao, "Content-Type": "application/json" },
+        body: JSON.stringify({ lote }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setLancamentos((prev) => [...(json.data || []), ...prev]);
+        setModalLote(false);
+        limparForm();
+        setNotification({ type: "success", message: `${selecionados.length} lançamentos criados com sucesso` });
+      } else {
+        setNotification({ type: "error", message: json.error || "Erro ao salvar lote" });
+      }
+    } catch {
+      setNotification({ type: "error", message: "Erro de conexão" });
+    } finally {
+      setLoteSalvando(false);
+    }
+  };
+
+  const contasDespesaParaLote = useMemo(
+    () => planoContas.filter((c) => c.natureza === "DESPESA"),
+    [planoContas]
+  );
 
   return (
     <LayoutShell>
@@ -267,7 +395,6 @@ export default function LancamentosPage() {
           )}
 
           <div className="departamentos-page">
-            {/* 2-column: form + table */}
             <div className="split-view">
               {/* LEFT: Form */}
               <section className="split-view-panel">
@@ -299,15 +426,34 @@ export default function LancamentosPage() {
                         id="lanc-tipo"
                         className="form-input"
                         value={formTipo}
-                        onChange={(e) => setFormTipo(e.target.value as "Entrada" | "Saída")}
+                        onChange={(e) => {
+                          setFormTipo(e.target.value as "Entrada" | "Saída");
+                          setFormPessoaId("");
+                        }}
                       >
-                        <option value="Entrada">Entrada</option>
-                        <option value="Saída">Saída</option>
+                        <option value="Saída">Saída (Pagamento)</option>
+                        <option value="Entrada">Entrada (Recebimento)</option>
                       </select>
                     </div>
                   </div>
 
                   <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="lanc-pessoa">
+                        {formTipo === "Entrada" ? "Cliente" : "Fornecedor"}
+                      </label>
+                      <select
+                        id="lanc-pessoa"
+                        className="form-input"
+                        value={formPessoaId}
+                        onChange={(e) => handlePessoaChange(e.target.value)}
+                      >
+                        <option value="">Selecione</option>
+                        {pessoasFiltradas.map((p) => (
+                          <option key={p.id} value={p.id}>{p.nome}</option>
+                        ))}
+                      </select>
+                    </div>
                     <div className="form-group">
                       <label htmlFor="lanc-conta">Plano de conta *</label>
                       <select
@@ -318,24 +464,8 @@ export default function LancamentosPage() {
                         required
                       >
                         <option value="">Selecione</option>
-                        {planoContas.map((c) => (
+                        {planoContasFiltrados.map((c) => (
                           <option key={c.id} value={c.id}>{c.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="lanc-pessoa">
-                        {formTipo === "Entrada" ? "Cliente" : "Fornecedor"}
-                      </label>
-                      <select
-                        id="lanc-pessoa"
-                        className="form-input"
-                        value={formPessoaId}
-                        onChange={(e) => setFormPessoaId(e.target.value)}
-                      >
-                        <option value="">Nenhum</option>
-                        {pessoasFiltradas.map((p) => (
-                          <option key={p.id} value={p.id}>{p.nome}</option>
                         ))}
                       </select>
                     </div>
@@ -344,54 +474,14 @@ export default function LancamentosPage() {
                   <div className="form-grid two-columns">
                     <div className="form-group">
                       <label htmlFor="lanc-historico">Histórico *</label>
-                      {contaSalarioFerias && funcionarios.length > 0 ? (
-                        <select
-                          id="lanc-historico"
-                          className="form-input"
-                          value={formHistorico}
-                          onChange={(e) => setFormHistorico(e.target.value)}
-                          required
-                        >
-                          <option value="">Selecione o funcionário</option>
-                          {funcionarios.map((f) => (
-                            <option key={f.id} value={f.nome}>{f.nome}</option>
-                          ))}
-                          <option value="__manual__">Digitar manualmente...</option>
-                        </select>
-                      ) : (
-                        <input
-                          id="lanc-historico"
-                          className="form-input"
-                          value={formHistorico}
-                          onChange={(e) => setFormHistorico(e.target.value)}
-                          placeholder="Descrição do lançamento"
-                          required
-                        />
-                      )}
-                      {contaSalarioFerias && formHistorico === "__manual__" && (
-                        <input
-                          className="form-input"
-                          style={{ marginTop: 4 }}
-                          value=""
-                          onChange={(e) => setFormHistorico(e.target.value)}
-                          placeholder="Digite o histórico"
-                          autoFocus
-                        />
-                      )}
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="lanc-centro">Centro de custo</label>
-                      <select
-                        id="lanc-centro"
+                      <input
+                        id="lanc-historico"
                         className="form-input"
-                        value={formCentroId}
-                        onChange={(e) => setFormCentroId(e.target.value)}
-                      >
-                        <option value="">Nenhum</option>
-                        {centrosCusto.map((c) => (
-                          <option key={c.id} value={c.id}>{c.label}</option>
-                        ))}
-                      </select>
+                        value={formHistorico}
+                        onChange={(e) => setFormHistorico(e.target.value)}
+                        placeholder="Descrição do lançamento"
+                        required
+                      />
                     </div>
                     <div className="form-group">
                       <label htmlFor="lanc-valor">Valor *</label>
@@ -412,34 +502,59 @@ export default function LancamentosPage() {
 
                   <div className="form-grid two-columns">
                     <div className="form-group">
+                      <label htmlFor="lanc-centro">Centro de custo</label>
+                      <select
+                        id="lanc-centro"
+                        className="form-input"
+                        value={formCentroId}
+                        onChange={(e) => setFormCentroId(e.target.value)}
+                      >
+                        <option value="">Nenhum</option>
+                        {centrosCusto.map((c) => (
+                          <option key={c.id} value={c.id}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
                       <label htmlFor="lanc-doc">Documento</label>
                       <input
                         id="lanc-doc"
                         className="form-input"
                         value={formDocumento}
                         onChange={(e) => setFormDocumento(e.target.value)}
-                        placeholder="Número ou referência"
+                        placeholder="NF, recibo, referência"
                       />
                     </div>
-                    <div className="form-group">
-                      <label htmlFor="lanc-status">Status</label>
-                      <select
-                        id="lanc-status"
-                        className="form-input"
-                        value={formStatus}
-                        onChange={(e) => setFormStatus(e.target.value as "confirmado" | "pendente")}
-                      >
-                        <option value="confirmado">Confirmado</option>
-                        <option value="pendente">Pendente</option>
-                      </select>
-                    </div>
                   </div>
+
+                  {formTipo === "Entrada" && (
+                    <div className="form-group">
+                      <label htmlFor="lanc-placa">Placa / Veículo</label>
+                      <input
+                        id="lanc-placa"
+                        className="form-input"
+                        value={formPlaca}
+                        onChange={(e) => setFormPlaca(e.target.value.toUpperCase())}
+                        placeholder="ABC-1234"
+                        style={{ textTransform: "uppercase", maxWidth: 200 }}
+                      />
+                    </div>
+                  )}
 
                   <div className="form-actions departamentos-actions">
                     <div className="button-row">
                       <button type="submit" className="button button-primary" disabled={salvando}>
                         {salvando ? "Salvando..." : "Salvar"}
                       </button>
+                      {contaSalarioFerias && !selecionado && funcionarios.length > 0 && (
+                        <button
+                          type="button"
+                          className="button button-secondary"
+                          onClick={abrirModalLote}
+                        >
+                          Lançar em Lote
+                        </button>
+                      )}
                       <button type="button" className="button button-secondary" onClick={limparForm}>
                         Cancelar
                       </button>
@@ -474,7 +589,7 @@ export default function LancamentosPage() {
                       className="form-input"
                       value={busca}
                       onChange={(e) => setBusca(e.target.value)}
-                      placeholder="Histórico, conta..."
+                      placeholder="Histórico, conta, placa..."
                     />
                   </div>
                 </div>
@@ -497,7 +612,6 @@ export default function LancamentosPage() {
                         <th>Conta</th>
                         <th>Tipo</th>
                         <th style={{ textAlign: "right" }}>Valor</th>
-                        <th style={{ textAlign: "center" }}>Status</th>
                         <th style={{ textAlign: "center" }}>Ações</th>
                       </tr>
                     </thead>
@@ -505,20 +619,22 @@ export default function LancamentosPage() {
                       {dadosFiltrados.map((item) => (
                         <tr key={item.id} onClick={() => preencherForm(item)} style={{ cursor: "pointer" }}>
                           <td data-label="Data">{item.data}</td>
-                          <td data-label="Histórico">{item.historico}</td>
+                          <td data-label="Histórico">
+                            {item.historico}
+                            {item.pessoaNome && (
+                              <span style={{ display: "block", fontSize: "0.75rem", color: "#6b7280" }}>
+                                {item.pessoaNome}
+                              </span>
+                            )}
+                          </td>
                           <td data-label="Conta">{item.conta}</td>
                           <td data-label="Tipo">
                             <span className={item.tipo === "Entrada" ? "badge badge-success" : "badge badge-danger"}>
                               {item.tipo}
                             </span>
                           </td>
-                          <td data-label="Valor" style={{ fontWeight: 600 }}>
+                          <td data-label="Valor" style={{ fontWeight: 600, textAlign: "right" }}>
                             {formatadorMoeda.format(Math.abs(item.valor))}
-                          </td>
-                          <td data-label="Status">
-                            <span className={item.status === "confirmado" ? "badge badge-success" : "badge badge-danger"}>
-                              {item.status === "confirmado" ? "Confirmado" : "Pendente"}
-                            </span>
                           </td>
                           <td data-label="">
                             <button
@@ -539,6 +655,132 @@ export default function LancamentosPage() {
           </div>
         </main>
         </PaginaProtegida>
+
+        {/* Modal lote salário/férias */}
+        {modalLote && (
+          <div style={{
+            position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+          }}>
+            <div style={{
+              backgroundColor: "#fff", borderRadius: 12, padding: 24,
+              width: "90%", maxWidth: 700, maxHeight: "90vh", overflow: "auto",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}>
+              <h2 style={{ margin: "0 0 4px", fontSize: "1.1rem" }}>Lançamento em Lote</h2>
+              <p style={{ color: "#6b7280", fontSize: "0.85rem", margin: "0 0 16px" }}>
+                Selecione os funcionários e informe o valor individual. Todos serão lançados como saída.
+              </p>
+
+              <div className="form-grid two-columns" style={{ marginBottom: 12 }}>
+                <div className="form-group">
+                  <label>Data</label>
+                  <input type="date" className="form-input" value={formData} onChange={(e) => setFormData(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Plano de conta *</label>
+                  <select className="form-input" value={loteContaId} onChange={(e) => setLoteContaId(e.target.value)} required>
+                    <option value="">Selecione</option>
+                    {contasDespesaParaLote.map((c) => (
+                      <option key={c.id} value={c.id}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <button
+                  type="button"
+                  className="button button-secondary button-compact"
+                  onClick={() => setLoteFuncs((prev) => prev.map((f) => ({ ...f, selecionado: true })))}
+                >
+                  Selecionar todos
+                </button>
+                <button
+                  type="button"
+                  className="button button-secondary button-compact"
+                  onClick={() => setLoteFuncs((prev) => prev.map((f) => ({ ...f, selecionado: false })))}
+                >
+                  Desmarcar todos
+                </button>
+              </div>
+
+              <table className="data-table" style={{ fontSize: "0.85rem" }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 40 }}></th>
+                    <th>Funcionário</th>
+                    <th style={{ width: 140, textAlign: "right" }}>Valor (R$)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loteFuncs.map((f, idx) => (
+                    <tr key={f.id} style={{ opacity: f.selecionado ? 1 : 0.5 }}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={f.selecionado}
+                          onChange={(e) => {
+                            const novo = [...loteFuncs];
+                            novo[idx] = { ...novo[idx], selecionado: e.target.checked };
+                            setLoteFuncs(novo);
+                          }}
+                        />
+                      </td>
+                      <td style={{ fontWeight: 600 }}>{f.nome}</td>
+                      <td>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="form-input"
+                          style={{ textAlign: "right", padding: "4px 8px" }}
+                          value={f.valor}
+                          onChange={(e) => {
+                            const novo = [...loteFuncs];
+                            novo[idx] = { ...novo[idx], valor: e.target.value };
+                            setLoteFuncs(novo);
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr style={{ fontWeight: 700, borderTop: "2px solid #e5e7eb" }}>
+                    <td colSpan={2}>TOTAL ({loteFuncs.filter((f) => f.selecionado && Number(f.valor) > 0).length} funcionários)</td>
+                    <td style={{ textAlign: "right" }}>
+                      {formatadorMoeda.format(
+                        loteFuncs
+                          .filter((f) => f.selecionado)
+                          .reduce((acc, f) => acc + (Number(f.valor) || 0), 0)
+                      )}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => setModalLote(false)}
+                  disabled={loteSalvando}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={handleSalvarLote}
+                  disabled={loteSalvando || !loteContaId}
+                >
+                  {loteSalvando ? "Salvando..." : "Lançar em Lote"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </LayoutShell>
   );

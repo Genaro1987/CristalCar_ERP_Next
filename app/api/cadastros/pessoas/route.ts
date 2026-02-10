@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   if (!empresaId) return NextResponse.json({ success: false, error: "Empresa nao informada" }, { status: 400 });
 
   const body = await request.json();
-  const { nome, documento, tipo, endereco, cidade, uf, cep, telefone, email, observacao } = body;
+  const { nome, documento, tipo, endereco, cidade, uf, cep, telefone, email, observacao, contaReceitaId, contaDespesaId } = body;
 
   if (!nome?.trim()) {
     return NextResponse.json({ success: false, error: "Nome e obrigatorio" }, { status: 400 });
@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await db.execute({
-      sql: `INSERT INTO CAD_PESSOA (EMPRESA_ID, CAD_PESSOA_NOME, CAD_PESSOA_DOCUMENTO, CAD_PESSOA_TIPO, CAD_PESSOA_ENDERECO, CAD_PESSOA_CIDADE, CAD_PESSOA_UF, CAD_PESSOA_CEP, CAD_PESSOA_TELEFONE, CAD_PESSOA_EMAIL, CAD_PESSOA_OBSERVACAO)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [empresaId, nome.trim(), documento || null, tipo || "AMBOS", endereco || null, cidade || null, uf || null, cep || null, telefone || null, email || null, observacao || null],
+      sql: `INSERT INTO CAD_PESSOA (EMPRESA_ID, CAD_PESSOA_NOME, CAD_PESSOA_DOCUMENTO, CAD_PESSOA_TIPO, CAD_PESSOA_ENDERECO, CAD_PESSOA_CIDADE, CAD_PESSOA_UF, CAD_PESSOA_CEP, CAD_PESSOA_TELEFONE, CAD_PESSOA_EMAIL, CAD_PESSOA_OBSERVACAO, CAD_PESSOA_CONTA_RECEITA_ID, CAD_PESSOA_CONTA_DESPESA_ID)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [empresaId, nome.trim(), documento || null, tipo || "AMBOS", endereco || null, cidade || null, uf || null, cep || null, telefone || null, email || null, observacao || null, contaReceitaId || null, contaDespesaId || null],
     });
 
     return NextResponse.json({ success: true, id: Number(result.lastInsertRowid), message: "Cadastro criado com sucesso" }, { status: 201 });
@@ -61,7 +61,7 @@ export async function PUT(request: NextRequest) {
   if (!id) return NextResponse.json({ success: false, error: "ID nao informado" }, { status: 400 });
 
   const body = await request.json();
-  const { nome, documento, tipo, endereco, cidade, uf, cep, telefone, email, observacao, ativo } = body;
+  const { nome, documento, tipo, endereco, cidade, uf, cep, telefone, email, observacao, ativo, contaReceitaId, contaDespesaId } = body;
 
   if (!nome?.trim()) {
     return NextResponse.json({ success: false, error: "Nome e obrigatorio" }, { status: 400 });
@@ -73,9 +73,10 @@ export async function PUT(request: NextRequest) {
               CAD_PESSOA_NOME = ?, CAD_PESSOA_DOCUMENTO = ?, CAD_PESSOA_TIPO = ?,
               CAD_PESSOA_ENDERECO = ?, CAD_PESSOA_CIDADE = ?, CAD_PESSOA_UF = ?, CAD_PESSOA_CEP = ?,
               CAD_PESSOA_TELEFONE = ?, CAD_PESSOA_EMAIL = ?, CAD_PESSOA_OBSERVACAO = ?,
-              CAD_PESSOA_ATIVO = ?, CAD_PESSOA_ATUALIZADO_EM = datetime('now')
+              CAD_PESSOA_ATIVO = ?, CAD_PESSOA_CONTA_RECEITA_ID = ?, CAD_PESSOA_CONTA_DESPESA_ID = ?,
+              CAD_PESSOA_ATUALIZADO_EM = datetime('now')
             WHERE CAD_PESSOA_ID = ? AND EMPRESA_ID = ?`,
-      args: [nome.trim(), documento || null, tipo || "AMBOS", endereco || null, cidade || null, uf || null, cep || null, telefone || null, email || null, observacao || null, ativo ?? 1, Number(id), empresaId],
+      args: [nome.trim(), documento || null, tipo || "AMBOS", endereco || null, cidade || null, uf || null, cep || null, telefone || null, email || null, observacao || null, ativo ?? 1, contaReceitaId || null, contaDespesaId || null, Number(id), empresaId],
     });
     return NextResponse.json({ success: true, message: "Cadastro atualizado" });
   } catch (error) {
