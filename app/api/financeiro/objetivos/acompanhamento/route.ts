@@ -48,9 +48,11 @@ function somarFilhos(node: DreNode): DreNode {
 
   // Sum child columns
   const colunasConsolidadas: DreNode["colunas"] = {};
-  const chaves = new Set<string>();
-  filhosAtualizados.forEach((f) => Object.keys(f.colunas).forEach((k) => chaves.add(k)));
-  for (const chave of chaves) {
+  const chavesSet = new Set<string>();
+  filhosAtualizados.forEach((f) => Object.keys(f.colunas).forEach((k) => chavesSet.add(k)));
+  const chaves = Array.from(chavesSet);
+  for (let ci = 0; ci < chaves.length; ci++) {
+    const chave = chaves[ci];
     const pCol = filhosAtualizados.reduce((acc, f) => acc + (f.colunas[chave]?.previsto ?? 0), 0);
     const rCol = filhosAtualizados.reduce((acc, f) => acc + (f.colunas[chave]?.realizado ?? 0), 0);
     const dv = rCol - pCol;
