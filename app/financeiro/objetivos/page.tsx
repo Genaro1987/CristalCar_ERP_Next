@@ -22,6 +22,7 @@ interface DreNode {
 }
 
 type TipoPeriodo = "mensal" | "trimestral" | "semestral" | "anual";
+type TipoObjetivoVal = "ESTRUTURA_DRE" | "PLANO_CONTAS" | "CENTRO_CUSTO";
 
 function formatMoney(val: number): string {
   return val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -34,6 +35,12 @@ const TIPO_PERIODO_LABELS: Record<TipoPeriodo, string> = {
   trimestral: "Trimestral",
   semestral: "Semestral",
   anual: "Anual",
+};
+
+const TIPO_OBJETIVO_LABELS: Record<TipoObjetivoVal, string> = {
+  ESTRUTURA_DRE: "DRE",
+  PLANO_CONTAS: "Plano de Contas",
+  CENTRO_CUSTO: "Centro de Custo",
 };
 
 function mesesNoPeriodo(tipo: TipoPeriodo): number {
@@ -345,6 +352,9 @@ export default function ObjetivosPage() {
   const mesAtual = new Date().getMonth() + 1;
   const anoAtual = new Date().getFullYear();
 
+  // Tipo de objetivo (DRE / Plano de Contas / Centro de Custo)
+  const [tipoObjetivo, setTipoObjetivo] = useState<TipoObjetivoVal>("ESTRUTURA_DRE");
+
   // Reference period (for media calculation)
   const [mesInicio, setMesInicio] = useState(Math.max(1, mesAtual - 2));
   const [mesFim, setMesFim] = useState(mesAtual);
@@ -380,10 +390,17 @@ export default function ObjetivosPage() {
     }
   }, [tipoPeriodo, anoObjetivo, mesAtual]);
 
+  // Clear edited percentages when tipo changes
+  useEffect(() => {
+    setPercentuaisEditados({});
+  }, [tipoObjetivo]);
+
   const periodoLabel = useMemo(() => {
     if (!refPeriodo) return "";
     return labelPeriodo(tipoPeriodo, refPeriodo);
   }, [tipoPeriodo, refPeriodo]);
+
+  const tipoLabel = TIPO_OBJETIVO_LABELS[tipoObjetivo];
 
   const mesesRef = useMemo(() => {
     if (mesFim >= mesInicio) return mesFim - mesInicio + 1;
@@ -407,7 +424,7 @@ export default function ObjetivosPage() {
         anoObjetivo: String(anoObjetivo),
       });
 
-      const resp = await fetch(`/api/financeiro/objetivos/dre?${params}`, {
+      const resp = await fetch(`/api/financeiro/objetivos/dre?${params}&tipo=${tipoObjetivo}`, {
         headers: headersPadrao,
       });
       const json = await resp.json();
@@ -435,7 +452,7 @@ export default function ObjetivosPage() {
     } finally {
       setCarregando(false);
     }
-  }, [empresa?.id, headersPadrao, anoRef, mesInicio, mesFim, anoObjetivo]);
+  }, [empresa?.id, headersPadrao, anoRef, mesInicio, mesFim, anoObjetivo, tipoObjetivo]);
 
   useEffect(() => {
     carregarDados();
@@ -483,12 +500,13 @@ export default function ObjetivosPage() {
           refPeriodo,
           valorTotal: totalObjetivo,
           periodoLabel,
+          tipo: tipoObjetivo,
         }),
       });
 
       const json = await resp.json();
       if (json?.success) {
-        setNotification({ type: "success", message: `Objetivo ${TIPO_PERIODO_LABELS[tipoPeriodo]} para ${periodoLabel} salvo com sucesso!` });
+        setNotification({ type: "success", message: `Objetivo ${TIPO_PERIODO_LABELS[tipoPeriodo]} para ${periodoLabel} (${tipoLabel}) salvo com sucesso!` });
       } else {
         setNotification({ type: "error", message: json?.error ?? "Erro ao salvar objetivos" });
       }
@@ -509,6 +527,12 @@ export default function ObjetivosPage() {
     }
     setPercentuaisEditados(editados);
   };
+
+  const tipoObjetivoOpcoes = [
+    { val: "ESTRUTURA_DRE" as TipoObjetivoVal, label: "DRE" },
+    { val: "PLANO_CONTAS" as TipoObjetivoVal, label: "Plano de Contas" },
+    { val: "CENTRO_CUSTO" as TipoObjetivoVal, label: "Centro de Custo" },
+  ];
 
   return (
     <LayoutShell>
@@ -531,6 +555,7 @@ export default function ObjetivosPage() {
                   <h2 style={{ margin: "0 0 4px 0", fontSize: "1.1rem", color: "#111827" }}>
                     Objetivo {TIPO_PERIODO_LABELS[tipoPeriodo]}
                     {periodoLabel ? ` - ${periodoLabel}` : ""}
+                    {` (${tipoLabel})`}
                   </h2>
                   <p style={{ color: "#6b7280", fontSize: "0.85rem", margin: 0 }}>
                     Defina o objetivo para o periodo selecionado. Informe o % ou o valor desejado por linha.
@@ -546,8 +571,25 @@ export default function ObjetivosPage() {
                 </button>
               </div>
 
-              {/* Period type buttons */}
+              {/* Tipo de Objetivo selector */}
               <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Tipo de Objetivo</label>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    {tipoObjetivoOpcoes.map((t) => (
+                      <button
+                        key={t.val}
+                        type="button"
+                        className={tipoObjetivo === t.val ? "button button-primary button-compact" : "button button-secondary button-compact"}
+                        onClick={() => setTipoObjetivo(t.val)}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Period type buttons */}
                 <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
                   <div className="form-group" style={{ flex: "0 0 auto" }}>
                     <label>Tipo de Periodo</label>
@@ -674,10 +716,10 @@ export default function ObjetivosPage() {
             {/* DRE Tree */}
             <section className="panel" style={{ marginTop: 20 }}>
               {carregando ? (
-                <div className="empty-state">Carregando estrutura DRE...</div>
+                <div className="empty-state">Carregando estrutura {tipoLabel}...</div>
               ) : arvoreCalculada.length === 0 ? (
                 <div className="empty-state">
-                  Nenhuma estrutura de DRE encontrada. Cadastre a estrutura do DRE e vincule contas primeiro.
+                  Nenhuma estrutura de {tipoLabel} encontrada. Cadastre a estrutura e vincule contas primeiro.
                 </div>
               ) : (
                 <>
@@ -686,7 +728,7 @@ export default function ObjetivosPage() {
                     <table className="data-table" style={{ tableLayout: "auto", width: "100%" }}>
                       <thead>
                         <tr>
-                          <th style={{ textAlign: "left" }}>Estrutura DRE</th>
+                          <th style={{ textAlign: "left" }}>{tipoLabel}</th>
                           <th style={{ textAlign: "right", width: 150 }}>Base ({TIPO_PERIODO_LABELS[tipoPeriodo]})</th>
                           <th style={{ textAlign: "center", width: 100 }}>Cresc. %</th>
                           <th style={{ textAlign: "right", width: 150 }}>Objetivo R$</th>

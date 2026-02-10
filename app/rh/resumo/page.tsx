@@ -27,6 +27,7 @@ type ResumoFuncionario = {
   salarioBase: number;
   diasTrabalhados: number;
   temPonto: boolean;
+  temFechamento: boolean;
   ajustesMin: number;
   feriasCount: number;
   faltasJustificadas: number;
@@ -39,6 +40,8 @@ type ResumoFuncionario = {
   saldoUltimoMes: number;
   evolucao: EvolucaoMes[];
 };
+
+type FiltroStatus = "digitados" | "calculados" | "fechados";
 
 const MESES_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -74,6 +77,18 @@ export default function ResumoFuncionariosPage() {
   const [carregando, setCarregando] = useState(true);
   const [expandido, setExpandido] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState<FiltroStatus[]>(["digitados", "calculados", "fechados"]);
+
+  const toggleFiltroStatus = (status: FiltroStatus) => {
+    setFiltroStatus((prev) => {
+      const has = prev.indexOf(status) >= 0;
+      if (has) {
+        const novo = prev.filter((s) => s !== status);
+        return novo.length === 0 ? [status] : novo; // keep at least one
+      }
+      return [...prev, status];
+    });
+  };
 
   // Fetch available years
   useEffect(() => {
@@ -125,13 +140,26 @@ export default function ResumoFuncionariosPage() {
 
   const dadosFiltrados = useMemo(() => {
     const b = busca.trim().toLowerCase();
-    if (!b) return dados;
-    return dados.filter(
-      (f) =>
-        f.nome.toLowerCase().includes(b) ||
-        f.departamento.toLowerCase().includes(b)
-    );
-  }, [dados, busca]);
+    return dados.filter((f) => {
+      // Text search filter
+      if (b && !f.nome.toLowerCase().includes(b) && !f.departamento.toLowerCase().includes(b)) {
+        return false;
+      }
+      // Status filter
+      const mostraDigitados = filtroStatus.indexOf("digitados") >= 0;
+      const mostraCalculados = filtroStatus.indexOf("calculados") >= 0;
+      const mostraFechados = filtroStatus.indexOf("fechados") >= 0;
+
+      if (f.temFechamento && mostraFechados) return true;
+      if (f.temPonto && !f.temFechamento && mostraDigitados) return true;
+      if (f.temPonto && mostraCalculados) return true;
+      if (!f.temPonto && !f.temFechamento) {
+        // Sem lancamento - show if digitados or calculados selected
+        return mostraDigitados || mostraCalculados;
+      }
+      return false;
+    });
+  }, [dados, busca, filtroStatus]);
 
   // Separate employees with and without ponto entries
   const { funcionariosComPonto, funcionariosSemPonto } = useMemo(() => {
@@ -207,6 +235,38 @@ export default function ResumoFuncionariosPage() {
             <div className="resumo-filtro-item resumo-filtro-busca">
               <label htmlFor="resumo-busca">Buscar</label>
               <input id="resumo-busca" type="text" className="form-input" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome ou departamento" />
+            </div>
+            <div className="resumo-filtro-item">
+              <label>Status</label>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                {([
+                  { val: "digitados" as FiltroStatus, label: "Digitados", color: "#2563eb" },
+                  { val: "calculados" as FiltroStatus, label: "Calculados", color: "#059669" },
+                  { val: "fechados" as FiltroStatus, label: "Fechados", color: "#7c3aed" },
+                ]).map((opt) => {
+                  const ativo = filtroStatus.indexOf(opt.val) >= 0;
+                  return (
+                    <button
+                      key={opt.val}
+                      type="button"
+                      onClick={() => toggleFiltroStatus(opt.val)}
+                      style={{
+                        padding: "4px 10px",
+                        fontSize: "0.78rem",
+                        fontWeight: 600,
+                        border: ativo ? "2px solid " + opt.color : "1px solid #d1d5db",
+                        borderRadius: 6,
+                        background: ativo ? opt.color + "15" : "#fff",
+                        color: ativo ? opt.color : "#6b7280",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -285,9 +345,16 @@ export default function ResumoFuncionariosPage() {
                   return (
                     <div key={func.id} className={`resumo-func${isExpanded ? " resumo-func-expanded" : ""}`}>
                       <div className="resumo-func-row" onClick={() => setExpandido(isExpanded ? null : func.id)}>
-                        {/* Name + dept */}
+                        {/* Name + dept + status badge */}
                         <div className="resumo-func-info">
-                          <strong className="resumo-func-nome">{func.nome}</strong>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <strong className="resumo-func-nome">{func.nome}</strong>
+                            {func.temFechamento ? (
+                              <span className="badge" style={{ backgroundColor: "#ede9fe", color: "#7c3aed", fontSize: "0.65rem", padding: "1px 6px" }}>Fechado</span>
+                            ) : (
+                              <span className="badge" style={{ backgroundColor: "#dbeafe", color: "#2563eb", fontSize: "0.65rem", padding: "1px 6px" }}>Digitado</span>
+                            )}
+                          </div>
                           <span className="resumo-func-dept">{func.departamento}</span>
                         </div>
 

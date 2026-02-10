@@ -4,7 +4,7 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { NotificationBar } from "@/components/NotificationBar";
 import { PaginaProtegida } from "@/components/PaginaProtegida";
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
@@ -109,6 +109,7 @@ export default function EstruturaDrePage() {
   const [form, setForm] = useState<FormDre>({ ...FORM_VAZIO });
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const formRef = useRef<HTMLElement>(null);
 
   // Vinculacao de contas
   const [contaBusca, setContaBusca] = useState("");
@@ -171,6 +172,7 @@ export default function EstruturaDrePage() {
     setEditandoId(null);
     setForm({ ...FORM_VAZIO, paiId: paiId || null });
     setSelecionada(null);
+    setTimeout(() => { formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 100);
   };
 
   const handleEditar = (item: LinhaDre) => {
@@ -485,7 +487,7 @@ export default function EstruturaDrePage() {
               </section>
 
               {/* RIGHT: Inline Form + Linked accounts */}
-              <section className="split-view-panel">
+              <section className="split-view-panel" ref={formRef}>
                 <header className="form-section-header">
                   <h2>{editandoId ? "Editar linha do DRE" : "Nova linha do DRE"}</h2>
                   <p>

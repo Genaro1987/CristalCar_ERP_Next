@@ -269,6 +269,7 @@ export async function GET(request: NextRequest) {
         salarioBase: Number(func.SALARIO_BASE ?? 0),
         diasTrabalhados: diasMap.get(id) ?? 0,
         temPonto: (pontoCountMap.get(id) ?? 0) > 0,
+        temFechamento: fech.length > 0,
         ajustesMin: ajusteMap.get(id)?.total ?? 0,
         feriasCount: ocorr.get("FERIAS") ?? 0,
         faltasJustificadas: ocorr.get("FALTA_JUSTIFICADA") ?? 0,
