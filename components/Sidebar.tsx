@@ -54,6 +54,12 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             requerEmpresa: true,
             codigoTela: "CAD006_SEG_PERFIL",
           },
+          {
+            label: "Clientes / Fornecedores",
+            rota: "/cadastros/pessoas",
+            requerEmpresa: true,
+            codigoTela: "CAD_PESSOA",
+          },
         ],
       },
       {

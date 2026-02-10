@@ -17,6 +17,8 @@ type Lancamento = {
   contaId: number;
   centroCusto: string;
   centroCustoId: number | null;
+  pessoaId: number | null;
+  pessoaNome: string;
   valor: number;
   tipo: "Entrada" | "Saída";
   status: "confirmado" | "pendente";
@@ -25,6 +27,8 @@ type Lancamento = {
 
 type PlanoContaOption = { id: number; label: string };
 type CentroCustoOption = { id: number; label: string };
+type PessoaOption = { id: number; nome: string; tipo: string };
+type FuncionarioOption = { id: string; nome: string };
 
 export default function LancamentosPage() {
   useRequerEmpresaSelecionada();
@@ -57,7 +61,10 @@ export default function LancamentosPage() {
   const [formTipo, setFormTipo] = useState<"Entrada" | "Saída">("Entrada");
   const [formDocumento, setFormDocumento] = useState("");
   const [formStatus, setFormStatus] = useState<"confirmado" | "pendente">("confirmado");
+  const [formPessoaId, setFormPessoaId] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [pessoas, setPessoas] = useState<PessoaOption[]>([]);
+  const [funcionarios, setFuncionarios] = useState<FuncionarioOption[]>([]);
 
   const headersPadrao = useMemo<HeadersInit>(() => {
     const h: Record<string, string> = {};
@@ -75,6 +82,7 @@ export default function LancamentosPage() {
     setFormTipo("Entrada");
     setFormDocumento("");
     setFormStatus("confirmado");
+    setFormPessoaId("");
   };
 
   const preencherForm = (item: Lancamento) => {
@@ -87,6 +95,7 @@ export default function LancamentosPage() {
     setFormTipo(item.tipo);
     setFormDocumento(item.documento ?? "");
     setFormStatus(item.status);
+    setFormPessoaId(item.pessoaId ? String(item.pessoaId) : "");
   };
 
   // Buscar lançamentos
@@ -115,9 +124,11 @@ export default function LancamentosPage() {
     if (!empresa?.id) return;
     const carregar = async () => {
       try {
-        const [planosRes, centrosRes] = await Promise.all([
+        const [planosRes, centrosRes, pessoasRes, funcRes] = await Promise.all([
           fetch("/api/financeiro/plano-contas", { headers: headersPadrao }),
           fetch("/api/financeiro/centro-custo", { headers: headersPadrao }),
+          fetch("/api/cadastros/pessoas", { headers: headersPadrao }),
+          fetch("/api/rh/funcionarios", { headers: headersPadrao }),
         ]);
         if (planosRes.ok) {
           const json = await planosRes.json();
@@ -140,12 +151,45 @@ export default function LancamentosPage() {
             setCentrosCusto(flatten(json.data ?? []));
           }
         }
+        if (pessoasRes.ok) {
+          const json = await pessoasRes.json();
+          if (json.success)
+            setPessoas(
+              (json.data ?? [])
+                .filter((p: any) => p.CAD_PESSOA_ATIVO === 1)
+                .map((p: any) => ({ id: p.CAD_PESSOA_ID, nome: p.CAD_PESSOA_NOME, tipo: p.CAD_PESSOA_TIPO }))
+            );
+        }
+        if (funcRes.ok) {
+          const json = await funcRes.json();
+          if (json?.data)
+            setFuncionarios((json.data ?? []).map((f: any) => ({ id: f.ID_FUNCIONARIO, nome: f.NOME_COMPLETO })));
+        }
       } catch (e) {
         console.error("Erro ao carregar opções:", e);
       }
     };
     carregar();
   }, [empresa?.id, headersPadrao]);
+
+  // Pessoa filtrada por tipo (Entrada=CLIENTE, Saída=FORNECEDOR)
+  const pessoasFiltradas = useMemo(() => {
+    return pessoas.filter((p) => {
+      if (p.tipo === "AMBOS") return true;
+      if (formTipo === "Entrada" && p.tipo === "CLIENTE") return true;
+      if (formTipo === "Saída" && p.tipo === "FORNECEDOR") return true;
+      return false;
+    });
+  }, [pessoas, formTipo]);
+
+  // Detecta se a conta selecionada é Salário ou Férias
+  const contaSalarioFerias = useMemo(() => {
+    if (!formContaId) return false;
+    const conta = planoContas.find((c) => String(c.id) === formContaId);
+    if (!conta) return false;
+    const nome = conta.label.toUpperCase();
+    return nome.includes("SALÁRIO") || nome.includes("SALARIO") || nome.includes("FÉRIAS") || nome.includes("FERIAS");
+  }, [formContaId, planoContas]);
 
   // Filtro local
   const dadosFiltrados = useMemo(() => {
@@ -177,6 +221,7 @@ export default function LancamentosPage() {
       valor: valorFinal,
       documento: formDocumento,
       status: formStatus,
+      pessoaId: Number(formPessoaId) || null,
     };
 
     setSalvando(true);
@@ -264,17 +309,6 @@ export default function LancamentosPage() {
 
                   <div className="form-grid two-columns">
                     <div className="form-group">
-                      <label htmlFor="lanc-historico">Histórico *</label>
-                      <input
-                        id="lanc-historico"
-                        className="form-input"
-                        value={formHistorico}
-                        onChange={(e) => setFormHistorico(e.target.value)}
-                        placeholder="Descrição do lançamento"
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
                       <label htmlFor="lanc-conta">Plano de conta *</label>
                       <select
                         id="lanc-conta"
@@ -289,9 +323,62 @@ export default function LancamentosPage() {
                         ))}
                       </select>
                     </div>
+                    <div className="form-group">
+                      <label htmlFor="lanc-pessoa">
+                        {formTipo === "Entrada" ? "Cliente" : "Fornecedor"}
+                      </label>
+                      <select
+                        id="lanc-pessoa"
+                        className="form-input"
+                        value={formPessoaId}
+                        onChange={(e) => setFormPessoaId(e.target.value)}
+                      >
+                        <option value="">Nenhum</option>
+                        {pessoasFiltradas.map((p) => (
+                          <option key={p.id} value={p.id}>{p.nome}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
                   <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="lanc-historico">Histórico *</label>
+                      {contaSalarioFerias && funcionarios.length > 0 ? (
+                        <select
+                          id="lanc-historico"
+                          className="form-input"
+                          value={formHistorico}
+                          onChange={(e) => setFormHistorico(e.target.value)}
+                          required
+                        >
+                          <option value="">Selecione o funcionário</option>
+                          {funcionarios.map((f) => (
+                            <option key={f.id} value={f.nome}>{f.nome}</option>
+                          ))}
+                          <option value="__manual__">Digitar manualmente...</option>
+                        </select>
+                      ) : (
+                        <input
+                          id="lanc-historico"
+                          className="form-input"
+                          value={formHistorico}
+                          onChange={(e) => setFormHistorico(e.target.value)}
+                          placeholder="Descrição do lançamento"
+                          required
+                        />
+                      )}
+                      {contaSalarioFerias && formHistorico === "__manual__" && (
+                        <input
+                          className="form-input"
+                          style={{ marginTop: 4 }}
+                          value=""
+                          onChange={(e) => setFormHistorico(e.target.value)}
+                          placeholder="Digite o histórico"
+                          autoFocus
+                        />
+                      )}
+                    </div>
                     <div className="form-group">
                       <label htmlFor="lanc-centro">Centro de custo</label>
                       <select
