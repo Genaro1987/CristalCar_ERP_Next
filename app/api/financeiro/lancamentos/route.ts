@@ -38,10 +38,24 @@ interface Lancamento {
   documento?: string;
 }
 
+/** Normaliza data para YYYY-MM-DD (remove horário se presente) */
+function normalizarData(data: string): string {
+  if (!data) return data;
+  // "2026 17:09-02-06" → year=first 4, month-day=last 6
+  if (data.length > 10 && data[4] === " " && /^\d{4}/.test(data)) {
+    return data.substring(0, 4) + data.substring(data.length - 6);
+  }
+  // "2026-02-06 17:09:00" or "2026-02-06T17:09:00" → first 10
+  if (data.length > 10 && data[4] === "-" && data[7] === "-") {
+    return data.substring(0, 10);
+  }
+  return data;
+}
+
 function converterLancamento(reg: LancamentoDB): Lancamento {
   return {
     id: String(reg.FIN_LANCAMENTO_ID),
-    data: reg.FIN_LANCAMENTO_DATA,
+    data: normalizarData(reg.FIN_LANCAMENTO_DATA),
     historico: reg.FIN_LANCAMENTO_HISTORICO,
     conta: `${reg.CONTA_CODIGO} ${reg.CONTA_NOME}`,
     contaId: reg.FIN_PLANO_CONTA_ID,
@@ -139,8 +153,10 @@ export async function GET(request: NextRequest) {
     const args: any[] = [empresaId];
 
     if (periodo) {
-      sql += ` AND strftime('%Y-%m', l.FIN_LANCAMENTO_DATA) = ?`;
-      args.push(periodo);
+      // Use SUBSTR for robustness with dates that may have timestamps
+      // Works for both "YYYY-MM-DD" and malformed "YYYY HH:MM-MM-DD"
+      sql += ` AND (strftime('%Y-%m', l.FIN_LANCAMENTO_DATA) = ? OR SUBSTR(l.FIN_LANCAMENTO_DATA, 1, 4) || '-' || SUBSTR(l.FIN_LANCAMENTO_DATA, -5, 2) = ?)`;
+      args.push(periodo, periodo);
     }
 
     sql += ` ORDER BY l.FIN_LANCAMENTO_DATA DESC, l.FIN_LANCAMENTO_ID DESC`;

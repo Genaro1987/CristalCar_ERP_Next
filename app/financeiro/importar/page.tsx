@@ -174,16 +174,19 @@ function parseValorBR(valorStr: string): number {
 
 function formatarData(dataStr: string): string {
   if (!dataStr) return "";
-  if (dataStr.includes("/")) {
-    const partes = dataStr.split("/");
+  // Strip time portion: "06/02/2026 17:09" → "06/02/2026", "2026-02-06 17:09:00" → "2026-02-06"
+  const semHora = dataStr.trim().split(/[\sT]/)[0];
+  if (semHora.includes("/")) {
+    const partes = semHora.split("/");
     if (partes.length === 3) {
       return `${partes[2]}-${partes[1].padStart(2, "0")}-${partes[0].padStart(2, "0")}`;
     }
-  } else if (/^\d{2}-\d{2}-\d{4}$/.test(dataStr)) {
-    const partes = dataStr.split("-");
+  } else if (/^\d{2}-\d{2}-\d{4}$/.test(semHora)) {
+    const partes = semHora.split("-");
     return `${partes[2]}-${partes[1]}-${partes[0]}`;
   }
-  return dataStr;
+  // Already YYYY-MM-DD or unrecognized — return just date part
+  return semHora;
 }
 
 // ============================================================================
