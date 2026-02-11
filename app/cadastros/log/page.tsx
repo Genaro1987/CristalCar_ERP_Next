@@ -213,100 +213,92 @@ export default function LogAuditoriaPage() {
         />
 
         <PaginaProtegida codigoTela="LOG_AUDITORIA">
-          <main className="page-content-card">
+          <main style={{ flex: 1, display: "flex", flexDirection: "column", padding: "0 16px 16px" }}>
             {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
-            <section className="panel">
-              <div className="form-section-header">
-                <div>
-                  <h2>Log de Auditoria</h2>
-                  <p>Consulte alterações e exclusões realizadas em lançamentos financeiros e registros de ponto.</p>
-                </div>
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={() => { setPagina(0); carregar(); }}
-                  disabled={carregando}
+            {/* Filters */}
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 12, marginBottom: 12 }}>
+              <div className="form-group" style={{ margin: 0, minWidth: 150 }}>
+                <label htmlFor="f-tabela">Tabela</label>
+                <select
+                  id="f-tabela"
+                  className="form-input"
+                  value={filtroTabela}
+                  onChange={(e) => { setFiltroTabela(e.target.value); setPagina(0); }}
                 >
-                  {carregando ? "Carregando..." : "Atualizar"}
-                </button>
+                  {TABELAS.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
               </div>
 
-              {/* Filters */}
-              <div className="form-grid" style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
-                <div className="form-group">
-                  <label htmlFor="f-tabela">Tabela</label>
-                  <select
-                    id="f-tabela"
-                    className="form-input"
-                    value={filtroTabela}
-                    onChange={(e) => { setFiltroTabela(e.target.value); setPagina(0); }}
-                  >
-                    {TABELAS.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="f-operacao">Operação</label>
-                  <select
-                    id="f-operacao"
-                    className="form-input"
-                    value={filtroOperacao}
-                    onChange={(e) => { setFiltroOperacao(e.target.value); setPagina(0); }}
-                  >
-                    {OPERACOES.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="f-data-inicio">Data início</label>
-                  <input
-                    id="f-data-inicio"
-                    type="date"
-                    className="form-input"
-                    value={filtroDataInicio}
-                    onChange={(e) => { setFiltroDataInicio(e.target.value); setPagina(0); }}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="f-data-fim">Data fim</label>
-                  <input
-                    id="f-data-fim"
-                    type="date"
-                    className="form-input"
-                    value={filtroDataFim}
-                    onChange={(e) => { setFiltroDataFim(e.target.value); setPagina(0); }}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="f-busca">Busca</label>
-                  <input
-                    id="f-busca"
-                    type="text"
-                    className="form-input"
-                    placeholder="Buscar na descrição..."
-                    value={filtroBusca}
-                    onChange={(e) => { setFiltroBusca(e.target.value); setPagina(0); }}
-                  />
-                </div>
+              <div className="form-group" style={{ margin: 0, minWidth: 130 }}>
+                <label htmlFor="f-operacao">Operação</label>
+                <select
+                  id="f-operacao"
+                  className="form-input"
+                  value={filtroOperacao}
+                  onChange={(e) => { setFiltroOperacao(e.target.value); setPagina(0); }}
+                >
+                  {OPERACOES.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
               </div>
-            </section>
+
+              <div className="form-group" style={{ margin: 0, minWidth: 140 }}>
+                <label htmlFor="f-data-inicio">Data início</label>
+                <input
+                  id="f-data-inicio"
+                  type="date"
+                  className="form-input"
+                  value={filtroDataInicio}
+                  onChange={(e) => { setFiltroDataInicio(e.target.value); setPagina(0); }}
+                />
+              </div>
+
+              <div className="form-group" style={{ margin: 0, minWidth: 140 }}>
+                <label htmlFor="f-data-fim">Data fim</label>
+                <input
+                  id="f-data-fim"
+                  type="date"
+                  className="form-input"
+                  value={filtroDataFim}
+                  onChange={(e) => { setFiltroDataFim(e.target.value); setPagina(0); }}
+                />
+              </div>
+
+              <div className="form-group" style={{ margin: 0, minWidth: 180, flex: 1 }}>
+                <label htmlFor="f-busca">Busca</label>
+                <input
+                  id="f-busca"
+                  type="text"
+                  className="form-input"
+                  placeholder="Buscar na descrição..."
+                  value={filtroBusca}
+                  onChange={(e) => { setFiltroBusca(e.target.value); setPagina(0); }}
+                />
+              </div>
+
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => { setPagina(0); carregar(); }}
+                disabled={carregando}
+              >
+                {carregando ? "Carregando..." : "Atualizar"}
+              </button>
+            </div>
 
             {/* Results */}
-            <section className="panel" style={{ marginTop: 16 }}>
-              <div className="form-section-header">
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+              <div style={{ marginBottom: 8 }}>
                 <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>
                   {total} registro(s) encontrado(s)
                 </span>
               </div>
 
-              <div style={{ overflowX: "auto" }}>
+              <div style={{ overflowX: "auto", flex: 1 }}>
                 <table className="data-table" style={{ fontSize: "0.82rem" }}>
                   <thead>
                     <tr>
@@ -438,7 +430,7 @@ export default function LogAuditoriaPage() {
                   </button>
                 </div>
               )}
-            </section>
+            </div>
 
             {/* Confirmation modal for revert */}
             <ModalConfirmacao
