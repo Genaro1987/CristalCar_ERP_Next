@@ -60,6 +60,12 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             requerEmpresa: true,
             codigoTela: "CAD_PESSOA",
           },
+          {
+            label: "Log de Auditoria",
+            rota: "/cadastros/log",
+            requerEmpresa: true,
+            codigoTela: "LOG_AUDITORIA",
+          },
         ],
       },
       {

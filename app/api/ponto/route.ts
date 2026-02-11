@@ -6,6 +6,7 @@ import {
   obterEmpresaIdDaRequest,
   respostaEmpresaNaoSelecionada,
 } from "@/app/api/_utils/empresa";
+import { registrarAuditLog } from "@/app/api/_utils/auditLog";
 
 interface LancamentoDiaPayload {
   dataReferencia?: string;
@@ -258,6 +259,17 @@ export async function PUT(request: NextRequest) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
+    // Capture existing records before batch delete for audit log
+    const registrosAnteriores = await db.execute({
+      sql: `SELECT RH_PONTO_ID, DATA_REFERENCIA, ENTRADA_MANHA, SAIDA_MANHA,
+                   ENTRADA_TARDE, SAIDA_TARDE, ENTRADA_EXTRA, SAIDA_EXTRA,
+                   STATUS_DIA, OBSERVACAO
+            FROM RH_PONTO_LANCAMENTO
+            WHERE ID_EMPRESA = ? AND ID_FUNCIONARIO = ?
+              AND DATA_REFERENCIA BETWEEN ? AND ?`,
+      args: [empresaId, funcionarioId, intervalo.inicio, intervalo.fim],
+    });
+
     // Executar DELETE + INSERTs em batch atômico (suportado pelo Turso HTTP)
     const batchStatements: Array<{ sql: string; args: any[] }> = [
       {
@@ -270,6 +282,35 @@ export async function PUT(request: NextRequest) {
     ];
 
     await db.batch(batchStatements, "write");
+
+    // Register audit log for ponto update
+    if (registrosAnteriores.rows.length > 0) {
+      const dadosAntes = registrosAnteriores.rows.map((r: any) => ({
+        pontoId: r.RH_PONTO_ID,
+        data: r.DATA_REFERENCIA,
+        entrada: r.ENTRADA_MANHA,
+        saidaAlmoco: r.SAIDA_MANHA,
+        voltaAlmoco: r.ENTRADA_TARDE,
+        saida: r.SAIDA_TARDE,
+        observacao: r.OBSERVACAO,
+      }));
+
+      await registrarAuditLog(empresaId, {
+        tabela: "RH_PONTO_LANCAMENTO",
+        registroId: Number(funcionarioId.replace(/\D/g, "")) || 0,
+        operacao: "UPDATE",
+        dadosAntes: JSON.stringify(dadosAntes),
+        dadosDepois: JSON.stringify(insertsArgs.map((args) => ({
+          data: args[2],
+          entrada: args[3],
+          saidaAlmoco: args[4],
+          voltaAlmoco: args[5],
+          saida: args[6],
+          observacao: args[13],
+        }))),
+        descricao: `Atualização de ponto do funcionário ${funcionarioId} - competência ${competencia}`,
+      });
+    }
 
     await registrarPeriodoDigitado({
       idEmpresa: empresaId,

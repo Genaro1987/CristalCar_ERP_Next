@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { obterEmpresaIdDaRequest, respostaEmpresaNaoSelecionada } from "@/app/api/_utils/empresa";
+import { registrarAuditLog } from "@/app/api/_utils/auditLog";
 import { db } from "@/db/client";
 
 interface LancamentoDB {
@@ -291,6 +292,25 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
+    // Capture "before" state for audit log
+    const anteResult = await db.execute({
+      sql: `SELECT * FROM FIN_LANCAMENTO WHERE FIN_LANCAMENTO_ID = ? AND EMPRESA_ID = ?`,
+      args: [id, empresaId],
+    });
+    const dadosAntes = anteResult.rows.length > 0
+      ? JSON.stringify({
+          data: (anteResult.rows[0] as any).FIN_LANCAMENTO_DATA,
+          historico: (anteResult.rows[0] as any).FIN_LANCAMENTO_HISTORICO,
+          valor: (anteResult.rows[0] as any).FIN_LANCAMENTO_VALOR,
+          contaId: (anteResult.rows[0] as any).FIN_PLANO_CONTA_ID,
+          centroCustoId: (anteResult.rows[0] as any).FIN_CENTRO_CUSTO_ID,
+          documento: (anteResult.rows[0] as any).FIN_LANCAMENTO_DOCUMENTO,
+          status: (anteResult.rows[0] as any).FIN_LANCAMENTO_STATUS,
+          pessoaId: (anteResult.rows[0] as any).FIN_LANCAMENTO_PESSOA_ID,
+          placa: (anteResult.rows[0] as any).FIN_LANCAMENTO_PLACA,
+        })
+      : null;
+
     await db.execute({
       sql: `
         UPDATE FIN_LANCAMENTO
@@ -320,6 +340,23 @@ export async function PUT(request: NextRequest) {
         id,
         empresaId,
       ],
+    });
+
+    // Register audit log for update
+    await registrarAuditLog(empresaId, {
+      tabela: "FIN_LANCAMENTO",
+      registroId: Number(id),
+      operacao: "UPDATE",
+      dadosAntes,
+      dadosDepois: JSON.stringify({
+        data, historico, valor, contaId,
+        centroCustoId: centroCustoId || null,
+        documento: documento || null,
+        status: status || "confirmado",
+        pessoaId: pessoaId || null,
+        placa: placa || null,
+      }),
+      descricao: `Alteração de lançamento: ${historico}`,
     });
 
     const lancamentoResult = await db.execute({
@@ -441,10 +478,45 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    await db.execute({
-      sql: `DELETE FROM FIN_LANCAMENTO WHERE FIN_LANCAMENTO_ID = ? AND EMPRESA_ID = ?`,
+    // Capture "before" state for audit log
+    const anteResult = await db.execute({
+      sql: `SELECT * FROM FIN_LANCAMENTO WHERE FIN_LANCAMENTO_ID = ? AND EMPRESA_ID = ?`,
       args: [id, empresaId],
     });
+
+    if (anteResult.rows.length > 0) {
+      const reg = anteResult.rows[0] as any;
+      const dadosAntes = JSON.stringify({
+        data: reg.FIN_LANCAMENTO_DATA,
+        historico: reg.FIN_LANCAMENTO_HISTORICO,
+        valor: reg.FIN_LANCAMENTO_VALOR,
+        contaId: reg.FIN_PLANO_CONTA_ID,
+        centroCustoId: reg.FIN_CENTRO_CUSTO_ID,
+        documento: reg.FIN_LANCAMENTO_DOCUMENTO,
+        status: reg.FIN_LANCAMENTO_STATUS,
+        pessoaId: reg.FIN_LANCAMENTO_PESSOA_ID,
+        placa: reg.FIN_LANCAMENTO_PLACA,
+      });
+
+      await db.execute({
+        sql: `DELETE FROM FIN_LANCAMENTO WHERE FIN_LANCAMENTO_ID = ? AND EMPRESA_ID = ?`,
+        args: [id, empresaId],
+      });
+
+      // Register audit log for deletion
+      await registrarAuditLog(empresaId, {
+        tabela: "FIN_LANCAMENTO",
+        registroId: Number(id),
+        operacao: "DELETE",
+        dadosAntes,
+        descricao: `Exclusão de lançamento: ${reg.FIN_LANCAMENTO_HISTORICO}`,
+      });
+    } else {
+      await db.execute({
+        sql: `DELETE FROM FIN_LANCAMENTO WHERE FIN_LANCAMENTO_ID = ? AND EMPRESA_ID = ?`,
+        args: [id, empresaId],
+      });
+    }
 
     return NextResponse.json({ success: true, message: "Lançamento excluído" });
   } catch (error) {
