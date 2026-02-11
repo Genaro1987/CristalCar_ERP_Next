@@ -4,15 +4,27 @@ import {
   obterEmpresaIdDaRequest,
   respostaEmpresaNaoSelecionada,
 } from "@/app/api/_utils/empresa";
+import { registrarAuditLog } from "@/app/api/_utils/auditLog";
 
-type TipoImportacao = "plano_contas" | "centro_custo" | "lancamentos";
+type TipoImportacao = "plano_contas" | "centro_custo" | "lancamentos" | "lancamentos_financeiros";
 
 interface LinhaImportacao {
   [key: string]: string;
 }
 
 interface MapeamentoColunas {
-  [campoDB: string]: string; // campo do sistema → coluna do arquivo
+  [campoDB: string]: string;
+}
+
+interface LancamentoFinanceiroInput {
+  codigo: string;
+  descricao: string;
+  contaId: number;
+  natureza: string;
+  valor: string;
+  dataInclusao: string;
+  dataMovimento: string;
+  placa: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -23,39 +35,58 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { tipo, dados, mapeamento } = body as {
-      tipo: TipoImportacao;
-      dados: LinhaImportacao[];
-      mapeamento: MapeamentoColunas;
-    };
+    const { tipo } = body as { tipo: TipoImportacao };
 
-    if (!tipo || !dados || !mapeamento) {
+    if (!tipo) {
       return NextResponse.json(
-        { success: false, error: "Tipo, dados e mapeamento são obrigatórios" },
-        { status: 400 }
-      );
-    }
-
-    if (dados.length === 0) {
-      return NextResponse.json(
-        { success: false, error: "Nenhum dado para importar" },
+        { success: false, error: "Tipo de importação é obrigatório" },
         { status: 400 }
       );
     }
 
     let resultado: { importados: number; erros: string[] };
 
-    if (tipo === "plano_contas") {
-      resultado = await importarPlanoContas(empresaId, dados, mapeamento);
-    } else if (tipo === "centro_custo") {
-      resultado = await importarCentroCusto(empresaId, dados, mapeamento);
-    } else if (tipo === "lancamentos") {
-      resultado = await importarLancamentos(empresaId, dados, mapeamento);
+    if (tipo === "lancamentos_financeiros") {
+      const { lancamentos } = body as { lancamentos: LancamentoFinanceiroInput[] };
+      if (!lancamentos || lancamentos.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "Nenhum lançamento para importar" },
+          { status: 400 }
+        );
+      }
+      resultado = await importarLancamentosFinanceiros(empresaId, lancamentos);
     } else {
-      return NextResponse.json(
-        { success: false, error: "Tipo de importação inválido" },
-        { status: 400 }
-      );
+      const { dados, mapeamento } = body as {
+        dados: LinhaImportacao[];
+        mapeamento: MapeamentoColunas;
+      };
+
+      if (!dados || !mapeamento) {
+        return NextResponse.json(
+          { success: false, error: "Dados e mapeamento são obrigatórios" },
+          { status: 400 }
+        );
+      }
+
+      if (dados.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "Nenhum dado para importar" },
+          { status: 400 }
+        );
+      }
+
+      if (tipo === "plano_contas") {
+        resultado = await importarPlanoContas(empresaId, dados, mapeamento);
+      } else if (tipo === "centro_custo") {
+        resultado = await importarCentroCusto(empresaId, dados, mapeamento);
+      } else if (tipo === "lancamentos") {
+        resultado = await importarLancamentos(empresaId, dados, mapeamento);
+      } else {
+        return NextResponse.json(
+          { success: false, error: "Tipo de importação inválido" },
+          { status: 400 }
+        );
+      }
     }
 
     return NextResponse.json({
@@ -85,7 +116,6 @@ async function importarPlanoContas(
   let importados = 0;
   const erros: string[] = [];
 
-  // Build lookup map for conta pai by codigo
   const contasPorCodigo = new Map<string, number>();
   const contasExistentes = await db.execute({
     sql: "SELECT FIN_PLANO_CONTA_ID, FIN_PLANO_CONTA_CODIGO FROM FIN_PLANO_CONTA WHERE EMPRESA_ID = ?",
@@ -103,14 +133,12 @@ async function importarPlanoContas(
     const natureza = obterValor(linha, mapeamento, "natureza").toUpperCase() || "DESPESA";
     const contaPaiCod = obterValor(linha, mapeamento, "contaPai");
     const tipo = obterValor(linha, mapeamento, "tipo").toUpperCase();
-    const dataInclusao = obterValor(linha, mapeamento, "dataInclusao");
 
     if (!codigo || !nome) {
       erros.push(`Linha ${i + 1}: codigo e nome sao obrigatorios`);
       continue;
     }
 
-    // Resolve conta pai
     let paiId: number | null = null;
     if (contaPaiCod) {
       paiId = contasPorCodigo.get(contaPaiCod.toUpperCase()) ?? null;
@@ -119,8 +147,6 @@ async function importarPlanoContas(
       }
     }
 
-    // Determine if sintetica (has children = no direct lancamentos)
-    // For import, we store tipo info but the main flag is visivelDre
     const isSintetica = tipo === "SINTETICA" || tipo === "S";
 
     try {
@@ -151,7 +177,6 @@ async function importarPlanoContas(
         ],
       });
 
-      // Add to lookup so subsequent lines can reference this as parent
       const novoId = await db.execute({
         sql: "SELECT FIN_PLANO_CONTA_ID FROM FIN_PLANO_CONTA WHERE FIN_PLANO_CONTA_CODIGO = ? AND EMPRESA_ID = ?",
         args: [codigo, empresaId],
@@ -224,7 +249,6 @@ async function importarLancamentos(
   let importados = 0;
   const erros: string[] = [];
 
-  // Build lookup maps for plano de contas
   const planosResult = await db.execute({
     sql: `SELECT FIN_PLANO_CONTA_ID, FIN_PLANO_CONTA_CODIGO, FIN_PLANO_CONTA_NOME
           FROM FIN_PLANO_CONTA WHERE EMPRESA_ID = ?`,
@@ -244,20 +268,16 @@ async function importarLancamentos(
     planosNomes.push({ nome, id });
   }
 
-  // Fuzzy match: find conta by partial name match
   function buscarContaFuzzy(ref: string): number | undefined {
     const refUpper = ref.toUpperCase().trim();
-    // 1. Exact match by code or name
     const exato = planosPorCodigo.get(refUpper) ?? planosPorNome.get(refUpper);
     if (exato) return exato;
 
-    // 2. Partial match: ref is contained in account name, or account name is contained in ref
     const parcial = planosNomes.find(
       (p) => p.nome.includes(refUpper) || refUpper.includes(p.nome)
     );
     if (parcial) return parcial.id;
 
-    // 3. Normalize: remove accents, plurals, hyphens
     const normalizar = (s: string) =>
       s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
     const refNorm = normalizar(refUpper);
@@ -270,7 +290,6 @@ async function importarLancamentos(
     return undefined;
   }
 
-  // Build lookup maps for centros de custo
   const centrosResult = await db.execute({
     sql: `SELECT FIN_CENTRO_CUSTO_ID, FIN_CENTRO_CUSTO_CODIGO, FIN_CENTRO_CUSTO_NOME
           FROM FIN_CENTRO_CUSTO WHERE EMPRESA_ID = ?`,
@@ -301,7 +320,6 @@ async function importarLancamentos(
       continue;
     }
 
-    // Parse date - support dd/mm/yyyy, dd-mm-yyyy, and yyyy-mm-dd
     let dataFormatada = dataStr;
     if (dataStr.includes("/")) {
       const partes = dataStr.split("/");
@@ -313,7 +331,6 @@ async function importarLancamentos(
       dataFormatada = `${partes[2]}-${partes[1]}-${partes[0]}`;
     }
 
-    // Parse valor - handle various BR formats: "1.234,56", "1234.56", "-R$ 1.234,56"
     let valor = parseFloat(
       valorStr
         .replace(/[R$\s]/g, "")
@@ -326,7 +343,6 @@ async function importarLancamentos(
       continue;
     }
 
-    // Determine sign based on tipo or operacao fields
     const sinalizador = tipoStr || operacaoStr;
     if (sinalizador === "SAIDA" || sinalizador === "SAÍDA" || sinalizador === "DESPESA" || sinalizador === "DEBITO" || sinalizador === "DÉBITO" || sinalizador === "S") {
       valor = -Math.abs(valor);
@@ -334,17 +350,14 @@ async function importarLancamentos(
       valor = Math.abs(valor);
     }
 
-    // Resolve plano de conta with fuzzy matching
     const contaId = buscarContaFuzzy(contaRef);
     if (!contaId) {
       erros.push(`Linha ${i + 1}: conta "${contaRef}" nao encontrada`);
       continue;
     }
 
-    // Use historico if mapped, otherwise use contaRef as fallback
     const historicoFinal = historico || contaRef;
 
-    // Resolve centro de custo (optional)
     let centroId: number | null = null;
     if (centroRef) {
       const centroUpper = centroRef.toUpperCase();
@@ -367,6 +380,97 @@ async function importarLancamentos(
       importados++;
     } catch (err) {
       erros.push(`Linha ${i + 1}: erro ao inserir - ${(err as Error).message}`);
+    }
+  }
+
+  return { importados, erros };
+}
+
+async function importarLancamentosFinanceiros(
+  empresaId: number,
+  lancamentos: LancamentoFinanceiroInput[]
+): Promise<{ importados: number; erros: string[] }> {
+  let importados = 0;
+  const erros: string[] = [];
+
+  // Build plano de contas lookup for natureza resolution
+  const planosResult = await db.execute({
+    sql: `SELECT FIN_PLANO_CONTA_ID, FIN_PLANO_CONTA_NATUREZA FROM FIN_PLANO_CONTA WHERE EMPRESA_ID = ?`,
+    args: [empresaId],
+  });
+
+  const planosNatureza = new Map<number, string>();
+  for (const row of planosResult.rows) {
+    const r = row as any;
+    planosNatureza.set(Number(r.FIN_PLANO_CONTA_ID), String(r.FIN_PLANO_CONTA_NATUREZA));
+  }
+
+  for (let i = 0; i < lancamentos.length; i++) {
+    const lanc = lancamentos[i];
+
+    if (!lanc.contaId) {
+      erros.push(`Registro ${i + 1}: conta não selecionada`);
+      continue;
+    }
+
+    if (!lanc.dataMovimento) {
+      erros.push(`Registro ${i + 1}: data de movimento é obrigatória`);
+      continue;
+    }
+
+    const valorNum = parseFloat(lanc.valor) || 0;
+    if (valorNum === 0) {
+      erros.push(`Registro ${i + 1}: valor não pode ser zero`);
+      continue;
+    }
+
+    // Determine sign based on account natureza
+    const natureza = lanc.natureza || planosNatureza.get(lanc.contaId) || "";
+    const valorFinal = natureza === "DESPESA" ? -Math.abs(valorNum) : Math.abs(valorNum);
+
+    const historico = lanc.descricao || lanc.codigo || "";
+
+    try {
+      const resultado = await db.execute({
+        sql: `INSERT INTO FIN_LANCAMENTO (
+          FIN_LANCAMENTO_DATA, FIN_LANCAMENTO_HISTORICO, FIN_LANCAMENTO_VALOR,
+          FIN_PLANO_CONTA_ID, FIN_LANCAMENTO_DOCUMENTO, FIN_LANCAMENTO_PLACA,
+          FIN_LANCAMENTO_STATUS, FIN_LANCAMENTO_CRIADO_EM, EMPRESA_ID
+        ) VALUES (?, ?, ?, ?, ?, ?, 'confirmado', ?, ?)`,
+        args: [
+          lanc.dataMovimento,
+          historico,
+          valorFinal,
+          lanc.contaId,
+          lanc.codigo || null,
+          lanc.placa || null,
+          lanc.dataInclusao || new Date().toISOString().split("T")[0],
+          empresaId,
+        ],
+      });
+
+      const insertId = Number(resultado.lastInsertRowid);
+
+      // Register audit log for the import
+      await registrarAuditLog(empresaId, {
+        tabela: "FIN_LANCAMENTO",
+        registroId: insertId,
+        operacao: "INSERT",
+        dadosDepois: JSON.stringify({
+          data: lanc.dataMovimento,
+          historico,
+          valor: valorFinal,
+          contaId: lanc.contaId,
+          placa: lanc.placa,
+          documento: lanc.codigo,
+          dataInclusao: lanc.dataInclusao,
+        }),
+        descricao: `Importação de lançamento financeiro: ${historico}`,
+      });
+
+      importados++;
+    } catch (err) {
+      erros.push(`Registro ${i + 1}: erro ao inserir - ${(err as Error).message}`);
     }
   }
 

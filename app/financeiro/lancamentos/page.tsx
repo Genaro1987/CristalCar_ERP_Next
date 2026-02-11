@@ -54,8 +54,11 @@ export default function LancamentosPage() {
   const caminhoTela = tela?.CAMINHO_ROTA ?? caminhoRota;
 
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
-  const [carregando, setCarregando] = useState(true);
-  const [periodo, setPeriodo] = useState("");
+  const [carregando, setCarregando] = useState(false);
+  const [periodo, setPeriodo] = useState(() => {
+    const hoje = new Date();
+    return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
+  });
   const [busca, setBusca] = useState("");
   const [planoContas, setPlanoContas] = useState<PlanoContaOption[]>([]);
   const [centrosCusto, setCentrosCusto] = useState<CentroCustoOption[]>([]);
@@ -117,13 +120,12 @@ export default function LancamentosPage() {
     setFormPlaca(item.placa ?? "");
   };
 
-  // Buscar lançamentos
+  // Buscar lançamentos (somente com filtro de período)
   const buscarLancamentos = useCallback(async () => {
-    if (!empresa?.id) return;
+    if (!empresa?.id || !periodo) return;
     setCarregando(true);
     try {
-      let url = "/api/financeiro/lancamentos";
-      if (periodo) url += `?periodo=${periodo}`;
+      const url = `/api/financeiro/lancamentos?periodo=${periodo}`;
       const res = await fetch(url, { headers: headersPadrao });
       const json = await res.json();
       if (res.ok && json.success) setLancamentos(json.data);
@@ -567,7 +569,11 @@ export default function LancamentosPage() {
               <section className="split-view-panel">
                 <header className="form-section-header">
                   <h2>Lançamentos cadastrados</h2>
-                  <p>Selecione um lançamento para editar.</p>
+                  <p>
+                    {periodo
+                      ? `${dadosFiltrados.length} lançamento(s) em ${periodo.substring(5,7)}/${periodo.substring(0,4)}`
+                      : "Selecione um período para visualizar."}
+                  </p>
                 </header>
 
                 <div className="form-grid two-columns" style={{ marginBottom: 12 }}>
@@ -594,7 +600,12 @@ export default function LancamentosPage() {
                   </div>
                 </div>
 
-                {carregando ? (
+                {!periodo ? (
+                  <div className="empty-state">
+                    <strong>Selecione um período</strong>
+                    <p>Informe o mês/ano no campo Período para carregar os lançamentos.</p>
+                  </div>
+                ) : carregando ? (
                   <div className="empty-state">
                     <p>Carregando lançamentos...</p>
                   </div>
@@ -618,7 +629,7 @@ export default function LancamentosPage() {
                     <tbody>
                       {dadosFiltrados.map((item) => (
                         <tr key={item.id} onClick={() => preencherForm(item)} style={{ cursor: "pointer" }}>
-                          <td data-label="Data">{item.data}</td>
+                          <td data-label="Data">{item.data && item.data.length >= 10 ? `${item.data.substring(8,10)}/${item.data.substring(5,7)}/${item.data.substring(0,4)}` : item.data}</td>
                           <td data-label="Histórico">
                             {item.historico}
                             {item.pessoaNome && (
