@@ -102,12 +102,14 @@ function DreLinhaRow({
   nivel,
   ref100Codigo,
   linhasRaiz,
+  mediaData,
 }: {
   node: DreLinha;
   periodos: PeriodoInfo[];
   nivel: number;
   ref100Codigo: string | null;
   linhasRaiz: DreLinha[];
+  mediaData?: Record<string, number> | null;
 }) {
   const [aberto, setAberto] = useState(true);
   const temFilhos = (node.filhos?.length ?? 0) > 0;
@@ -181,6 +183,22 @@ function DreLinhaRow({
                 {formatarPct(calcPct(node.valor, ref100ValorTotal))}
               </td>
             )}
+            {mediaData && (() => {
+              const mVal = mediaData[String(node.id)] ?? 0;
+              const dist = node.valor - mVal;
+              const distPct = mVal !== 0 ? (dist / Math.abs(mVal)) * 100 : 0;
+              return (
+                <>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap", borderLeft: "2px solid #a78bfa", color: "#7c3aed" }}>{formatarValor(mVal)}</td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap", color: dist >= 0 ? "#059669" : "#dc2626" }}>
+                    {dist >= 0 ? "+" : "-"}{formatarValor(dist)}
+                  </td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap", fontSize: "0.82rem", color: distPct >= 0 ? "#059669" : "#dc2626" }}>
+                    {distPct >= 0 ? "+" : ""}{formatarPct(distPct)}
+                  </td>
+                </>
+              );
+            })()}
           </>
         ) : (
           <>
@@ -192,12 +210,28 @@ function DreLinhaRow({
                 {formatarPct(calcPct(node.valor, ref100ValorTotal))}
               </td>
             )}
+            {mediaData && (() => {
+              const mVal = mediaData[String(node.id)] ?? 0;
+              const dist = node.valor - mVal;
+              const distPct = mVal !== 0 ? (dist / Math.abs(mVal)) * 100 : 0;
+              return (
+                <>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap", borderLeft: "2px solid #a78bfa", color: "#7c3aed" }}>{formatarValor(mVal)}</td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap", color: dist >= 0 ? "#059669" : "#dc2626" }}>
+                    {dist >= 0 ? "+" : "-"}{formatarValor(dist)}
+                  </td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap", fontSize: "0.82rem", color: distPct >= 0 ? "#059669" : "#dc2626" }}>
+                    {distPct >= 0 ? "+" : ""}{formatarPct(distPct)}
+                  </td>
+                </>
+              );
+            })()}
           </>
         )}
       </tr>
       {aberto &&
         node.filhos?.map((filho) => (
-          <DreLinhaRow key={filho.id} node={filho} periodos={periodos} nivel={nivel + 1} ref100Codigo={ref100Codigo} linhasRaiz={linhasRaiz} />
+          <DreLinhaRow key={filho.id} node={filho} periodos={periodos} nivel={nivel + 1} ref100Codigo={ref100Codigo} linhasRaiz={linhasRaiz} mediaData={mediaData} />
         ))}
     </>
   );
@@ -210,12 +244,14 @@ function DreLinhaCard({
   nivel,
   ref100Codigo,
   linhasRaiz,
+  mediaData,
 }: {
   node: DreLinha;
   periodos: PeriodoInfo[];
   nivel: number;
   ref100Codigo: string | null;
   linhasRaiz: DreLinha[];
+  mediaData?: Record<string, number> | null;
 }) {
   const [aberto, setAberto] = useState(nivel === 0);
   const [detalhes, setDetalhes] = useState(false);
@@ -292,10 +328,25 @@ function DreLinhaCard({
             })}
           </div>
         )}
+
+        {/* Media comparison on mobile */}
+        {mediaData && (() => {
+          const mVal = mediaData[String(node.id)] ?? 0;
+          const dist = node.valor - mVal;
+          const distPct = mVal !== 0 ? (dist / Math.abs(mVal)) * 100 : 0;
+          return (
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px", borderTop: "1px solid #ede9fe", backgroundColor: "#faf5ff", fontSize: "0.82rem" }}>
+              <span style={{ color: "#7c3aed", fontWeight: 600 }}>Media: {formatarValor(mVal)}</span>
+              <span style={{ color: dist >= 0 ? "#059669" : "#dc2626" }}>
+                Dist: {dist >= 0 ? "+" : "-"}{formatarValor(dist)} ({distPct >= 0 ? "+" : ""}{formatarPct(distPct)})
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {aberto && temFilhos && node.filhos!.map((filho) => (
-        <DreLinhaCard key={filho.id} node={filho} periodos={periodos} nivel={nivel + 1} ref100Codigo={ref100Codigo} linhasRaiz={linhasRaiz} />
+        <DreLinhaCard key={filho.id} node={filho} periodos={periodos} nivel={nivel + 1} ref100Codigo={ref100Codigo} linhasRaiz={linhasRaiz} mediaData={mediaData} />
       ))}
     </>
   );
@@ -317,6 +368,11 @@ export default function DrePage() {
   const [carregando, setCarregando] = useState(true);
   const [ref100Codigo, setRef100Codigo] = useState<string | null>(null);
 
+  // Media comparison state
+  const [compararMedia, setCompararMedia] = useState(false);
+  const [mediaData, setMediaData] = useState<Record<string, number> | null>(null);
+  const [mediaMeses, setMediaMeses] = useState(0);
+
   // Generate selectable months (3 years back to end of current year)
   const anoAtual = new Date().getFullYear();
   const mesAtualNum = new Date().getMonth() + 1;
@@ -332,6 +388,8 @@ export default function DrePage() {
 
   const [mesInicio, setMesInicio] = useState(`${anoAtual}-01`);
   const [mesFim, setMesFim] = useState(`${anoAtual}-${String(mesAtualNum).padStart(2, "0")}`);
+  const [mediaInicio, setMediaInicio] = useState(`${anoAtual - 1}-01`);
+  const [mediaFim, setMediaFim] = useState(`${anoAtual - 1}-12`);
 
   useEffect(() => {
     if (!empresa?.id || !mesInicio || !mesFim) return;
@@ -343,6 +401,10 @@ export default function DrePage() {
         params.set("visao", visao);
         params.set("mesInicio", mesInicio);
         params.set("mesFim", mesFim);
+        if (compararMedia) {
+          params.set("mediaInicio", mediaInicio);
+          params.set("mediaFim", mediaFim);
+        }
 
         const resposta = await fetch(`/api/financeiro/dre?${params.toString()}`, {
           headers: { "x-empresa-id": String(empresa.id) },
@@ -354,6 +416,8 @@ export default function DrePage() {
             setLinhas(dados.data ?? []);
             setPeriodos(dados.periodos ?? []);
             setRef100Codigo(dados.referencia100Codigo ?? null);
+            setMediaData(dados.media ?? null);
+            setMediaMeses(dados.mediaMeses ?? 0);
           }
         }
       } catch (erro) {
@@ -364,7 +428,7 @@ export default function DrePage() {
     };
 
     carregarDre();
-  }, [empresa?.id, visao, mesInicio, mesFim]);
+  }, [empresa?.id, visao, mesInicio, mesFim, compararMedia, mediaInicio, mediaFim]);
 
   const totalResultado = useMemo(() => {
     return linhas.reduce((acc, linha) => acc + calcularImpacto(linha), 0);
@@ -460,6 +524,63 @@ export default function DrePage() {
                 </div>
               </div>
             </div>
+
+            {/* Media comparison toggle */}
+            <div style={{ marginTop: 16, borderTop: "1px solid #e5e7eb", paddingTop: 12 }}>
+              <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem" }}>
+                  <input
+                    type="checkbox"
+                    checked={compararMedia}
+                    onChange={(e) => setCompararMedia(e.target.checked)}
+                    style={{ width: 16, height: 16 }}
+                  />
+                  Comparar com Media
+                </label>
+
+                {compararMedia && (
+                  <>
+                    <div className="form-group" style={{ flex: "0 0 160px" }}>
+                      <label htmlFor="dre-media-inicio">Media Inicio</label>
+                      <select
+                        id="dre-media-inicio"
+                        className="form-input"
+                        value={mediaInicio}
+                        onChange={(e) => {
+                          setMediaInicio(e.target.value);
+                          if (e.target.value > mediaFim) setMediaFim(e.target.value);
+                        }}
+                      >
+                        {mesesDisponiveis.map((m) => (
+                          <option key={m} value={m}>{formatarMesLabel(m)}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ flex: "0 0 160px" }}>
+                      <label htmlFor="dre-media-fim">Media Fim</label>
+                      <select
+                        id="dre-media-fim"
+                        className="form-input"
+                        value={mediaFim}
+                        onChange={(e) => {
+                          setMediaFim(e.target.value);
+                          if (e.target.value < mediaInicio) setMediaInicio(e.target.value);
+                        }}
+                      >
+                        {mesesDisponiveis.filter((m) => m >= mediaInicio).map((m) => (
+                          <option key={m} value={m}>{formatarMesLabel(m)}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {mediaMeses > 0 && (
+                      <span style={{ fontSize: "0.82rem", color: "#6b7280" }}>
+                        ({mediaMeses} {mediaMeses === 1 ? "mes" : "meses"})
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </section>
 
           <section className="panel" style={{ marginTop: 16 }}>
@@ -483,11 +604,18 @@ export default function DrePage() {
                         ))}
                         <th style={{ textAlign: "right" }}>Total</th>
                         {ref100Codigo && <th style={{ textAlign: "right", fontSize: "0.78rem", color: "#6b7280" }}>%</th>}
+                        {compararMedia && mediaData && (
+                          <>
+                            <th style={{ textAlign: "right", borderLeft: "2px solid #a78bfa", color: "#7c3aed", whiteSpace: "nowrap" }}>Media</th>
+                            <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>Dist. R$</th>
+                            <th style={{ textAlign: "right", whiteSpace: "nowrap", fontSize: "0.78rem" }}>Dist. %</th>
+                          </>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
                       {linhas.map((linha) => (
-                        <DreLinhaRow key={linha.id} node={linha} periodos={periodos} nivel={0} ref100Codigo={ref100Codigo} linhasRaiz={linhas} />
+                        <DreLinhaRow key={linha.id} node={linha} periodos={periodos} nivel={0} ref100Codigo={ref100Codigo} linhasRaiz={linhas} mediaData={compararMedia ? mediaData : null} />
                       ))}
                     </tbody>
                     <tfoot>
@@ -522,6 +650,21 @@ export default function DrePage() {
                             {formatarPct(calcPct(totalResultado, ref100ValorTotal))}
                           </td>
                         )}
+                        {compararMedia && mediaData && (() => {
+                          const totalMediaRes = linhas.reduce(function (acc, l) {
+                            const mVal = mediaData[String(l.id)] ?? 0;
+                            return acc + (l.natureza === "RECEITA" ? Math.abs(mVal) : l.natureza === "DESPESA" ? -Math.abs(mVal) : Math.abs(mVal));
+                          }, 0);
+                          const dist = totalResultado - totalMediaRes;
+                          const distPct = totalMediaRes !== 0 ? (dist / Math.abs(totalMediaRes)) * 100 : 0;
+                          return (
+                            <>
+                              <td style={{ textAlign: "right", borderLeft: "2px solid #a78bfa", color: "#7c3aed" }}>{totalMediaRes >= 0 ? "+" : "-"}{formatarValor(totalMediaRes)}</td>
+                              <td style={{ textAlign: "right", color: dist >= 0 ? "#059669" : "#dc2626" }}>{dist >= 0 ? "+" : "-"}{formatarValor(dist)}</td>
+                              <td style={{ textAlign: "right", fontSize: "0.82rem", color: distPct >= 0 ? "#059669" : "#dc2626" }}>{distPct >= 0 ? "+" : ""}{formatarPct(distPct)}</td>
+                            </>
+                          );
+                        })()}
                       </tr>
                     </tfoot>
                   </table>
@@ -530,7 +673,7 @@ export default function DrePage() {
                 {/* Mobile: Card view */}
                 <div className="dre-mobile-cards">
                   {linhas.map((linha) => (
-                    <DreLinhaCard key={linha.id} node={linha} periodos={periodos} nivel={0} ref100Codigo={ref100Codigo} linhasRaiz={linhas} />
+                    <DreLinhaCard key={linha.id} node={linha} periodos={periodos} nivel={0} ref100Codigo={ref100Codigo} linhasRaiz={linhas} mediaData={compararMedia ? mediaData : null} />
                   ))}
 
                   <div className="dre-card-resultado">

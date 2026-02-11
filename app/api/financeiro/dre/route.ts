@@ -275,6 +275,8 @@ export async function GET(request: NextRequest) {
   const mesInicio = params.get("mesInicio");
   const mesFim = params.get("mesFim");
   const visao = (params.get("visao") as TipoVisao | null) ?? "mensal";
+  const mediaInicio = params.get("mediaInicio");
+  const mediaFim = params.get("mediaFim");
 
   // Fallback: dataInicio/dataFim for backward compat
   const dataInicio = params.get("dataInicio");
@@ -409,11 +411,61 @@ export async function GET(request: NextRequest) {
       // Find ref100 code
       const ref100Codigo = encontrarRef100(arvore);
 
+      // Media comparison if requested
+      var mediaData: Record<string, number> | null = null;
+      var mediaMesesCount = 0;
+      if (mediaInicio && mediaFim) {
+        var mediaPeriodos = gerarPeriodosRange(mediaInicio, mediaFim, "mensal");
+        mediaMesesCount = mediaPeriodos.length;
+        if (mediaMesesCount > 0) {
+          var mediaLancResult = await db.execute({
+            sql: "SELECT FIN_PLANO_CONTA_ID, COALESCE(SUM(FIN_LANCAMENTO_VALOR), 0) as total FROM FIN_LANCAMENTO WHERE EMPRESA_ID = ? AND FIN_LANCAMENTO_DATA >= ? AND FIN_LANCAMENTO_DATA <= ? GROUP BY FIN_PLANO_CONTA_ID",
+            args: [empresaId, mediaPeriodos[0].inicio, mediaPeriodos[mediaPeriodos.length - 1].fim],
+          });
+
+          var mediaTotaisConta = new Map<number, number>();
+          for (var mli = 0; mli < (mediaLancResult.rows ?? []).length; mli++) {
+            var mlr = (mediaLancResult.rows as any[])[mli];
+            mediaTotaisConta.set(Number(mlr.FIN_PLANO_CONTA_ID), Number(mlr.total ?? 0));
+          }
+
+          var calcMediaArvore = function (items: DreLinha[]): Record<string, number> {
+            var result: Record<string, number> = {};
+            for (var mi = 0; mi < items.length; mi++) {
+              var item = items[mi];
+              if (item.natureza !== "CALCULADO") {
+                var contasItem = contasPorLinha.get(item.id) ?? [];
+                var totalMedia = 0;
+                for (var mci = 0; mci < contasItem.length; mci++) {
+                  totalMedia += mediaTotaisConta.get(contasItem[mci]) ?? 0;
+                }
+                result[String(item.id)] = totalMedia / Math.max(1, mediaMesesCount);
+              }
+              if (item.filhos.length > 0) {
+                var filhosMedia = calcMediaArvore(item.filhos);
+                var filhosSoma = 0;
+                var filhosKeys = Object.keys(filhosMedia);
+                for (var fki = 0; fki < filhosKeys.length; fki++) {
+                  result[filhosKeys[fki]] = filhosMedia[filhosKeys[fki]];
+                  filhosSoma += filhosMedia[filhosKeys[fki]];
+                }
+                result[String(item.id)] = (result[String(item.id)] ?? 0) + filhosSoma;
+              }
+            }
+            return result;
+          };
+
+          mediaData = calcMediaArvore(arvore);
+        }
+      }
+
       return NextResponse.json({
         success: true,
         data: arvore,
         periodos: periodos.map((p) => ({ chave: p.chave, label: p.label })),
         referencia100Codigo: ref100Codigo,
+        media: mediaData,
+        mediaMeses: mediaMesesCount,
       });
     }
 

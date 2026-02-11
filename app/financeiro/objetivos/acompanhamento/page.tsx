@@ -9,6 +9,13 @@ import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSeleci
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 
 type TipoVisao = "mensal" | "trimestral" | "semestral" | "anual";
+type TipoObjetivoVal = "ESTRUTURA_DRE" | "PLANO_CONTAS" | "CENTRO_CUSTO";
+
+var TIPO_OBJETIVO_LABELS: Record<TipoObjetivoVal, string> = {
+  ESTRUTURA_DRE: "DRE",
+  PLANO_CONTAS: "Plano de Contas",
+  CENTRO_CUSTO: "Centro de Custo",
+};
 
 interface ColunaPeriodo {
   previsto: number;
@@ -217,6 +224,7 @@ export default function AcompanhamentoPage() {
   const anoAtual = new Date().getFullYear();
   const mesAtual = new Date().getMonth() + 1;
 
+  const [tipoObjetivo, setTipoObjetivo] = useState<TipoObjetivoVal>("ESTRUTURA_DRE");
   const [visao, setVisao] = useState<TipoVisao>("mensal");
   const [mesInicioRef, setMesInicioRef] = useState(Math.max(1, mesAtual - 2));
   const [mesFimRef, setMesFimRef] = useState(mesAtual);
@@ -244,6 +252,7 @@ export default function AcompanhamentoPage() {
           mesFimRef: String(mesFimRef),
           anoObjetivo: String(anoObjetivo),
           visao,
+          tipo: tipoObjetivo,
         });
 
         const resp = await fetch(`/api/financeiro/objetivos/acompanhamento?${params}`, {
@@ -263,7 +272,7 @@ export default function AcompanhamentoPage() {
     };
 
     carregar();
-  }, [empresa?.id, headersPadrao, anoRef, mesInicioRef, mesFimRef, anoObjetivo, visao]);
+  }, [empresa?.id, headersPadrao, anoRef, mesInicioRef, mesFimRef, anoObjetivo, visao, tipoObjetivo]);
 
   // Totals
   const totalPrevisto = useMemo(() => arvore.reduce((acc, n) => acc + n.previsto, 0), [arvore]);
@@ -295,8 +304,24 @@ export default function AcompanhamentoPage() {
           <main className="page-content-card">
             <section className="panel">
               <p style={{ color: "#6b7280", fontSize: "0.85rem", margin: "0 0 12px 0" }}>
-                Acompanhe a distorcao entre o previsto (objetivo) e o realizado por estrutura DRE
+                Acompanhe a distorcao entre o previsto (objetivo) e o realizado - {TIPO_OBJETIVO_LABELS[tipoObjetivo]}
               </p>
+
+              {/* Tipo selector */}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+                {(["ESTRUTURA_DRE", "PLANO_CONTAS", "CENTRO_CUSTO"] as TipoObjetivoVal[]).map(function (t) {
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      className={tipoObjetivo === t ? "button button-primary button-compact" : "button button-secondary button-compact"}
+                      onClick={function () { setTipoObjetivo(t); }}
+                    >
+                      {TIPO_OBJETIVO_LABELS[t]}
+                    </button>
+                  );
+                })}
+              </div>
 
               <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
                 <div className="form-group" style={{ flex: "0 0 auto", minWidth: 100 }}>
@@ -378,7 +403,7 @@ export default function AcompanhamentoPage() {
                     <table className="data-table" style={{ tableLayout: "auto", minWidth: mostrarColunas ? "1200px" : "auto" }}>
                       <thead>
                         <tr>
-                          <th style={{ textAlign: "left" }} rowSpan={2}>Estrutura DRE</th>
+                          <th style={{ textAlign: "left" }} rowSpan={2}>{TIPO_OBJETIVO_LABELS[tipoObjetivo]}</th>
                           {mostrarColunas && periodos.map((p) => (
                             <th key={p.chave} colSpan={4} style={{ textAlign: "center", borderLeft: "1px solid #e5e7eb" }}>{p.label}</th>
                           ))}
