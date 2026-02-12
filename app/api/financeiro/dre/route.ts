@@ -103,6 +103,10 @@ function resolverFormulas(linhas: DreLinha[], valoresPorCodigo: Map<string, numb
   for (const linha of linhas) {
     if (linha.natureza === "CALCULADO" && linha.formula) {
       linha.valor = avaliarFormula(linha.formula, valoresPorCodigo);
+      // Atualizar mapa para que linhas CALCULADO subsequentes possam referenciar este resultado
+      if (linha.codigo) {
+        valoresPorCodigo.set(linha.codigo, linha.valor);
+      }
     }
     if (linha.filhos.length > 0) {
       resolverFormulas(linha.filhos, valoresPorCodigo);
@@ -120,6 +124,10 @@ function resolverFormulasPorPeriodo(linhas: DreLinha[], valoresPorCodigoPeriodo:
           const val = avaliarFormula(linha.formula, mapa);
           linha.colunas[chave] = val;
           totalGeral += val;
+          // Atualizar mapa para que linhas CALCULADO subsequentes possam referenciar este resultado
+          if (linha.codigo) {
+            mapa.set(linha.codigo, val);
+          }
         }
       }
       linha.valor = totalGeral;
