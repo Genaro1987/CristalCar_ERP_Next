@@ -423,24 +423,6 @@ export default function LancamentosPage() {
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="lanc-tipo">Tipo *</label>
-                      <select
-                        id="lanc-tipo"
-                        className="form-input"
-                        value={formTipo}
-                        onChange={(e) => {
-                          setFormTipo(e.target.value as "Entrada" | "Saída");
-                          setFormPessoaId("");
-                        }}
-                      >
-                        <option value="Saída">Saída (Pagamento)</option>
-                        <option value="Entrada">Entrada (Recebimento)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="form-grid two-columns">
-                    <div className="form-group">
                       <label htmlFor="lanc-pessoa">
                         {formTipo === "Entrada" ? "Cliente" : "Fornecedor"}
                       </label>
@@ -454,6 +436,24 @@ export default function LancamentosPage() {
                         {pessoasFiltradas.map((p) => (
                           <option key={p.id} value={p.id}>{p.nome}</option>
                         ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="lanc-tipo">Tipo *</label>
+                      <select
+                        id="lanc-tipo"
+                        className="form-input"
+                        value={formTipo}
+                        onChange={(e) => {
+                          setFormTipo(e.target.value as "Entrada" | "Saída");
+                          setFormPessoaId("");
+                        }}
+                      >
+                        <option value="Saída">Saída (Pagamento)</option>
+                        <option value="Entrada">Entrada (Recebimento)</option>
                       </select>
                     </div>
                     <div className="form-group">
@@ -529,7 +529,7 @@ export default function LancamentosPage() {
                     </div>
                   </div>
 
-                  {formTipo === "Entrada" && (
+                  <div className="form-grid two-columns">
                     <div className="form-group">
                       <label htmlFor="lanc-placa">Placa / Veículo</label>
                       <input
@@ -538,10 +538,10 @@ export default function LancamentosPage() {
                         value={formPlaca}
                         onChange={(e) => setFormPlaca(e.target.value.toUpperCase())}
                         placeholder="ABC-1234"
-                        style={{ textTransform: "uppercase", maxWidth: 200 }}
+                        style={{ textTransform: "uppercase" }}
                       />
                     </div>
-                  )}
+                  </div>
 
                   <div className="form-actions departamentos-actions">
                     <div className="button-row">
@@ -600,6 +600,7 @@ export default function LancamentosPage() {
                   </div>
                 </div>
 
+                <div className="lancamentos-scroll-area">
                 {!periodo ? (
                   <div className="empty-state">
                     <strong>Selecione um período</strong>
@@ -615,33 +616,42 @@ export default function LancamentosPage() {
                     <p>Ajuste o período ou adicione um novo lançamento.</p>
                   </div>
                 ) : (
-                  <div style={{ overflowX: "auto" }}>
-                  <table className="data-table mobile-cards" style={{ fontSize: "0.82rem" }}>
+                  <table className="data-table mobile-cards" style={{ fontSize: "0.84rem" }}>
                     <thead>
                       <tr>
                         <th style={{ whiteSpace: "nowrap", width: 82 }}>Data</th>
-                        <th style={{ minWidth: 180 }}>Histórico</th>
-                        <th style={{ minWidth: 160 }}>Conta</th>
-                        <th style={{ whiteSpace: "nowrap", width: 70 }}>Tipo</th>
-                        <th style={{ textAlign: "right", whiteSpace: "nowrap", width: 110 }}>Valor</th>
-                        <th style={{ whiteSpace: "nowrap", width: 80 }}>Placa</th>
-                        <th style={{ minWidth: 80 }}>Documento</th>
-                        <th style={{ textAlign: "center", width: 60 }}>Ações</th>
+                        <th style={{ minWidth: 150 }}>Histórico</th>
+                        <th style={{ minWidth: 140 }}>Conta</th>
+                        <th style={{ whiteSpace: "nowrap", width: 68 }}>Tipo</th>
+                        <th style={{ textAlign: "right", whiteSpace: "nowrap", width: 105 }}>Valor</th>
+                        <th style={{ textAlign: "center", whiteSpace: "nowrap", width: 78 }}>Placa</th>
+                        <th style={{ textAlign: "center", minWidth: 80 }}>Documento</th>
                       </tr>
                     </thead>
                     <tbody>
                       {dadosFiltrados.map((item) => (
-                        <tr key={item.id} onClick={() => preencherForm(item)} style={{ cursor: "pointer" }}>
-                          <td data-label="Data" style={{ whiteSpace: "nowrap" }}>{item.data && item.data.length >= 10 ? `${item.data.substring(8,10)}/${item.data.substring(5,7)}/${item.data.substring(0,4)}` : item.data}</td>
+                        <tr
+                          key={item.id}
+                          onClick={() => preencherForm(item)}
+                          style={{
+                            cursor: "pointer",
+                            backgroundColor: selecionado?.id === item.id ? "#eff6ff" : undefined,
+                          }}
+                        >
+                          <td data-label="Data" style={{ whiteSpace: "nowrap" }}>
+                            {item.data && item.data.length >= 10
+                              ? `${item.data.substring(8,10)}/${item.data.substring(5,7)}/${item.data.substring(0,4)}`
+                              : item.data}
+                          </td>
                           <td data-label="Histórico">
                             {item.historico}
                             {item.pessoaNome && (
-                              <span style={{ display: "block", fontSize: "0.72rem", color: "#6b7280" }}>
+                              <span style={{ display: "block", fontSize: "0.76rem", color: "#6b7280" }}>
                                 {item.pessoaNome}
                               </span>
                             )}
                           </td>
-                          <td data-label="Conta" style={{ fontSize: "0.78rem" }}>{item.conta}</td>
+                          <td data-label="Conta">{item.conta}</td>
                           <td data-label="Tipo">
                             <span className={item.tipo === "Entrada" ? "badge badge-success" : "badge badge-danger"}>
                               {item.tipo}
@@ -650,28 +660,18 @@ export default function LancamentosPage() {
                           <td data-label="Valor" style={{ fontWeight: 600, textAlign: "right", whiteSpace: "nowrap" }}>
                             {formatadorMoeda.format(Math.abs(item.valor))}
                           </td>
-                          <td data-label="Placa" style={{ fontFamily: "monospace", fontWeight: 600, fontSize: "0.78rem" }}>
+                          <td data-label="Placa" style={{ textAlign: "center" }}>
                             {item.placa || "-"}
                           </td>
-                          <td data-label="Documento" style={{ fontSize: "0.78rem", color: "#6b7280" }}>
+                          <td data-label="Documento" style={{ textAlign: "center", color: "#6b7280" }}>
                             {item.documento || "-"}
-                          </td>
-                          <td data-label="">
-                            <button
-                              type="button"
-                              className="button button-secondary button-compact"
-                              style={{ fontSize: "0.75rem", padding: "2px 8px" }}
-                              onClick={(e) => { e.stopPropagation(); preencherForm(item); }}
-                            >
-                              Editar
-                            </button>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  </div>
                 )}
+                </div>
               </section>
             </div>
           </div>
