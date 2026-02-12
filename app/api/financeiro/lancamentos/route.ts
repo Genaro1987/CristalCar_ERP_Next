@@ -33,19 +33,19 @@ interface Lancamento {
   pessoaNome: string;
   placa: string;
   valor: number;
-  tipo: "Entrada" | "Saída";
+  tipo: "Entrada" | "Saida";
   status: "confirmado" | "pendente";
   documento?: string;
 }
 
-/** Normaliza data para YYYY-MM-DD (remove horário se presente) */
+/** Normaliza data para YYYY-MM-DD (remove horario se presente) */
 function normalizarData(data: string): string {
   if (!data) return data;
-  // "2026 17:09-02-06" → year=first 4, month-day=last 6
+  // "2026 17:09-02-06" -> year=first 4, month-day=last 6
   if (data.length > 10 && data[4] === " " && /^\d{4}/.test(data)) {
     return data.substring(0, 4) + data.substring(data.length - 6);
   }
-  // "2026-02-06 17:09:00" or "2026-02-06T17:09:00" → first 10
+  // "2026-02-06 17:09:00" or "2026-02-06T17:09:00" -> first 10
   if (data.length > 10 && data[4] === "-" && data[7] === "-") {
     return data.substring(0, 10);
   }
@@ -67,7 +67,7 @@ function converterLancamento(reg: LancamentoDB): Lancamento {
     pessoaNome: reg.PESSOA_NOME ?? "",
     placa: reg.FIN_LANCAMENTO_PLACA ?? "",
     valor: reg.FIN_LANCAMENTO_VALOR,
-    tipo: reg.FIN_LANCAMENTO_VALOR >= 0 ? "Entrada" : "Saída",
+    tipo: reg.FIN_LANCAMENTO_VALOR >= 0 ? "Entrada" : "Saida",
     status: reg.FIN_LANCAMENTO_STATUS === "confirmado" ? "confirmado" : "pendente",
     documento: reg.FIN_LANCAMENTO_DOCUMENTO || undefined,
   };
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
 
   try {
     if (id) {
-      // Buscar um lançamento específico
+      // Buscar um lancamento especifico
       const resultado = await db.execute({
         sql: `
           SELECT
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
 
       if (resultado.rows.length === 0) {
         return NextResponse.json(
-          { success: false, error: "Lançamento não encontrado" },
+          { success: false, error: "Lancamento nao encontrado" },
           { status: 404 }
         );
       }
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: lancamento });
     }
 
-    // Buscar todos os lançamentos
+    // Buscar todos os lancamentos
     let sql = `
       SELECT
         l.FIN_LANCAMENTO_ID,
@@ -171,9 +171,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: lancamentos });
   } catch (error) {
-    console.error("Erro ao buscar lançamentos:", error);
+    console.error("Erro ao buscar lancamentos:", error);
     return NextResponse.json(
-      { success: false, error: "Erro ao buscar lançamentos" },
+      { success: false, error: "Erro ao buscar lancamentos" },
       { status: 500 }
     );
   }
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { data, historico, contaId, centroCustoId, valor, documento, status, pessoaId, placa, lote } = body;
 
-  // Lançamento em lote (salário/férias)
+  // Lancamento em lote (salario/ferias)
   if (Array.isArray(lote) && lote.length > 0) {
     try {
       const resultados: Lancamento[] = [];
@@ -212,14 +212,14 @@ export async function POST(request: NextRequest) {
       }
       return NextResponse.json({ success: true, data: resultados, lote: true }, { status: 201 });
     } catch (error) {
-      console.error("Erro ao criar lançamentos em lote:", error);
-      return NextResponse.json({ success: false, error: "Erro ao criar lançamentos em lote" }, { status: 500 });
+      console.error("Erro ao criar lancamentos em lote:", error);
+      return NextResponse.json({ success: false, error: "Erro ao criar lancamentos em lote" }, { status: 500 });
     }
   }
 
   if (!data || !historico || !contaId || valor === undefined) {
     return NextResponse.json(
-      { success: false, error: "Data, histórico, conta e valor são obrigatórios" },
+      { success: false, error: "Data, historico, conta e valor sao obrigatorios" },
       { status: 400 }
     );
   }
@@ -245,10 +245,10 @@ export async function POST(request: NextRequest) {
 
     const lancamentoId = resultado.lastInsertRowid;
     if (lancamentoId === undefined) {
-      throw new Error("ID do lançamento não retornado após inserção.");
+      throw new Error("ID do lancamento nao retornado apos insercao.");
     }
 
-    // Buscar o lançamento criado com joins
+    // Buscar o lancamento criado com joins
     const lancamentoResult = await db.execute({
       sql: `
         SELECT
@@ -283,9 +283,9 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Erro ao criar lançamento:", error);
+    console.error("Erro ao criar lancamento:", error);
     return NextResponse.json(
-      { success: false, error: "Erro ao criar lançamento" },
+      { success: false, error: "Erro ao criar lancamento" },
       { status: 500 }
     );
   }
@@ -302,7 +302,7 @@ export async function PUT(request: NextRequest) {
 
   if (!id || !data || !historico || !contaId || valor === undefined) {
     return NextResponse.json(
-      { success: false, error: "ID, data, histórico, conta e valor são obrigatórios" },
+      { success: false, error: "ID, data, historico, conta e valor sao obrigatorios" },
       { status: 400 }
     );
   }
@@ -372,7 +372,7 @@ export async function PUT(request: NextRequest) {
         pessoaId: pessoaId || null,
         placa: placa || null,
       }),
-      descricao: `Alteração de lançamento: ${historico}`,
+      descricao: `Alteracao de lancamento: ${historico}`,
     });
 
     const lancamentoResult = await db.execute({
@@ -403,7 +403,7 @@ export async function PUT(request: NextRequest) {
 
     if (lancamentoResult.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: "Lançamento não encontrado" },
+        { success: false, error: "Lancamento nao encontrado" },
         { status: 404 }
       );
     }
@@ -413,9 +413,9 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: lancamentoAtualizado });
   } catch (error) {
-    console.error("Erro ao atualizar lançamento:", error);
+    console.error("Erro ao atualizar lancamento:", error);
     return NextResponse.json(
-      { success: false, error: "Erro ao atualizar lançamento" },
+      { success: false, error: "Erro ao atualizar lancamento" },
       { status: 500 }
     );
   }
@@ -430,7 +430,7 @@ export async function PATCH(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id");
   if (!id) {
     return NextResponse.json(
-      { success: false, error: "ID é obrigatório" },
+      { success: false, error: "ID e obrigatorio" },
       { status: 400 }
     );
   }
@@ -439,7 +439,7 @@ export async function PATCH(request: NextRequest) {
   const { data, historico, contaId, centroCustoId, valor, documento, status } = body;
 
   try {
-    // Verificar se o lançamento existe
+    // Verificar se o lancamento existe
     const verificacao = await db.execute({
       sql: `SELECT COUNT(*) as total FROM FIN_LANCAMENTO WHERE FIN_LANCAMENTO_ID = ? AND EMPRESA_ID = ?`,
       args: [id, empresaId],
@@ -448,7 +448,7 @@ export async function PATCH(request: NextRequest) {
     const total = (verificacao.rows[0] as any).total;
     if (total === 0) {
       return NextResponse.json(
-        { success: false, error: "Lançamento não encontrado" },
+        { success: false, error: "Lancamento nao encontrado" },
         { status: 404 }
       );
     }
@@ -469,11 +469,11 @@ export async function PATCH(request: NextRequest) {
       args: [data, historico, valor, contaId, centroCustoId, documento, status, id, empresaId],
     });
 
-    return NextResponse.json({ success: true, message: "Lançamento atualizado" });
+    return NextResponse.json({ success: true, message: "Lancamento atualizado" });
   } catch (error) {
-    console.error("Erro ao atualizar lançamento:", error);
+    console.error("Erro ao atualizar lancamento:", error);
     return NextResponse.json(
-      { success: false, error: "Erro ao atualizar lançamento" },
+      { success: false, error: "Erro ao atualizar lancamento" },
       { status: 500 }
     );
   }
@@ -488,7 +488,7 @@ export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id");
   if (!id) {
     return NextResponse.json(
-      { success: false, error: "ID é obrigatório" },
+      { success: false, error: "ID e obrigatorio" },
       { status: 400 }
     );
   }
@@ -525,7 +525,7 @@ export async function DELETE(request: NextRequest) {
         registroId: Number(id),
         operacao: "DELETE",
         dadosAntes,
-        descricao: `Exclusão de lançamento: ${reg.FIN_LANCAMENTO_HISTORICO}`,
+        descricao: `Exclusao de lancamento: ${reg.FIN_LANCAMENTO_HISTORICO}`,
       });
     } else {
       await db.execute({
@@ -534,11 +534,11 @@ export async function DELETE(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ success: true, message: "Lançamento excluído" });
+    return NextResponse.json({ success: true, message: "Lancamento excluido" });
   } catch (error) {
-    console.error("Erro ao excluir lançamento:", error);
+    console.error("Erro ao excluir lancamento:", error);
     return NextResponse.json(
-      { success: false, error: "Erro ao excluir lançamento" },
+      { success: false, error: "Erro ao excluir lancamento" },
       { status: 500 }
     );
   }
