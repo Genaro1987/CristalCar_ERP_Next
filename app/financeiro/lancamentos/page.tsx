@@ -796,7 +796,7 @@ export default function LancamentosPage() {
                     <p>Ajuste o período ou adicione um novo lançamento.</p>
                   </div>
                 ) : (
-                  <table className="data-table mobile-cards" style={{ fontSize: "0.7rem", tableLayout: "fixed", width: "100%" }}>
+                  <table className="data-table mobile-cards" style={{ fontSize: "0.7rem", tableLayout: "fixed", width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
                     <colgroup>
                       {colDefs.map((col, i) => (
                         <col key={col.key} style={colWidths[i] > 0 ? { width: colWidths[i] } : undefined} />
@@ -806,24 +806,34 @@ export default function LancamentosPage() {
                       <tr>
                         {colDefs.map((col, i) => {
                           const align = col.key === "valor" ? "right" : col.key === "placa" || col.key === "documento" ? "center" : "left";
+                          const isLast = i === colDefs.length - 1;
                           return (
                             <th
                               key={col.key}
                               onClick={() => handleSort(col.key)}
                               style={{
                                 whiteSpace: "nowrap", cursor: "pointer", userSelect: "none",
-                                textAlign: align, position: "relative", paddingRight: 10,
+                                textAlign: align, position: "relative", paddingRight: 14,
+                                borderRight: isLast ? "none" : "1px solid #d1d5db",
                               }}
                               title={`Ordenar por ${col.label}`}
                             >
                               {col.label}{sortIcon(col.key)}
-                              <span
-                                onMouseDown={(e) => onResizeStart(e, i)}
-                                style={{
-                                  position: "absolute", right: 0, top: 0, bottom: 0, width: 5,
-                                  cursor: "col-resize", zIndex: 1,
-                                }}
-                              />
+                              {!isLast && (
+                                <span
+                                  onMouseDown={(e) => onResizeStart(e, i)}
+                                  style={{
+                                    position: "absolute", right: -3, top: 4, bottom: 4, width: 6,
+                                    cursor: "col-resize", zIndex: 2,
+                                    borderRadius: 3,
+                                    backgroundColor: "#94a3b8",
+                                    opacity: 0.4,
+                                    transition: "opacity 0.15s",
+                                  }}
+                                  onMouseEnter={(e) => { (e.target as HTMLElement).style.opacity = "1"; (e.target as HTMLElement).style.backgroundColor = "#3b82f6"; }}
+                                  onMouseLeave={(e) => { (e.target as HTMLElement).style.opacity = "0.4"; (e.target as HTMLElement).style.backgroundColor = "#94a3b8"; }}
+                                />
+                              )}
                             </th>
                           );
                         })}
@@ -839,12 +849,12 @@ export default function LancamentosPage() {
                             backgroundColor: selecionado?.id === item.id ? "#eff6ff" : undefined,
                           }}
                         >
-                          <td data-label="Data" style={{ whiteSpace: "nowrap" }}>
+                          <td data-label="Data" style={{ whiteSpace: "nowrap", borderRight: "1px solid #e5e7eb" }}>
                             {item.data && item.data.length >= 10
                               ? `${item.data.substring(8,10)}/${item.data.substring(5,7)}`
                               : item.data}
                           </td>
-                          <td data-label="Histórico" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <td data-label="Histórico" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", borderRight: "1px solid #e5e7eb" }}>
                             {item.historico}
                             {item.pessoaNome && (
                               <span style={{ display: "block", fontSize: "0.63rem", color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -852,14 +862,15 @@ export default function LancamentosPage() {
                               </span>
                             )}
                           </td>
-                          <td data-label="Conta" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.conta}</td>
+                          <td data-label="Conta" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", borderRight: "1px solid #e5e7eb" }}>{item.conta}</td>
                           <td data-label="Valor" style={{
                             fontWeight: 600, textAlign: "right", whiteSpace: "nowrap",
                             color: item.tipo === "Entrada" ? "#16a34a" : "#dc2626",
+                            borderRight: "1px solid #e5e7eb",
                           }}>
                             {item.tipo === "Entrada" ? "+" : "-"}{formatadorMoeda.format(Math.abs(item.valor))}
                           </td>
-                          <td data-label="Placa" style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                          <td data-label="Placa" style={{ textAlign: "center", whiteSpace: "nowrap", borderRight: "1px solid #e5e7eb" }}>
                             {item.placa || "-"}
                           </td>
                           <td data-label="Doc" style={{ textAlign: "center", color: "#6b7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
