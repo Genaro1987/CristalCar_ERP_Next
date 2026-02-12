@@ -316,7 +316,75 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: { series, meses, mesesLabels } });
     }
 
-    return NextResponse.json({ success: false, error: "Tipo invalido. Use: evolucao, receitas, despesas, contas, cruzamento, lancamentos" }, { status: 400 });
+    if (tipo === "saldo-reserva") {
+      const contaIdParam = params.get("contaId");
+
+      // Fetch all accounts for the selector
+      const contasResult = await db.execute({
+        sql: `SELECT FIN_PLANO_CONTA_ID as id, FIN_PLANO_CONTA_NOME as nome, FIN_PLANO_CONTA_CODIGO as codigo, FIN_PLANO_CONTA_NATUREZA as natureza
+              FROM FIN_PLANO_CONTA WHERE EMPRESA_ID = ? AND FIN_PLANO_CONTA_ATIVO = 1 ORDER BY FIN_PLANO_CONTA_CODIGO`,
+        args: [empresaId],
+      });
+
+      const contas = (contasResult.rows ?? []).map((r: any) => ({
+        id: Number(r.id),
+        nome: String(r.nome),
+        codigo: String(r.codigo ?? ""),
+        natureza: String(r.natureza),
+      }));
+
+      if (!contaIdParam) {
+        return NextResponse.json({ success: true, data: { contas, evolucao: [], saldoAtual: 0, totalEntradas: 0, totalSaidas: 0 } });
+      }
+
+      const contaId = Number(contaIdParam);
+
+      // Monthly evolution of this account
+      const evolResult = await db.execute({
+        sql: `
+          SELECT
+            strftime('%Y-%m', l.FIN_LANCAMENTO_DATA) as mes,
+            COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR >= 0 THEN l.FIN_LANCAMENTO_VALOR ELSE 0 END), 0) as entradas,
+            COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR < 0 THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as saidas,
+            COALESCE(SUM(l.FIN_LANCAMENTO_VALOR), 0) as saldo
+          FROM FIN_LANCAMENTO l
+          WHERE l.EMPRESA_ID = ?
+            AND l.FIN_PLANO_CONTA_ID = ?
+            AND l.FIN_LANCAMENTO_DATA >= ?
+            AND l.FIN_LANCAMENTO_DATA <= ?
+          GROUP BY strftime('%Y-%m', l.FIN_LANCAMENTO_DATA)
+          ORDER BY mes ASC
+        `,
+        args: [empresaId, contaId, dataInicio, dataFim],
+      });
+
+      const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+      let saldoAcumulado = 0;
+      const evolucao = (evolResult.rows ?? []).map((row: any) => {
+        const mesNum = parseInt(String(row.mes).split("-")[1]) - 1;
+        saldoAcumulado += Number(row.saldo);
+        return {
+          mes: String(row.mes),
+          label: mesesNomes[mesNum] ?? String(row.mes),
+          entradas: Number(row.entradas),
+          saidas: Number(row.saidas),
+          saldo: Number(row.saldo),
+          saldoAcumulado,
+        };
+      });
+
+      // Overall balance for the period
+      const totalEntradas = evolucao.reduce((a, e) => a + e.entradas, 0);
+      const totalSaidas = evolucao.reduce((a, e) => a + e.saidas, 0);
+      const saldoAtual = evolucao.length > 0 ? evolucao[evolucao.length - 1].saldoAcumulado : 0;
+
+      return NextResponse.json({
+        success: true,
+        data: { contas, evolucao, saldoAtual, totalEntradas, totalSaidas },
+      });
+    }
+
+    return NextResponse.json({ success: false, error: "Tipo invalido. Use: evolucao, receitas, despesas, contas, cruzamento, lancamentos, saldo-reserva" }, { status: 400 });
   } catch (error) {
     console.error("Erro na analise do dashboard:", error);
     return NextResponse.json({ success: false, error: "Erro interno" }, { status: 500 });

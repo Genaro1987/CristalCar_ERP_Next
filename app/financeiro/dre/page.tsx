@@ -367,14 +367,17 @@ export default function DrePage() {
   }, [empresa?.id, visao, mesInicio, mesFim]);
 
   const totalResultado = useMemo(() => {
-    return linhas.reduce((acc, linha) => acc + calcularImpacto(linha), 0);
+    return linhas
+      .filter((l) => l.natureza !== "CALCULADO")
+      .reduce((acc, linha) => acc + calcularImpacto(linha), 0);
   }, [linhas]);
 
   const resultadoPorPeriodo = useMemo(() => {
     if (periodos.length === 0) return {};
     const resultado: Record<string, number> = {};
+    const linhasNaoCalc = linhas.filter((l) => l.natureza !== "CALCULADO");
     for (const p of periodos) {
-      resultado[p.chave] = linhas.reduce((acc, linha) => {
+      resultado[p.chave] = linhasNaoCalc.reduce((acc, linha) => {
         const val = linha.colunas?.[p.chave] ?? 0;
         return acc + calcularImpactoValor(linha.natureza, val);
       }, 0);
