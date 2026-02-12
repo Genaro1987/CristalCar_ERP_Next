@@ -55,10 +55,7 @@ export default function LancamentosPage() {
 
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [carregando, setCarregando] = useState(false);
-  const [periodo, setPeriodo] = useState(() => {
-    const hoje = new Date();
-    return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
-  });
+  const [filtroNatureza, setFiltroNatureza] = useState<"RECEITA" | "DESPESA" | "">("");
   const [busca, setBusca] = useState("");
   const [planoContas, setPlanoContas] = useState<PlanoContaOption[]>([]);
   const [centrosCusto, setCentrosCusto] = useState<CentroCustoOption[]>([]);
@@ -117,6 +114,10 @@ export default function LancamentosPage() {
   }, []);
 
   const preencherForm = (item: Lancamento) => {
+    if (!podeEditar(item.data)) {
+      setNotification({ type: "error", message: "Lancamento com mais de 21 dias nao pode ser editado" });
+      return;
+    }
     setSelecionado(item);
     setFormData(item.data);
     setFormHistorico(item.historico);
@@ -130,12 +131,29 @@ export default function LancamentosPage() {
     setFormPlaca(item.placa ?? "");
   };
 
-  // Buscar lancamentos (somente com filtro de periodo)
+  // Data limite para edicao/exclusao (hoje - 21 dias)
+  const dataLimiteEdicao = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 21);
+    return d.toISOString().split("T")[0];
+  }, []);
+
+  // Verifica se um lancamento pode ser editado/excluido (dentro dos 21 dias)
+  const podeEditar = useCallback((dataLanc: string) => {
+    if (!dataLanc || dataLanc.length < 10) return false;
+    return dataLanc >= dataLimiteEdicao;
+  }, [dataLimiteEdicao]);
+
+  // Buscar lancamentos (natureza obrigatorio + busca com 3+ chars)
   const buscarLancamentos = useCallback(async () => {
-    if (!empresa?.id || !periodo) return;
+    if (!empresa?.id || !filtroNatureza) return;
+    if (busca.length > 0 && busca.length < 3) return;
     setCarregando(true);
     try {
-      const url = `/api/financeiro/lancamentos?periodo=${periodo}`;
+      const params = new URLSearchParams();
+      params.set("natureza", filtroNatureza);
+      if (busca.length >= 3) params.set("busca", busca);
+      const url = `/api/financeiro/lancamentos?${params.toString()}`;
       const res = await fetch(url, { headers: headersPadrao });
       const json = await res.json();
       if (res.ok && json.success) setLancamentos(json.data);
@@ -144,11 +162,19 @@ export default function LancamentosPage() {
     } finally {
       setCarregando(false);
     }
-  }, [empresa?.id, periodo, headersPadrao]);
+  }, [empresa?.id, filtroNatureza, busca, headersPadrao]);
 
   useEffect(() => {
-    buscarLancamentos();
-  }, [buscarLancamentos]);
+    if (!filtroNatureza) {
+      setLancamentos([]);
+      return;
+    }
+    if (busca.length > 0 && busca.length < 3) return;
+    const timer = setTimeout(() => {
+      buscarLancamentos();
+    }, busca.length >= 3 ? 400 : 0);
+    return () => clearTimeout(timer);
+  }, [filtroNatureza, busca, buscarLancamentos]);
 
   // Carregar opcoes
   useEffect(() => {
@@ -268,16 +294,6 @@ export default function LancamentosPage() {
     }
   }, [pessoas, formTipo]);
 
-  // Filtro local
-  const dadosFiltrados = useMemo(() => {
-    const b = busca.trim().toLowerCase();
-    return lancamentos.filter((item) => {
-      if (b && !`${item.historico} ${item.conta} ${item.centroCusto} ${item.pessoaNome} ${item.placa}`.toLowerCase().includes(b))
-        return false;
-      return true;
-    });
-  }, [busca, lancamentos]);
-
   // Ordenacao da tabela
   type SortKey = "data" | "historico" | "conta" | "valor" | "placa" | "documento";
   const [sortKey, setSortKey] = useState<SortKey>("data");
@@ -293,7 +309,7 @@ export default function LancamentosPage() {
   };
 
   const dadosOrdenados = useMemo(() => {
-    const arr = [...dadosFiltrados];
+    const arr = [...lancamentos];
     const dir = sortDir === "asc" ? 1 : -1;
     arr.sort((a, b) => {
       let va: string | number = "";
@@ -311,7 +327,7 @@ export default function LancamentosPage() {
       return 0;
     });
     return arr;
-  }, [dadosFiltrados, sortKey, sortDir]);
+  }, [lancamentos, sortKey, sortDir]);
 
   const sortIcon = (key: SortKey) => {
     if (sortKey !== key) return " \u2195";
@@ -397,6 +413,10 @@ export default function LancamentosPage() {
   // Excluir lancamento
   const handleExcluir = async () => {
     if (!selecionado || !empresa?.id) return;
+    if (!podeEditar(selecionado.data)) {
+      setNotification({ type: "error", message: "Lancamento com mais de 21 dias nao pode ser excluido" });
+      return;
+    }
     if (!window.confirm("Tem certeza que deseja excluir este lancamento?")) return;
     setExcluindo(true);
     try {
@@ -423,6 +443,10 @@ export default function LancamentosPage() {
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!empresa?.id) return;
+    if (selecionado && !podeEditar(selecionado.data)) {
+      setNotification({ type: "error", message: "Lancamento com mais de 21 dias nao pode ser editado" });
+      return;
+    }
     const valorNum = parseFloat(formValor.replace(/\./g, "").replace(",", ".")) || 0;
     const valorFinal = formTipo === "Saida" ? -Math.abs(valorNum) : Math.abs(valorNum);
     const payload = {
@@ -800,41 +824,48 @@ export default function LancamentosPage() {
                 <header className="form-section-header">
                   <h2>Lancamentos cadastrados</h2>
                   <p>
-                    {periodo
-                      ? `${dadosOrdenados.length} lancamento(s) em ${periodo.substring(5,7)}/${periodo.substring(0,4)}`
-                      : "Selecione um periodo para visualizar."}
+                    {filtroNatureza
+                      ? `${dadosOrdenados.length} lancamento(s) encontrado(s)`
+                      : "Selecione o tipo para visualizar."}
                   </p>
                 </header>
 
                 <div className="form-grid two-columns" style={{ marginBottom: 12 }}>
                   <div className="form-group">
-                    <label htmlFor="filtro-periodo">Periodo</label>
-                    <input
-                      id="filtro-periodo"
-                      type="month"
+                    <label htmlFor="filtro-natureza">Tipo *</label>
+                    <select
+                      id="filtro-natureza"
                       className="form-input"
-                      value={periodo}
-                      onChange={(e) => setPeriodo(e.target.value)}
-                    />
+                      value={filtroNatureza}
+                      onChange={(e) => setFiltroNatureza(e.target.value as "RECEITA" | "DESPESA" | "")}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="DESPESA">Despesa (Saida)</option>
+                      <option value="RECEITA">Receita (Entrada)</option>
+                    </select>
                   </div>
                   <div className="form-group">
-                    <label htmlFor="filtro-busca">Busca</label>
+                    <label htmlFor="filtro-busca">Busca (min. 3 caracteres)</label>
                     <input
                       id="filtro-busca"
                       type="text"
                       className="form-input"
                       value={busca}
                       onChange={(e) => setBusca(e.target.value)}
-                      placeholder="Historico, conta, placa..."
+                      placeholder="Descricao, conta, placa, doc, valor..."
                     />
                   </div>
                 </div>
 
                 <div className="lancamentos-scroll-area">
-                {!periodo ? (
+                {!filtroNatureza ? (
                   <div className="empty-state">
-                    <strong>Selecione um periodo</strong>
-                    <p>Informe o mes/ano no campo Periodo para carregar os lancamentos.</p>
+                    <strong>Selecione o tipo</strong>
+                    <p>Escolha Despesa ou Receita para carregar os lancamentos.</p>
+                  </div>
+                ) : (busca.length > 0 && busca.length < 3) ? (
+                  <div className="empty-state">
+                    <p>Digite ao menos 3 caracteres para buscar.</p>
                   </div>
                 ) : carregando ? (
                   <div className="empty-state">
@@ -843,7 +874,7 @@ export default function LancamentosPage() {
                 ) : dadosOrdenados.length === 0 ? (
                   <div className="empty-state">
                     <strong>Nenhum lancamento encontrado</strong>
-                    <p>Ajuste o periodo ou adicione um novo lancamento.</p>
+                    <p>Ajuste a busca ou adicione um novo lancamento.</p>
                   </div>
                 ) : (
                   <table className="data-table mobile-cards" style={{ fontSize: "0.7rem", tableLayout: "fixed", width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
@@ -890,14 +921,18 @@ export default function LancamentosPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {dadosOrdenados.map((item) => (
+                      {dadosOrdenados.map((item) => {
+                        const editavel = podeEditar(item.data);
+                        return (
                         <tr
                           key={item.id}
                           onClick={() => preencherForm(item)}
                           style={{
-                            cursor: "pointer",
+                            cursor: editavel ? "pointer" : "not-allowed",
                             backgroundColor: selecionado?.id === item.id ? "#eff6ff" : undefined,
+                            opacity: editavel ? 1 : 0.55,
                           }}
+                          title={editavel ? "Clique para editar" : "Lancamento com mais de 21 dias (somente leitura)"}
                         >
                           <td data-label="Data" style={{ whiteSpace: "nowrap", borderRight: "1px solid #e5e7eb" }}>
                             {item.data && item.data.length >= 10
@@ -927,7 +962,8 @@ export default function LancamentosPage() {
                             {item.documento || "-"}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 )}

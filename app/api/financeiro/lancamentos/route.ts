@@ -81,6 +81,8 @@ export async function GET(request: NextRequest) {
 
   const id = request.nextUrl.searchParams.get("id");
   const periodo = request.nextUrl.searchParams.get("periodo"); // formato: YYYY-MM
+  const natureza = request.nextUrl.searchParams.get("natureza"); // RECEITA ou DESPESA
+  const busca = request.nextUrl.searchParams.get("busca"); // texto livre 3+ chars
 
   try {
     if (id) {
@@ -153,10 +155,30 @@ export async function GET(request: NextRequest) {
     const args: any[] = [empresaId];
 
     if (periodo) {
-      // Use SUBSTR for robustness with dates that may have timestamps
-      // Works for both "YYYY-MM-DD" and malformed "YYYY HH:MM-MM-DD"
       sql += ` AND (strftime('%Y-%m', l.FIN_LANCAMENTO_DATA) = ? OR SUBSTR(l.FIN_LANCAMENTO_DATA, 1, 4) || '-' || SUBSTR(l.FIN_LANCAMENTO_DATA, -5, 2) = ?)`;
       args.push(periodo, periodo);
+    }
+
+    // Filtro por natureza (RECEITA = valor >= 0, DESPESA = valor < 0)
+    if (natureza === "RECEITA") {
+      sql += ` AND l.FIN_LANCAMENTO_VALOR >= 0`;
+    } else if (natureza === "DESPESA") {
+      sql += ` AND l.FIN_LANCAMENTO_VALOR < 0`;
+    }
+
+    // Busca textual (historico, conta, placa, documento, pessoa, valor)
+    if (busca && busca.length >= 3) {
+      const termo = `%${busca}%`;
+      sql += ` AND (
+        l.FIN_LANCAMENTO_HISTORICO LIKE ?
+        OR pc.FIN_PLANO_CONTA_NOME LIKE ?
+        OR pc.FIN_PLANO_CONTA_CODIGO LIKE ?
+        OR l.FIN_LANCAMENTO_PLACA LIKE ?
+        OR l.FIN_LANCAMENTO_DOCUMENTO LIKE ?
+        OR pes.CAD_PESSOA_NOME LIKE ?
+        OR CAST(ABS(l.FIN_LANCAMENTO_VALOR) AS TEXT) LIKE ?
+      )`;
+      args.push(termo, termo, termo, termo, termo, termo, termo);
     }
 
     sql += ` ORDER BY l.FIN_LANCAMENTO_DATA DESC, l.FIN_LANCAMENTO_ID DESC`;
