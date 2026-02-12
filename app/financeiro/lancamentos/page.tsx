@@ -435,7 +435,7 @@ export default function LancamentosPage() {
 
                 <form className="form" onSubmit={handleSalvar}>
                   {/* Linha 1: Data | Tipo */}
-                  <div className="form-grid two-columns">
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     <div className="form-group">
                       <label htmlFor="lanc-data">Data *</label>
                       <input
@@ -483,7 +483,7 @@ export default function LancamentosPage() {
                   </div>
 
                   {/* Linha 3: Plano de conta | Centro de custo */}
-                  <div className="form-grid two-columns">
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     <div className="form-group">
                       <label htmlFor="lanc-conta">Plano de conta *</label>
                       <select
@@ -515,8 +515,8 @@ export default function LancamentosPage() {
                     </div>
                   </div>
 
-                  {/* Linha 4: Histórico | Placa */}
-                  <div className="form-grid two-columns">
+                  {/* Linha 4: Histórico (maior) | Placa (menor) */}
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
                     <div className="form-group">
                       <label htmlFor="lanc-historico">Histórico *</label>
                       <input
@@ -529,7 +529,7 @@ export default function LancamentosPage() {
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="lanc-placa">Placa / Veículo</label>
+                      <label htmlFor="lanc-placa">Placa</label>
                       <input
                         id="lanc-placa"
                         className="form-input"
@@ -542,7 +542,7 @@ export default function LancamentosPage() {
                   </div>
 
                   {/* Linha 5: Valor (moeda) | Documento */}
-                  <div className="form-grid two-columns">
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     <div className="form-group">
                       <label htmlFor="lanc-valor">Valor *</label>
                       <div style={{ position: "relative" }}>
@@ -650,16 +650,16 @@ export default function LancamentosPage() {
                     <p>Ajuste o período ou adicione um novo lançamento.</p>
                   </div>
                 ) : (
-                  <table className="data-table mobile-cards" style={{ fontSize: "0.78rem" }}>
+                  <table className="data-table mobile-cards" style={{ fontSize: "0.72rem", tableLayout: "fixed", width: "100%" }}>
                     <thead>
                       <tr>
-                        <th style={{ whiteSpace: "nowrap", width: 76 }}>Data</th>
-                        <th>Histórico</th>
-                        <th>Conta</th>
-                        <th style={{ whiteSpace: "nowrap", width: 62 }}>Tipo</th>
-                        <th style={{ textAlign: "right", whiteSpace: "nowrap", width: 95 }}>Valor</th>
-                        <th style={{ textAlign: "center", whiteSpace: "nowrap", width: 72 }}>Placa</th>
-                        <th style={{ textAlign: "center", whiteSpace: "nowrap", width: 80 }}>Documento</th>
+                        <th style={{ whiteSpace: "nowrap", width: 72 }}>Data</th>
+                        <th style={{ width: "auto" }}>Histórico</th>
+                        <th style={{ whiteSpace: "nowrap", width: 120 }}>Conta</th>
+                        <th style={{ whiteSpace: "nowrap", width: 52 }}>Tipo</th>
+                        <th style={{ textAlign: "right", whiteSpace: "nowrap", width: 88 }}>Valor</th>
+                        <th style={{ textAlign: "center", whiteSpace: "nowrap", width: 80 }}>Placa</th>
+                        <th style={{ textAlign: "center", whiteSpace: "nowrap", width: 70 }}>Doc</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -677,27 +677,27 @@ export default function LancamentosPage() {
                               ? `${item.data.substring(8,10)}/${item.data.substring(5,7)}/${item.data.substring(0,4)}`
                               : item.data}
                           </td>
-                          <td data-label="Histórico">
+                          <td data-label="Histórico" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {item.historico}
                             {item.pessoaNome && (
-                              <span style={{ display: "block", fontSize: "0.7rem", color: "#6b7280" }}>
+                              <span style={{ display: "block", fontSize: "0.65rem", color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis" }}>
                                 {item.pessoaNome}
                               </span>
                             )}
                           </td>
-                          <td data-label="Conta">{item.conta}</td>
+                          <td data-label="Conta" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.conta}</td>
                           <td data-label="Tipo">
-                            <span className={item.tipo === "Entrada" ? "badge badge-success" : "badge badge-danger"}>
-                              {item.tipo}
+                            <span className={item.tipo === "Entrada" ? "badge badge-success" : "badge badge-danger"} style={{ fontSize: "0.68rem", padding: "1px 5px" }}>
+                              {item.tipo === "Entrada" ? "Ent" : "Saí"}
                             </span>
                           </td>
                           <td data-label="Valor" style={{ fontWeight: 600, textAlign: "right", whiteSpace: "nowrap" }}>
                             {formatadorMoeda.format(Math.abs(item.valor))}
                           </td>
-                          <td data-label="Placa" style={{ textAlign: "center" }}>
+                          <td data-label="Placa" style={{ textAlign: "center", whiteSpace: "nowrap", fontFamily: "monospace", letterSpacing: "-0.5px" }}>
                             {item.placa || "-"}
                           </td>
-                          <td data-label="Documento" style={{ textAlign: "center", color: "#6b7280" }}>
+                          <td data-label="Doc" style={{ textAlign: "center", color: "#6b7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {item.documento || "-"}
                           </td>
                         </tr>
