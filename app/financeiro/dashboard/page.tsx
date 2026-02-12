@@ -243,7 +243,7 @@ export default function FinanceiroDashboardPage() {
   const [cruzamentoData, setCruzamentoData] = useState<any>(null);
   const [chartTypeGraficos, setChartTypeGraficos] = useState<ChartType>("line");
   const [carregandoGraficos, setCarregandoGraficos] = useState(false);
-  const [filtroOrigem, setFiltroOrigem] = useState<"TODOS" | "PLANO_CONTAS" | "DRE">("TODOS");
+  const [filtroOrigem, setFiltroOrigem] = useState<"PLANO_CONTAS" | "DRE">("PLANO_CONTAS");
   const [buscaCruzamento, setBuscaCruzamento] = useState("");
 
   // Edit modal
@@ -255,6 +255,7 @@ export default function FinanceiroDashboardPage() {
   const [lancamentos, setLancamentos] = useState<LancamentoItem[]>([]);
   const [buscaLancamentos, setBuscaLancamentos] = useState("");
   const [contaIdFiltro, setContaIdFiltro] = useState<number | null>(null);
+  const [contaNomeFiltro, setContaNomeFiltro] = useState<string>("");
   const [carregandoLancamentos, setCarregandoLancamentos] = useState(false);
   const [mostrarLancamentos, setMostrarLancamentos] = useState(false);
 
@@ -370,10 +371,7 @@ export default function FinanceiroDashboardPage() {
   })();
 
   const contasFiltradas = useMemo(() => {
-    let lista = contasDisponiveis;
-    if (filtroOrigem !== "TODOS") {
-      lista = lista.filter((c) => c.origem === filtroOrigem);
-    }
+    let lista = contasDisponiveis.filter((c) => c.origem === filtroOrigem);
     if (buscaCruzamento.trim().length >= 3) {
       const b = buscaCruzamento.toLowerCase();
       lista = lista.filter((c) => `${c.codigo} ${c.nome}`.toLowerCase().includes(b));
@@ -449,10 +447,12 @@ export default function FinanceiroDashboardPage() {
     }
   };
 
-  const handleVerLancamentos = (contaId?: number) => {
+  const handleVerLancamentos = (contaId?: number, contaNome?: string) => {
     setContaIdFiltro(contaId ?? null);
+    setContaNomeFiltro(contaNome ?? "");
     setMostrarLancamentos(true);
-    carregarLancamentos(buscaLancamentos, contaId ?? null);
+    setBuscaLancamentos("");
+    carregarLancamentos("", contaId ?? null);
   };
 
   const tabs: { id: TabId; label: string }[] = [
@@ -591,7 +591,7 @@ export default function FinanceiroDashboardPage() {
                             type="button"
                             className="button button-secondary button-compact"
                             style={{ fontSize: "0.7rem", padding: "2px 6px" }}
-                            onClick={() => handleVerLancamentos(c.contaId)}
+                            onClick={() => handleVerLancamentos(c.contaId, `${c.contaCodigo ? c.contaCodigo + " " : ""}${c.conta}`)}
                           >
                             Ver
                           </button>
@@ -740,6 +740,8 @@ export default function FinanceiroDashboardPage() {
                               setActiveTab("despesas");
                               setMostrarLancamentos(true);
                               setContaIdFiltro(g.contaId);
+                              setContaNomeFiltro(`${g.contaCodigo ? g.contaCodigo + " " : ""}${g.contaNome}`);
+                              setBuscaLancamentos("");
                               carregarLancamentos("", g.contaId);
                             }}
                           >
@@ -803,14 +805,50 @@ export default function FinanceiroDashboardPage() {
             {/* Lancamentos detail view */}
             {mostrarLancamentos && (activeTab === "receitas" || activeTab === "despesas") && (
               <section className="panel">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600 }}>
-                      Lancamentos {contaIdFiltro ? "(conta filtrada)" : ""}
-                    </h3>
-                    <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#6b7280" }}>
-                      Clique em um lancamento para editar
-                    </p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <button
+                        type="button"
+                        className="button button-secondary button-compact"
+                        onClick={() => { setMostrarLancamentos(false); setContaIdFiltro(null); setContaNomeFiltro(""); }}
+                        style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+                      >
+                        Voltar
+                      </button>
+                      <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>
+                        Movimentos Detalhados
+                      </h3>
+                    </div>
+                    {contaNomeFiltro && (
+                      <div style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        marginTop: 6,
+                        padding: "6px 12px",
+                        backgroundColor: activeTab === "receitas" ? "#ecfdf5" : "#fef2f2",
+                        border: `1px solid ${activeTab === "receitas" ? "#a7f3d0" : "#fecaca"}`,
+                        borderRadius: 6,
+                        fontSize: "0.82rem",
+                      }}>
+                        <span style={{ color: "#6b7280" }}>Conta:</span>
+                        <strong style={{ color: activeTab === "receitas" ? "#065f46" : "#991b1b" }}>{contaNomeFiltro}</strong>
+                        <button
+                          type="button"
+                          onClick={() => { setContaIdFiltro(null); setContaNomeFiltro(""); carregarLancamentos(buscaLancamentos, null); }}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "1rem", padding: 0, lineHeight: 1 }}
+                          title="Remover filtro de conta"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    )}
+                    {!contaNomeFiltro && (
+                      <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#6b7280" }}>
+                        Todos os movimentos do periodo - clique em um lancamento para editar
+                      </p>
+                    )}
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <input
@@ -825,20 +863,44 @@ export default function FinanceiroDashboardPage() {
                       }}
                       style={{ width: 280, fontSize: "0.82rem", padding: "6px 10px" }}
                     />
-                    <button
-                      type="button"
-                      className="button button-secondary button-compact"
-                      onClick={() => { setMostrarLancamentos(false); setContaIdFiltro(null); }}
-                    >
-                      Voltar
-                    </button>
                   </div>
                 </div>
+
+                {/* Summary cards */}
+                {!carregandoLancamentos && lancamentos.length > 0 && (
+                  <div className="summary-cards" style={{ marginBottom: 16 }}>
+                    <div className="summary-card" style={{ padding: "10px 14px" }}>
+                      <span className="summary-label" style={{ fontSize: "0.72rem" }}>Lancamentos</span>
+                      <strong className="summary-value" style={{ fontSize: "1.1rem" }}>{lancamentos.length}</strong>
+                    </div>
+                    <div className="summary-card" style={{ padding: "10px 14px" }}>
+                      <span className="summary-label" style={{ fontSize: "0.72rem" }}>Total Entradas</span>
+                      <strong className="summary-value" style={{ fontSize: "1rem", color: "#059669" }}>
+                        {formatMoney(lancamentos.filter((l) => l.valor >= 0).reduce((a, l) => a + l.valor, 0))}
+                      </strong>
+                    </div>
+                    <div className="summary-card" style={{ padding: "10px 14px" }}>
+                      <span className="summary-label" style={{ fontSize: "0.72rem" }}>Total Saidas</span>
+                      <strong className="summary-value" style={{ fontSize: "1rem", color: "#dc2626" }}>
+                        {formatMoney(Math.abs(lancamentos.filter((l) => l.valor < 0).reduce((a, l) => a + l.valor, 0)))}
+                      </strong>
+                    </div>
+                    <div className="summary-card" style={{ padding: "10px 14px" }}>
+                      <span className="summary-label" style={{ fontSize: "0.72rem" }}>Resultado</span>
+                      <strong className="summary-value" style={{
+                        fontSize: "1rem",
+                        color: lancamentos.reduce((a, l) => a + l.valor, 0) >= 0 ? "#059669" : "#dc2626",
+                      }}>
+                        {formatMoney(lancamentos.reduce((a, l) => a + l.valor, 0))}
+                      </strong>
+                    </div>
+                  </div>
+                )}
 
                 {carregandoLancamentos ? (
                   <div className="empty-state">Carregando lancamentos...</div>
                 ) : lancamentos.length === 0 ? (
-                  <div className="empty-state">Nenhum lancamento encontrado.</div>
+                  <div className="empty-state">Nenhum lancamento encontrado no periodo.</div>
                 ) : (
                   <div style={{ overflowX: "auto" }}>
                     <table className="data-table mobile-cards">
@@ -892,7 +954,7 @@ export default function FinanceiroDashboardPage() {
                   </div>
 
                   <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
-                    {(["TODOS", "PLANO_CONTAS", "DRE"] as const).map((f) => (
+                    {(["PLANO_CONTAS", "DRE"] as const).map((f) => (
                       <button
                         key={f}
                         type="button"
@@ -900,7 +962,7 @@ export default function FinanceiroDashboardPage() {
                         onClick={() => setFiltroOrigem(f)}
                         style={{ fontSize: "0.75rem" }}
                       >
-                        {f === "TODOS" ? "Todas" : f === "PLANO_CONTAS" ? "Plano de Contas" : "DRE"}
+                        {f === "PLANO_CONTAS" ? "Plano de Contas" : "DRE"}
                       </button>
                     ))}
                     <input

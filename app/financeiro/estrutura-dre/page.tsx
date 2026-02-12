@@ -614,98 +614,147 @@ export default function EstruturaDrePage() {
 
                 {/* Linked accounts - separate card, only when editing */}
                 {editandoId && selecionada && (
-                  <section style={{ backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px 24px" }}>
-                    <header className="form-section-header" style={{ marginBottom: 16 }}>
-                      <h2>Contas vinculadas</h2>
-                      <p>Plano de contas conectado a esta linha do DRE: <strong>{form.codigo} - {form.nome}</strong></p>
-                    </header>
-
-                    {contasSelecionadas.length > 0 ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        {contasSelecionadas.map((conta) => (
-                          <div
-                            key={conta}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              flexWrap: "wrap",
-                              gap: 8,
-                              padding: "8px 12px",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: 8,
-                              backgroundColor: "#f9fafb",
-                              fontSize: "0.9rem",
-                            }}
-                          >
-                            <span style={{ minWidth: 0, wordBreak: "break-word", flex: 1 }}>{conta}</span>
-                            <button
-                              type="button"
-                              className="button button-secondary button-compact"
-                              style={{ flexShrink: 0 }}
-                              onClick={() => handleDesvincularConta(conta)}
-                              disabled={salvandoVinculo}
-                            >
-                              Remover
-                            </button>
-                          </div>
-                        ))}
+                  <section style={{ backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: 0, overflow: "hidden" }}>
+                    {/* Card header */}
+                    <div style={{
+                      padding: "16px 24px",
+                      backgroundColor: "#f8fafc",
+                      borderBottom: "1px solid #e5e7eb",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}>
+                      <div>
+                        <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Contas vinculadas</h2>
+                        <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#64748b" }}>
+                          Linha: <strong>{form.codigo} - {form.nome}</strong>
+                        </p>
                       </div>
-                    ) : (
-                      <div className="empty-state"><p>Nenhuma conta associada a esta linha.</p></div>
-                    )}
+                      <span style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minWidth: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        backgroundColor: contasSelecionadas.length > 0 ? "#dbeafe" : "#f3f4f6",
+                        color: contasSelecionadas.length > 0 ? "#1d4ed8" : "#6b7280",
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        padding: "0 8px",
+                      }}>
+                        {contasSelecionadas.length}
+                      </span>
+                    </div>
 
-                    <div style={{ marginTop: 16 }}>
-                      <label htmlFor="dre-busca-conta" className="detail-label">Vincular nova conta</label>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
-                        <input
-                          id="dre-busca-conta"
-                          className="form-input"
-                          placeholder="Buscar pelo codigo ou nome"
-                          value={contaBusca}
-                          onChange={(e) => setContaBusca(e.target.value)}
-                          style={{ flex: 1 }}
-                        />
-                        <span style={{ fontSize: "0.75rem", color: "#6b7280", whiteSpace: "nowrap" }}>
-                          {contasFiltradas.length} conta(s)
-                        </span>
-                      </div>
-                      <div style={{ maxHeight: 240, overflowY: "auto", marginTop: 8, border: "1px solid #e5e7eb", borderRadius: 8, backgroundColor: "#fafafa" }}>
-                        {contasFiltradas.length === 0 ? (
-                          <div style={{ padding: "12px 14px", fontSize: "0.82rem", color: "#6b7280", textAlign: "center" }}>
-                            {contaBusca.trim() ? "Nenhuma conta encontrada" : "Todas as contas ja estao vinculadas"}
-                          </div>
-                        ) : (
-                          contasFiltradas.map((conta) => (
-                            <button
-                              key={conta.id}
-                              type="button"
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                width: "100%",
-                                padding: "8px 12px",
-                                border: "none",
-                                borderBottom: "1px solid #f3f4f6",
-                                backgroundColor: "transparent",
-                                cursor: "pointer",
-                                textAlign: "left",
-                                fontSize: "0.82rem",
-                                color: "#1e40af",
-                                transition: "background-color 0.15s",
-                              }}
-                              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#dbeafe"; }}
-                              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}
-                              onClick={() => handleVincularConta(conta.id)}
-                              disabled={salvandoVinculo}
-                            >
-                              <span style={{ color: "#059669", fontWeight: 700, fontSize: "0.9rem", flexShrink: 0 }}>+</span>
-                              <span style={{ fontWeight: 600, minWidth: 60, flexShrink: 0 }}>{conta.codigo}</span>
-                              <span style={{ color: "#374151" }}>{conta.label.replace(conta.codigo + " ", "")}</span>
-                            </button>
-                          ))
-                        )}
+                    {/* Linked accounts list */}
+                    <div style={{ padding: "16px 24px" }}>
+                      {contasSelecionadas.length > 0 ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+                          {contasSelecionadas.map((conta, idx) => {
+                            const partes = conta.split(" ");
+                            const codigo = partes[0] ?? "";
+                            const nome = partes.slice(1).join(" ");
+                            return (
+                              <div
+                                key={conta}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 10,
+                                  padding: "10px 14px",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: 8,
+                                  backgroundColor: "#fff",
+                                  fontSize: "0.85rem",
+                                  borderLeft: `3px solid ${idx % 2 === 0 ? "#3b82f6" : "#8b5cf6"}`,
+                                }}
+                              >
+                                <span style={{ fontWeight: 700, color: "#374151", minWidth: 50, flexShrink: 0 }}>{codigo}</span>
+                                <span style={{ flex: 1, color: "#4b5563", minWidth: 0, wordBreak: "break-word" }}>{nome}</span>
+                                <button
+                                  type="button"
+                                  className="button button-secondary button-compact"
+                                  style={{ flexShrink: 0, fontSize: "0.75rem", color: "#dc2626" }}
+                                  onClick={() => handleDesvincularConta(conta)}
+                                  disabled={salvandoVinculo}
+                                >
+                                  Remover
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{
+                          padding: "20px 16px",
+                          textAlign: "center",
+                          color: "#9ca3af",
+                          fontSize: "0.85rem",
+                          backgroundColor: "#fafafa",
+                          borderRadius: 8,
+                          border: "1px dashed #d1d5db",
+                          marginBottom: 16,
+                        }}>
+                          Nenhuma conta associada a esta linha.
+                        </div>
+                      )}
+
+                      {/* Search and link new accounts */}
+                      <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 16 }}>
+                        <label htmlFor="dre-busca-conta" style={{ fontSize: "0.82rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
+                          Vincular nova conta
+                        </label>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <input
+                            id="dre-busca-conta"
+                            className="form-input"
+                            placeholder="Buscar pelo codigo ou nome..."
+                            value={contaBusca}
+                            onChange={(e) => setContaBusca(e.target.value)}
+                            style={{ flex: 1 }}
+                          />
+                          <span style={{ fontSize: "0.75rem", color: "#6b7280", whiteSpace: "nowrap" }}>
+                            {contasFiltradas.length} disponivel(is)
+                          </span>
+                        </div>
+                        <div style={{ maxHeight: 220, overflowY: "auto", marginTop: 8, border: "1px solid #e5e7eb", borderRadius: 8, backgroundColor: "#fafafa" }}>
+                          {contasFiltradas.length === 0 ? (
+                            <div style={{ padding: "14px 16px", fontSize: "0.82rem", color: "#6b7280", textAlign: "center" }}>
+                              {contaBusca.trim() ? "Nenhuma conta encontrada" : "Todas as contas ja estao vinculadas"}
+                            </div>
+                          ) : (
+                            contasFiltradas.map((conta) => (
+                              <button
+                                key={conta.id}
+                                type="button"
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  width: "100%",
+                                  padding: "8px 12px",
+                                  border: "none",
+                                  borderBottom: "1px solid #f3f4f6",
+                                  backgroundColor: "transparent",
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  fontSize: "0.82rem",
+                                  color: "#1e40af",
+                                  transition: "background-color 0.15s",
+                                }}
+                                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#dbeafe"; }}
+                                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}
+                                onClick={() => handleVincularConta(conta.id)}
+                                disabled={salvandoVinculo}
+                              >
+                                <span style={{ color: "#059669", fontWeight: 700, fontSize: "0.9rem", flexShrink: 0 }}>+</span>
+                                <span style={{ fontWeight: 600, minWidth: 60, flexShrink: 0 }}>{conta.codigo}</span>
+                                <span style={{ color: "#374151" }}>{conta.label.replace(conta.codigo + " ", "")}</span>
+                              </button>
+                            ))
+                          )}
+                        </div>
                       </div>
                     </div>
                   </section>
