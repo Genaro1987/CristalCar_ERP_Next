@@ -127,7 +127,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: lancamento });
     }
 
-    // Buscar todos os lancamentos
+    // Data limite: hoje - 21 dias (apenas registros editaveis)
+    const hoje = new Date();
+    hoje.setDate(hoje.getDate() - 21);
+    const dataLimite = hoje.toISOString().split("T")[0];
+
+    // Buscar lancamentos dentro da janela de 21 dias
     let sql = `
       SELECT
         l.FIN_LANCAMENTO_ID,
@@ -150,14 +155,10 @@ export async function GET(request: NextRequest) {
       LEFT JOIN FIN_CENTRO_CUSTO cc ON cc.FIN_CENTRO_CUSTO_ID = l.FIN_CENTRO_CUSTO_ID
       LEFT JOIN CAD_PESSOA pes ON pes.CAD_PESSOA_ID = l.FIN_LANCAMENTO_PESSOA_ID
       WHERE l.EMPRESA_ID = ?
+        AND l.FIN_LANCAMENTO_DATA >= ?
     `;
 
-    const args: any[] = [empresaId];
-
-    if (periodo) {
-      sql += ` AND (strftime('%Y-%m', l.FIN_LANCAMENTO_DATA) = ? OR SUBSTR(l.FIN_LANCAMENTO_DATA, 1, 4) || '-' || SUBSTR(l.FIN_LANCAMENTO_DATA, -5, 2) = ?)`;
-      args.push(periodo, periodo);
-    }
+    const args: any[] = [empresaId, dataLimite];
 
     // Filtro por natureza (RECEITA = valor >= 0, DESPESA = valor < 0)
     if (natureza === "RECEITA") {

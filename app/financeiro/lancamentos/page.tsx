@@ -114,10 +114,6 @@ export default function LancamentosPage() {
   }, []);
 
   const preencherForm = (item: Lancamento) => {
-    if (!podeEditar(item.data)) {
-      setNotification({ type: "error", message: "Lancamento com mais de 21 dias nao pode ser editado" });
-      return;
-    }
     setSelecionado(item);
     setFormData(item.data);
     setFormHistorico(item.historico);
@@ -130,19 +126,6 @@ export default function LancamentosPage() {
     setFormPessoaId(item.pessoaId ? String(item.pessoaId) : "");
     setFormPlaca(item.placa ?? "");
   };
-
-  // Data limite para edicao/exclusao (hoje - 21 dias)
-  const dataLimiteEdicao = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 21);
-    return d.toISOString().split("T")[0];
-  }, []);
-
-  // Verifica se um lancamento pode ser editado/excluido (dentro dos 21 dias)
-  const podeEditar = useCallback((dataLanc: string) => {
-    if (!dataLanc || dataLanc.length < 10) return false;
-    return dataLanc >= dataLimiteEdicao;
-  }, [dataLimiteEdicao]);
 
   // Buscar lancamentos (natureza obrigatorio + busca com 3+ chars)
   const buscarLancamentos = useCallback(async () => {
@@ -413,10 +396,6 @@ export default function LancamentosPage() {
   // Excluir lancamento
   const handleExcluir = async () => {
     if (!selecionado || !empresa?.id) return;
-    if (!podeEditar(selecionado.data)) {
-      setNotification({ type: "error", message: "Lancamento com mais de 21 dias nao pode ser excluido" });
-      return;
-    }
     if (!window.confirm("Tem certeza que deseja excluir este lancamento?")) return;
     setExcluindo(true);
     try {
@@ -443,10 +422,6 @@ export default function LancamentosPage() {
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!empresa?.id) return;
-    if (selecionado && !podeEditar(selecionado.data)) {
-      setNotification({ type: "error", message: "Lancamento com mais de 21 dias nao pode ser editado" });
-      return;
-    }
     const valorNum = parseFloat(formValor.replace(/\./g, "").replace(",", ".")) || 0;
     const valorFinal = formTipo === "Saida" ? -Math.abs(valorNum) : Math.abs(valorNum);
     const payload = {
@@ -825,7 +800,7 @@ export default function LancamentosPage() {
                   <h2>Lancamentos cadastrados</h2>
                   <p>
                     {filtroNatureza
-                      ? `${dadosOrdenados.length} lancamento(s) encontrado(s)`
+                      ? `${dadosOrdenados.length} lancamento(s) nos ultimos 21 dias`
                       : "Selecione o tipo para visualizar."}
                   </p>
                 </header>
@@ -921,18 +896,14 @@ export default function LancamentosPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {dadosOrdenados.map((item) => {
-                        const editavel = podeEditar(item.data);
-                        return (
+                      {dadosOrdenados.map((item) => (
                         <tr
                           key={item.id}
                           onClick={() => preencherForm(item)}
                           style={{
-                            cursor: editavel ? "pointer" : "not-allowed",
+                            cursor: "pointer",
                             backgroundColor: selecionado?.id === item.id ? "#eff6ff" : undefined,
-                            opacity: editavel ? 1 : 0.55,
                           }}
-                          title={editavel ? "Clique para editar" : "Lancamento com mais de 21 dias (somente leitura)"}
                         >
                           <td data-label="Data" style={{ whiteSpace: "nowrap", borderRight: "1px solid #e5e7eb" }}>
                             {item.data && item.data.length >= 10
@@ -962,8 +933,7 @@ export default function LancamentosPage() {
                             {item.documento || "-"}
                           </td>
                         </tr>
-                        );
-                      })}
+                      ))}
                     </tbody>
                   </table>
                 )}
