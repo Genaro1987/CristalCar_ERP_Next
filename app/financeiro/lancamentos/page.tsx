@@ -615,42 +615,52 @@ export default function LancamentosPage() {
                     <p>Ajuste o período ou adicione um novo lançamento.</p>
                   </div>
                 ) : (
-                  <table className="data-table mobile-cards">
+                  <div style={{ overflowX: "auto" }}>
+                  <table className="data-table mobile-cards" style={{ fontSize: "0.82rem" }}>
                     <thead>
                       <tr>
-                        <th>Data</th>
-                        <th>Histórico</th>
-                        <th>Conta</th>
-                        <th>Tipo</th>
-                        <th style={{ textAlign: "right" }}>Valor</th>
-                        <th style={{ textAlign: "center" }}>Ações</th>
+                        <th style={{ whiteSpace: "nowrap", width: 82 }}>Data</th>
+                        <th style={{ minWidth: 180 }}>Histórico</th>
+                        <th style={{ minWidth: 160 }}>Conta</th>
+                        <th style={{ whiteSpace: "nowrap", width: 70 }}>Tipo</th>
+                        <th style={{ textAlign: "right", whiteSpace: "nowrap", width: 110 }}>Valor</th>
+                        <th style={{ whiteSpace: "nowrap", width: 80 }}>Placa</th>
+                        <th style={{ minWidth: 80 }}>Documento</th>
+                        <th style={{ textAlign: "center", width: 60 }}>Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {dadosFiltrados.map((item) => (
                         <tr key={item.id} onClick={() => preencherForm(item)} style={{ cursor: "pointer" }}>
-                          <td data-label="Data">{item.data && item.data.length >= 10 ? `${item.data.substring(8,10)}/${item.data.substring(5,7)}/${item.data.substring(0,4)}` : item.data}</td>
+                          <td data-label="Data" style={{ whiteSpace: "nowrap" }}>{item.data && item.data.length >= 10 ? `${item.data.substring(8,10)}/${item.data.substring(5,7)}/${item.data.substring(0,4)}` : item.data}</td>
                           <td data-label="Histórico">
                             {item.historico}
                             {item.pessoaNome && (
-                              <span style={{ display: "block", fontSize: "0.75rem", color: "#6b7280" }}>
+                              <span style={{ display: "block", fontSize: "0.72rem", color: "#6b7280" }}>
                                 {item.pessoaNome}
                               </span>
                             )}
                           </td>
-                          <td data-label="Conta">{item.conta}</td>
+                          <td data-label="Conta" style={{ fontSize: "0.78rem" }}>{item.conta}</td>
                           <td data-label="Tipo">
                             <span className={item.tipo === "Entrada" ? "badge badge-success" : "badge badge-danger"}>
                               {item.tipo}
                             </span>
                           </td>
-                          <td data-label="Valor" style={{ fontWeight: 600, textAlign: "right" }}>
+                          <td data-label="Valor" style={{ fontWeight: 600, textAlign: "right", whiteSpace: "nowrap" }}>
                             {formatadorMoeda.format(Math.abs(item.valor))}
+                          </td>
+                          <td data-label="Placa" style={{ fontFamily: "monospace", fontWeight: 600, fontSize: "0.78rem" }}>
+                            {item.placa || "-"}
+                          </td>
+                          <td data-label="Documento" style={{ fontSize: "0.78rem", color: "#6b7280" }}>
+                            {item.documento || "-"}
                           </td>
                           <td data-label="">
                             <button
                               type="button"
                               className="button button-secondary button-compact"
+                              style={{ fontSize: "0.75rem", padding: "2px 8px" }}
                               onClick={(e) => { e.stopPropagation(); preencherForm(item); }}
                             >
                               Editar
@@ -660,6 +670,7 @@ export default function LancamentosPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 )}
               </section>
             </div>
