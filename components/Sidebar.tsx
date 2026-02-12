@@ -33,15 +33,36 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
   const { podeAcessar, permissoesCarregadas, perfilNome } = usePermissoes();
   const sidebarRef = useRef<HTMLElement>(null);
 
-  // Restaurar posicao do scroll ao montar
+  // Restaurar posicao do scroll ao montar (com rAF para garantir que layout ja foi calculado)
   useEffect(() => {
     const el = sidebarRef.current;
     if (!el) return;
     const saved = sessionStorage.getItem(SIDEBAR_SCROLL_KEY);
-    if (saved) el.scrollTop = Number(saved);
+    if (saved) {
+      const pos = Number(saved);
+      // Aguardar o browser calcular layout antes de setar scroll
+      requestAnimationFrame(() => {
+        el.scrollTop = pos;
+        // Fallback: se o primeiro rAF nao foi suficiente, tentar novamente
+        requestAnimationFrame(() => {
+          el.scrollTop = pos;
+        });
+      });
+    }
   }, []);
 
-  // Salvar posicao do scroll antes de navegar
+  // Salvar posicao do scroll continuamente (a cada scroll do sidebar)
+  useEffect(() => {
+    const el = sidebarRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(el.scrollTop));
+    };
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Tambem salvar antes de navegar (garante captura no click)
   const handleNavegar = useCallback(() => {
     const el = sidebarRef.current;
     if (el) sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(el.scrollTop));
