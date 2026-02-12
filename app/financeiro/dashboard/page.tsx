@@ -706,19 +706,19 @@ export default function FinanceiroDashboardPage() {
                     <table className="data-table mobile-cards">
                       <thead>
                         <tr>
-                          <th>Empresa</th>
-                          <th style={{ textAlign: "right" }}>Entradas</th>
-                          <th style={{ textAlign: "right" }}>Saidas</th>
-                          <th style={{ textAlign: "right" }}>Resultado</th>
+                          <th style={{ textAlign: "center" }}>Empresa</th>
+                          <th style={{ textAlign: "center" }}>Entradas</th>
+                          <th style={{ textAlign: "center" }}>Saidas</th>
+                          <th style={{ textAlign: "center" }}>Resultado</th>
                         </tr>
                       </thead>
                       <tbody>
                         {carteira.map((c, i) => (
                           <tr key={i}>
-                            <td data-label="Empresa" style={{ fontWeight: 600 }}>{c.empresa}</td>
-                            <td data-label="Entradas" style={{ color: "#059669" }}>{formatMoney(c.entradas)}</td>
-                            <td data-label="Saidas" style={{ color: "#dc2626" }}>{formatMoney(c.saidas)}</td>
-                            <td data-label="Resultado" style={{ fontWeight: 700 }}>{formatMoney(c.entradas - c.saidas)}</td>
+                            <td data-label="Empresa" style={{ fontWeight: 600, textAlign: "center" }}>{c.empresa}</td>
+                            <td data-label="Entradas" style={{ color: "#059669", textAlign: "center" }}>{formatMoney(c.entradas)}</td>
+                            <td data-label="Saidas" style={{ color: "#dc2626", textAlign: "center" }}>{formatMoney(c.saidas)}</td>
+                            <td data-label="Resultado" style={{ fontWeight: 700, textAlign: "center", color: (c.entradas - c.saidas) >= 0 ? "#059669" : "#dc2626" }}>{formatMoney(c.entradas - c.saidas)}</td>
                           </tr>
                         ))}
                         {carteira.length === 0 && !carregandoGeral && (

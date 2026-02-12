@@ -3,15 +3,22 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { PaginaProtegida } from "@/components/PaginaProtegida";
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
 
-type TipoVisao = "agrupado" | "detalhado" | "diario";
+type TipoVisao = "agrupado" | "diario";
 
 const formatMoney = (val: number) =>
   val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  return dateStr;
+}
 
 function defaultDataInicio() {
   const hoje = new Date();
@@ -92,11 +99,16 @@ export default function RelatorioCaixaPage() {
   const [dados, setDados] = useState<any>(null);
   const [carregando, setCarregando] = useState(true);
 
+  // Expansion state for agrupado view
+  const [expandedContas, setExpandedContas] = useState<Record<number, LancamentoDetalhe[]>>({});
+  const [loadingContas, setLoadingContas] = useState<Record<number, boolean>>({});
+
   useEffect(() => {
     if (!empresa?.id) return;
 
     const carregar = async () => {
       setCarregando(true);
+      setExpandedContas({});
       try {
         const params = new URLSearchParams({ dataInicio, dataFim, visao });
         if (busca.trim().length >= 3) params.set("busca", busca.trim());
@@ -116,9 +128,42 @@ export default function RelatorioCaixaPage() {
     carregar();
   }, [empresa?.id, visao, dataInicio, dataFim, busca]);
 
+  const toggleContaExpansion = useCallback(async (contaId: number) => {
+    if (expandedContas[contaId]) {
+      setExpandedContas((prev) => {
+        const next = { ...prev };
+        delete next[contaId];
+        return next;
+      });
+      return;
+    }
+
+    if (!empresa?.id) return;
+    setLoadingContas((prev) => ({ ...prev, [contaId]: true }));
+
+    try {
+      const params = new URLSearchParams({
+        dataInicio,
+        dataFim,
+        visao: "detalhado",
+        contaId: String(contaId),
+      });
+      const res = await fetch(`/api/financeiro/relatorio-caixa?${params}`, {
+        headers: { "x-empresa-id": String(empresa.id) },
+      });
+      const json = await res.json();
+      if (json.success) {
+        setExpandedContas((prev) => ({ ...prev, [contaId]: json.data.lancamentos ?? [] }));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingContas((prev) => ({ ...prev, [contaId]: false }));
+    }
+  }, [empresa?.id, dataInicio, dataFim, expandedContas]);
+
   const visaoOpcoes: { valor: TipoVisao; label: string }[] = [
     { valor: "agrupado", label: "Agrupado" },
-    { valor: "detalhado", label: "Detalhado" },
     { valor: "diario", label: "Diario" },
   ];
 
@@ -132,6 +177,7 @@ export default function RelatorioCaixaPage() {
         <table className="data-table mobile-cards">
           <thead>
             <tr>
+              <th style={{ textAlign: "center", width: 40 }}></th>
               <th style={{ textAlign: "left" }}>Conta</th>
               <th style={{ textAlign: "right" }}>Receitas</th>
               <th style={{ textAlign: "right" }}>Despesas</th>
@@ -144,6 +190,7 @@ export default function RelatorioCaixaPage() {
               <React.Fragment key={g.grupo}>
                 {g.contas.length > 1 && (
                   <tr style={{ backgroundColor: "#f1f5f9", fontWeight: 700 }}>
+                    <td></td>
                     <td style={{ paddingLeft: 8 }}>{g.grupo}</td>
                     <td style={{ textAlign: "right", color: "#059669" }}>{formatMoney(g.receitas)}</td>
                     <td style={{ textAlign: "right", color: "#dc2626" }}>{formatMoney(g.despesas)}</td>
@@ -151,71 +198,98 @@ export default function RelatorioCaixaPage() {
                     <td style={{ textAlign: "right" }}></td>
                   </tr>
                 )}
-                {g.contas.map((c) => (
-                  <tr key={c.contaId}>
-                    <td data-label="Conta" style={{ paddingLeft: g.contas.length > 1 ? 24 : 8 }}>
-                      {c.contaCodigo} {c.contaNome}
-                    </td>
-                    <td data-label="Receitas" style={{ textAlign: "right", color: "#059669" }}>{formatMoney(c.receitas)}</td>
-                    <td data-label="Despesas" style={{ textAlign: "right", color: "#dc2626" }}>{formatMoney(c.despesas)}</td>
-                    <td data-label="Saldo" style={{ textAlign: "right", color: c.saldo >= 0 ? "#059669" : "#dc2626" }}>{formatMoney(c.saldo)}</td>
-                    <td data-label="Qtd" style={{ textAlign: "right" }}>{c.qtd}</td>
-                  </tr>
-                ))}
+                {g.contas.map((c) => {
+                  const isExpanded = !!expandedContas[c.contaId];
+                  const isLoading = !!loadingContas[c.contaId];
+                  const lancamentos = expandedContas[c.contaId] ?? [];
+
+                  return (
+                    <React.Fragment key={c.contaId}>
+                      <tr>
+                        <td style={{ textAlign: "center", width: 40 }}>
+                          <button
+                            type="button"
+                            onClick={() => toggleContaExpansion(c.contaId)}
+                            style={{
+                              background: "none",
+                              border: "1px solid #d1d5db",
+                              borderRadius: 4,
+                              width: 26,
+                              height: 26,
+                              cursor: "pointer",
+                              fontSize: "0.85rem",
+                              fontWeight: 700,
+                              color: isExpanded ? "#dc2626" : "#059669",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            title={isExpanded ? "Fechar detalhes" : "Ver lancamentos"}
+                          >
+                            {isLoading ? "..." : isExpanded ? "-" : "+"}
+                          </button>
+                        </td>
+                        <td data-label="Conta" style={{ paddingLeft: g.contas.length > 1 ? 24 : 8 }}>
+                          {c.contaCodigo} {c.contaNome}
+                        </td>
+                        <td data-label="Receitas" style={{ textAlign: "right", color: "#059669" }}>{formatMoney(c.receitas)}</td>
+                        <td data-label="Despesas" style={{ textAlign: "right", color: "#dc2626" }}>{formatMoney(c.despesas)}</td>
+                        <td data-label="Saldo" style={{ textAlign: "right", color: c.saldo >= 0 ? "#059669" : "#dc2626" }}>{formatMoney(c.saldo)}</td>
+                        <td data-label="Qtd" style={{ textAlign: "right" }}>{c.qtd}</td>
+                      </tr>
+                      {isExpanded && lancamentos.length > 0 && (
+                        <tr>
+                          <td colSpan={6} style={{ padding: 0 }}>
+                            <div style={{ backgroundColor: "#f9fafb", padding: "8px 12px 8px 48px", borderTop: "1px dashed #e5e7eb", borderBottom: "1px dashed #e5e7eb" }}>
+                              <table style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
+                                <thead>
+                                  <tr style={{ color: "#6b7280" }}>
+                                    <th style={{ textAlign: "left", padding: "4px 8px", fontWeight: 600 }}>Data</th>
+                                    <th style={{ textAlign: "left", padding: "4px 8px", fontWeight: 600 }}>Descricao</th>
+                                    <th style={{ textAlign: "left", padding: "4px 8px", fontWeight: 600 }}>Pessoa</th>
+                                    <th style={{ textAlign: "left", padding: "4px 8px", fontWeight: 600 }}>Placa</th>
+                                    <th style={{ textAlign: "right", padding: "4px 8px", fontWeight: 600 }}>Valor</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {lancamentos.map((l: LancamentoDetalhe) => (
+                                    <tr key={l.id} style={{ borderTop: "1px solid #e5e7eb" }}>
+                                      <td style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>{formatDate(l.data)}</td>
+                                      <td style={{ padding: "4px 8px", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.descricao}</td>
+                                      <td style={{ padding: "4px 8px" }}>{l.pessoaNome || "-"}</td>
+                                      <td style={{ padding: "4px 8px" }}>{l.placa || "-"}</td>
+                                      <td style={{ padding: "4px 8px", textAlign: "right", color: l.valor >= 0 ? "#059669" : "#dc2626", fontWeight: 600 }}>
+                                        {l.valor >= 0 ? "+" : "-"}{formatMoney(Math.abs(l.valor))}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      {isExpanded && lancamentos.length === 0 && !isLoading && (
+                        <tr>
+                          <td colSpan={6} style={{ padding: "8px 48px", color: "#6b7280", fontSize: "0.85rem", backgroundColor: "#f9fafb" }}>
+                            Nenhum lancamento encontrado para esta conta.
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </React.Fragment>
             ))}
           </tbody>
           <tfoot>
             <tr style={{ fontWeight: 700, borderTop: "2px solid #e5e7eb", backgroundColor: "#f3f4f6" }}>
+              <td></td>
               <td>TOTAL</td>
               <td style={{ textAlign: "right", color: "#059669" }}>{formatMoney(dados.totalReceitas)}</td>
               <td style={{ textAlign: "right", color: "#dc2626" }}>{formatMoney(dados.totalDespesas)}</td>
               <td style={{ textAlign: "right", color: dados.saldoTotal >= 0 ? "#059669" : "#dc2626" }}>{formatMoney(dados.saldoTotal)}</td>
               <td></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    );
-  }
-
-  function renderDetalhado() {
-    if (!dados?.lancamentos) return null;
-    const lancamentos = dados.lancamentos as LancamentoDetalhe[];
-
-    return (
-      <div style={{ overflowX: "auto" }}>
-        <table className="data-table mobile-cards">
-          <thead>
-            <tr>
-              <th style={{ textAlign: "left" }}>Data</th>
-              <th style={{ textAlign: "left" }}>Descricao</th>
-              <th style={{ textAlign: "left" }}>Conta</th>
-              <th style={{ textAlign: "left" }}>Pessoa</th>
-              <th style={{ textAlign: "left" }}>Placa</th>
-              <th style={{ textAlign: "right" }}>Valor</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lancamentos.map((l) => (
-              <tr key={l.id}>
-                <td data-label="Data">{l.data}</td>
-                <td data-label="Descricao" style={{ maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.descricao}</td>
-                <td data-label="Conta" style={{ fontSize: "0.82rem" }}>{l.contaCodigo} {l.contaNome}</td>
-                <td data-label="Pessoa">{l.pessoaNome || "-"}</td>
-                <td data-label="Placa">{l.placa || "-"}</td>
-                <td data-label="Valor" style={{ textAlign: "right", color: l.valor >= 0 ? "#059669" : "#dc2626", fontWeight: 600 }}>
-                  {l.valor >= 0 ? "+" : "-"}{formatMoney(Math.abs(l.valor))}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr style={{ fontWeight: 700, borderTop: "2px solid #e5e7eb", backgroundColor: "#f3f4f6" }}>
-              <td colSpan={5}>
-                TOTAL ({lancamentos.length} lancamentos)
-              </td>
-              <td style={{ textAlign: "right", color: dados.saldoTotal >= 0 ? "#059669" : "#dc2626" }}>{formatMoney(dados.saldoTotal)}</td>
             </tr>
           </tfoot>
         </table>
@@ -247,7 +321,7 @@ export default function RelatorioCaixaPage() {
               saldoAcumulado += d.saldo;
               return (
                 <tr key={d.data}>
-                  <td data-label="Data">{d.data}</td>
+                  <td data-label="Data">{formatDate(d.data)}</td>
                   <td data-label="Receitas" style={{ textAlign: "right", color: "#059669" }}>{formatMoney(d.receitas)}</td>
                   <td data-label="Despesas" style={{ textAlign: "right", color: "#dc2626" }}>{formatMoney(d.despesas)}</td>
                   <td data-label="Saldo" style={{ textAlign: "right", color: d.saldo >= 0 ? "#059669" : "#dc2626" }}>{formatMoney(d.saldo)}</td>
@@ -349,8 +423,6 @@ export default function RelatorioCaixaPage() {
               <div className="empty-state">Nenhum dado disponivel.</div>
             ) : visao === "agrupado" ? (
               renderAgrupado()
-            ) : visao === "detalhado" ? (
-              renderDetalhado()
             ) : (
               renderDiario()
             )}
