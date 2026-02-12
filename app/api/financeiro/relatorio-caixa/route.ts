@@ -105,6 +105,12 @@ export async function GET(request: NextRequest) {
         args.push(Number(contaId));
       }
 
+      const dataExata = params.get("dataExata");
+      if (dataExata) {
+        sql += ` AND l.FIN_LANCAMENTO_DATA = ?`;
+        args.push(dataExata);
+      }
+
       if (busca.trim().length >= 3) {
         sql += ` AND (l.FIN_LANCAMENTO_DESCRICAO LIKE ? OR l.FIN_LANCAMENTO_PLACA LIKE ? OR COALESCE(pes.CAD_PESSOA_NOME, '') LIKE ?)`;
         const bLike = `%${busca.trim()}%`;
