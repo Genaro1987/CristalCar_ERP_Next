@@ -29,7 +29,8 @@ type ChartType = "bar" | "line" | "pie" | "doughnut";
 
 type ResumoCarteira = { empresa: string; saldo: number; entradas: number; saidas: number };
 type Indicador = { titulo: string; valor: string; descricao: string };
-type Alertas = { entradasPeriodo: number; saidasPeriodo: number; vencidos: number };
+type TopGasto = { contaId: number; contaNome: string; contaCodigo: string; total: number };
+type Alertas = { entradasPeriodo: number; saidasPeriodo: number; topGastos: TopGasto[] };
 
 interface ContaAnalise {
   contaId: number;
@@ -218,10 +219,12 @@ export default function FinanceiroDashboardPage() {
   const [activeTab, setActiveTab] = useState<TabId>("geral");
   const [dataInicio, setDataInicio] = useState(defaultDataInicio);
   const [dataFim, setDataFim] = useState(defaultDataFim);
+  // Periodo ativo: only updates when user clicks "Atualizar" (prevents auto-fetch on period change)
+  const [periodoAtivo, setPeriodoAtivo] = useState({ inicio: defaultDataInicio(), fim: defaultDataFim() });
 
   const [carteira, setCarteira] = useState<ResumoCarteira[]>([]);
   const [indicadores, setIndicadores] = useState<Indicador[]>([]);
-  const [alertas, setAlertas] = useState<Alertas>({ entradasPeriodo: 0, saidasPeriodo: 0, vencidos: 0 });
+  const [alertas, setAlertas] = useState<Alertas>({ entradasPeriodo: 0, saidasPeriodo: 0, topGastos: [] });
   const [carregandoGeral, setCarregandoGeral] = useState(true);
 
   const [receitasData, setReceitasData] = useState<any>(null);
@@ -262,18 +265,22 @@ export default function FinanceiroDashboardPage() {
   }, [empresa?.id]);
 
   const fetchAnalise = useCallback(async (tipo: string, extra?: Record<string, string>) => {
-    const params = new URLSearchParams({ dataInicio, dataFim, tipo, ...extra });
+    const params = new URLSearchParams({ dataInicio: periodoAtivo.inicio, dataFim: periodoAtivo.fim, tipo, ...extra });
     const res = await fetch(`/api/financeiro/dashboard/analise?${params}`, { headers });
     const json = await res.json();
     return json?.success ? json.data : null;
-  }, [dataInicio, dataFim, headers]);
+  }, [periodoAtivo.inicio, periodoAtivo.fim, headers]);
+
+  const handleAtualizar = () => {
+    setPeriodoAtivo({ inicio: dataInicio, fim: dataFim });
+  };
 
   useEffect(() => {
     if (!empresa?.id) return;
     const load = async () => {
       setCarregandoGeral(true);
       try {
-        const params = new URLSearchParams({ dataInicio, dataFim });
+        const params = new URLSearchParams({ dataInicio: periodoAtivo.inicio, dataFim: periodoAtivo.fim });
         const res = await fetch(`/api/financeiro/dashboard?${params}`, { headers });
         const json = await res.json();
         if (json?.success) {
@@ -285,7 +292,7 @@ export default function FinanceiroDashboardPage() {
       finally { setCarregandoGeral(false); }
     };
     load();
-  }, [empresa?.id, dataInicio, dataFim, headers]);
+  }, [empresa?.id, periodoAtivo.inicio, periodoAtivo.fim, headers]);
 
   useEffect(() => {
     if (!empresa?.id || activeTab !== "geral") return;
@@ -319,17 +326,34 @@ export default function FinanceiroDashboardPage() {
       .then((d) => { setCruzamentoData(d); setCarregandoGraficos(false); });
   }, [empresa?.id, activeTab, contasSelecionadas, fetchAnalise]);
 
-  // Load lancamentos for detail view
-  const carregarLancamentos = useCallback(async (busca?: string, contaId?: number | null) => {
+  // Load lancamentos - direct fetch instead of going through fetchAnalise to avoid stale closures
+  async function carregarLancamentos(busca?: string, contaId?: number | null) {
     if (!empresa?.id) return;
     setCarregandoLancamentos(true);
-    const extra: Record<string, string> = {};
-    if (busca && busca.trim().length >= 3) extra.busca = busca.trim();
-    if (contaId) extra.contaId = String(contaId);
-    const data = await fetchAnalise("lancamentos", extra);
-    if (data) setLancamentos(data);
-    setCarregandoLancamentos(false);
-  }, [empresa?.id, fetchAnalise]);
+    try {
+      const params = new URLSearchParams({
+        dataInicio: periodoAtivo.inicio,
+        dataFim: periodoAtivo.fim,
+        tipo: "lancamentos",
+      });
+      if (busca && busca.trim().length >= 3) params.set("busca", busca.trim());
+      if (contaId) params.set("contaId", String(contaId));
+      const res = await fetch(`/api/financeiro/dashboard/analise?${params}`, {
+        headers: { "x-empresa-id": String(empresa.id) },
+      });
+      const json = await res.json();
+      if (json?.success && json.data) {
+        setLancamentos(json.data);
+      } else {
+        setLancamentos([]);
+      }
+    } catch (e) {
+      console.error("Erro ao carregar lancamentos:", e);
+      setLancamentos([]);
+    } finally {
+      setCarregandoLancamentos(false);
+    }
+  }
 
   const carteiraSelecionada = useMemo(
     () => carteira[0] || { empresa: "", saldo: 0, entradas: 0, saidas: 0 },
@@ -338,8 +362,8 @@ export default function FinanceiroDashboardPage() {
 
   const periodoLabel = (() => {
     try {
-      const di = new Date(dataInicio + "T00:00:00");
-      const df = new Date(dataFim + "T00:00:00");
+      const di = new Date(periodoAtivo.inicio + "T00:00:00");
+      const df = new Date(periodoAtivo.fim + "T00:00:00");
       const fmtD = (d: Date) => `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
       return `${fmtD(di)} a ${fmtD(df)}`;
     } catch { return "Periodo"; }
@@ -409,7 +433,7 @@ export default function FinanceiroDashboardPage() {
       const json = await resp.json();
       if (json.success) {
         setLancamentoEditando(null);
-        if (mostrarLancamentos) carregarLancamentos(buscaLancamentos, contaIdFiltro);
+        if (mostrarLancamentos) { carregarLancamentos(buscaLancamentos, contaIdFiltro); }
         if (activeTab === "receitas") {
           setCarregandoReceitas(true);
           fetchAnalise("receitas").then((d) => { setReceitasData(d); setCarregandoReceitas(false); });
@@ -627,6 +651,14 @@ export default function FinanceiroDashboardPage() {
                 <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>a</span>
                 <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="form-input" style={{ fontSize: "0.8rem", padding: "4px 6px", flex: 1, minWidth: 110 }} />
               </div>
+              <button
+                type="button"
+                className="button button-primary button-compact"
+                onClick={handleAtualizar}
+                style={{ fontSize: "0.8rem", padding: "6px 16px", marginTop: 2 }}
+              >
+                Atualizar
+              </button>
             </div>
           </section>
 
@@ -689,17 +721,42 @@ export default function FinanceiroDashboardPage() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   <div className="panel">
-                    <h3 style={{ margin: "0 0 12px", fontSize: "0.95rem", fontWeight: 600 }}>Atencao Necessaria</h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                      <div className="detail-card" style={{ borderLeft: "4px solid #dc2626", padding: "12px 16px" }}>
-                        <span className="detail-label" style={{ color: "#dc2626" }}>Contas Vencidas</span>
-                        <strong style={{ fontSize: "1.15rem", color: "#991b1b" }}>{formatMoney(alertas.vencidos)}</strong>
+                    <h3 style={{ margin: "0 0 12px", fontSize: "0.95rem", fontWeight: 600 }}>5 Maiores Gastos</h3>
+                    {alertas.topGastos && alertas.topGastos.length > 0 ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {alertas.topGastos.map((g, idx) => (
+                          <div
+                            key={g.contaId}
+                            className="detail-card"
+                            style={{
+                              borderLeft: `4px solid ${CORES[idx % CORES.length]}`,
+                              padding: "10px 14px",
+                              cursor: "pointer",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                            onClick={() => {
+                              setActiveTab("despesas");
+                              setMostrarLancamentos(true);
+                              setContaIdFiltro(g.contaId);
+                              carregarLancamentos("", g.contaId);
+                            }}
+                          >
+                            <div style={{ flex: 1 }}>
+                              <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#374151" }}>
+                                {g.contaCodigo ? `${g.contaCodigo} ` : ""}{g.contaNome}
+                              </span>
+                            </div>
+                            <strong style={{ fontSize: "0.95rem", color: "#dc2626", whiteSpace: "nowrap", marginLeft: 8 }}>
+                              {formatMoney(g.total)}
+                            </strong>
+                          </div>
+                        ))}
                       </div>
-                      <div className="detail-card" style={{ borderLeft: "4px solid #f59e0b", padding: "12px 16px" }}>
-                        <span className="detail-label" style={{ color: "#d97706" }}>Saidas Previstas</span>
-                        <strong style={{ fontSize: "1.15rem", color: "#92400e" }}>{formatMoney(alertas.saidasPeriodo)}</strong>
-                      </div>
-                    </div>
+                    ) : (
+                      <p style={{ color: "#6b7280", fontSize: "0.85rem" }}>Nenhum gasto no periodo.</p>
+                    )}
                   </div>
                   <div className="panel">
                     <h3 style={{ margin: "0 0 12px", fontSize: "0.95rem", fontWeight: 600 }}>Movimentacao por Empresa</h3>

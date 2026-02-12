@@ -21,10 +21,17 @@ interface DashboardData {
   alertas: Alertas;
 }
 
+interface TopGasto {
+  contaId: number;
+  contaNome: string;
+  contaCodigo: string;
+  total: number;
+}
+
 interface Alertas {
   entradasPeriodo: number;
   saidasPeriodo: number;
-  vencidos: number;
+  topGastos: TopGasto[];
 }
 
 export async function GET(request: NextRequest) {
@@ -113,27 +120,59 @@ export async function GET(request: NextRequest) {
       descricao: "Resultado do período",
     });
 
-    const dataHoje = new Date().toISOString().slice(0, 10);
+    // Filtro para excluir prolabore
+    const prolaboreFilter = `AND UPPER(p.FIN_PLANO_CONTA_NOME) NOT LIKE '%PROLABORE%' AND UPPER(p.FIN_PLANO_CONTA_NOME) NOT LIKE '%PRO-LABORE%' AND UPPER(p.FIN_PLANO_CONTA_NOME) NOT LIKE '%PRO LABORE%'`;
 
     const sqlAlertas = `
       SELECT
         COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR >= 0 THEN l.FIN_LANCAMENTO_VALOR ELSE 0 END), 0) as entradasPeriodo,
-        COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR < 0 THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as saidasPeriodo,
-        COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_DATA < ? THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as vencidos
+        COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR < 0 THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as saidasPeriodo
       FROM FIN_LANCAMENTO l
+      JOIN FIN_PLANO_CONTA p ON p.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID AND p.EMPRESA_ID = l.EMPRESA_ID
       WHERE l.EMPRESA_ID = ?
         AND l.FIN_LANCAMENTO_DATA >= ? AND l.FIN_LANCAMENTO_DATA <= ?
+        ${prolaboreFilter}
     `;
 
     const resultadoAlertas = await db.execute({
       sql: sqlAlertas,
-      args: [dataHoje, empresaId, dataInicio, dataFim],
+      args: [empresaId, dataInicio, dataFim],
     });
+
+    // Top 5 maiores contas gastas (excluindo prolabore)
+    const sqlTopGastos = `
+      SELECT
+        p.FIN_PLANO_CONTA_ID as contaId,
+        p.FIN_PLANO_CONTA_NOME as contaNome,
+        p.FIN_PLANO_CONTA_CODIGO as contaCodigo,
+        COALESCE(SUM(ABS(l.FIN_LANCAMENTO_VALOR)), 0) as total
+      FROM FIN_LANCAMENTO l
+      JOIN FIN_PLANO_CONTA p ON p.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID AND p.EMPRESA_ID = l.EMPRESA_ID
+      WHERE l.EMPRESA_ID = ?
+        AND l.FIN_LANCAMENTO_DATA >= ? AND l.FIN_LANCAMENTO_DATA <= ?
+        AND l.FIN_LANCAMENTO_VALOR < 0
+        ${prolaboreFilter}
+      GROUP BY p.FIN_PLANO_CONTA_ID, p.FIN_PLANO_CONTA_NOME, p.FIN_PLANO_CONTA_CODIGO
+      ORDER BY total DESC
+      LIMIT 5
+    `;
+
+    const resultadoTopGastos = await db.execute({
+      sql: sqlTopGastos,
+      args: [empresaId, dataInicio, dataFim],
+    });
+
+    const topGastos: TopGasto[] = (resultadoTopGastos.rows ?? []).map((r: any) => ({
+      contaId: Number(r.contaId),
+      contaNome: String(r.contaNome),
+      contaCodigo: String(r.contaCodigo ?? ""),
+      total: Number(r.total),
+    }));
 
     const alertas: Alertas = {
       entradasPeriodo: Number((resultadoAlertas.rows[0] as any)?.entradasPeriodo ?? 0),
       saidasPeriodo: Number((resultadoAlertas.rows[0] as any)?.saidasPeriodo ?? 0),
-      vencidos: Number((resultadoAlertas.rows[0] as any)?.vencidos ?? 0),
+      topGastos,
     };
 
     const dashboardData: DashboardData = {

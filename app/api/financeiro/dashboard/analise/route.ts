@@ -22,6 +22,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: "dataInicio e dataFim obrigatorios" }, { status: 400 });
   }
 
+  // Filtro para excluir prolabore de todas as analises
+  const prolaboreFilter = `AND UPPER(p.FIN_PLANO_CONTA_NOME) NOT LIKE '%PROLABORE%' AND UPPER(p.FIN_PLANO_CONTA_NOME) NOT LIKE '%PRO-LABORE%' AND UPPER(p.FIN_PLANO_CONTA_NOME) NOT LIKE '%PRO LABORE%'`;
+
   try {
     if (tipo === "evolucao") {
       const result = await db.execute({
@@ -31,9 +34,11 @@ export async function GET(request: NextRequest) {
             COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR >= 0 THEN l.FIN_LANCAMENTO_VALOR ELSE 0 END), 0) as receitas,
             COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR < 0 THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as despesas
           FROM FIN_LANCAMENTO l
+          JOIN FIN_PLANO_CONTA p ON p.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID AND p.EMPRESA_ID = l.EMPRESA_ID
           WHERE l.EMPRESA_ID = ?
             AND l.FIN_LANCAMENTO_DATA >= ?
             AND l.FIN_LANCAMENTO_DATA <= ?
+            ${prolaboreFilter}
           GROUP BY strftime('%Y-%m', l.FIN_LANCAMENTO_DATA)
           ORDER BY mes ASC
         `,
@@ -76,6 +81,7 @@ export async function GET(request: NextRequest) {
             AND l.FIN_LANCAMENTO_DATA >= ?
             AND l.FIN_LANCAMENTO_DATA <= ?
             AND ${filtroValor}
+            ${prolaboreFilter}
           GROUP BY p.FIN_PLANO_CONTA_ID, p.FIN_PLANO_CONTA_NOME, p.FIN_PLANO_CONTA_CODIGO, p.FIN_PLANO_CONTA_NATUREZA, p.FIN_PLANO_CONTA_PAI_ID, strftime('%Y-%m', l.FIN_LANCAMENTO_DATA)
           ORDER BY p.FIN_PLANO_CONTA_CODIGO, mes
         `,
@@ -197,6 +203,7 @@ export async function GET(request: NextRequest) {
         WHERE l.EMPRESA_ID = ?
           AND l.FIN_LANCAMENTO_DATA >= ?
           AND l.FIN_LANCAMENTO_DATA <= ?
+          ${prolaboreFilter}
       `;
       const args: any[] = [empresaId, dataInicio, dataFim];
 

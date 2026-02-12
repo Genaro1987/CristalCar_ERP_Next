@@ -3,7 +3,7 @@
 import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { PaginaProtegida } from "@/components/PaginaProtegida";
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
@@ -125,8 +125,6 @@ export default function RelatorioCaixaPage() {
   // Expansion state: key = contaId (agrupado) or date string (diario)
   const [expandedItems, setExpandedItems] = useState<Record<string, LancamentoDetalhe[]>>({});
   const [loadingItems, setLoadingItems] = useState<Record<string, boolean>>({});
-  const expandedRef = useRef(expandedItems);
-  expandedRef.current = expandedItems;
 
   useEffect(() => {
     if (!empresa?.id) return;
@@ -134,6 +132,7 @@ export default function RelatorioCaixaPage() {
     const carregar = async () => {
       setCarregando(true);
       setExpandedItems({});
+      setLoadingItems({});
       try {
         const params = new URLSearchParams({ dataInicio, dataFim, visao });
         if (busca.trim().length >= 3) params.set("busca", busca.trim());
@@ -153,10 +152,10 @@ export default function RelatorioCaixaPage() {
     carregar();
   }, [empresa?.id, visao, dataInicio, dataFim, busca]);
 
-  // Fetch detail lancamentos for a specific contaId (agrupado) or date (diario)
-  const fetchDetalhes = useCallback(async (key: string, extraParams: Record<string, string>) => {
-    if (expandedRef.current[key] !== undefined) {
-      // Toggle off
+  // Simple expansion handler - no useCallback/useRef to avoid stale closures
+  async function handleExpand(key: string, extraParams: Record<string, string>) {
+    // If already expanded, toggle off
+    if (expandedItems[key] !== undefined) {
       setExpandedItems((prev) => {
         const next = { ...prev };
         delete next[key];
@@ -165,7 +164,10 @@ export default function RelatorioCaixaPage() {
       return;
     }
 
+    // If already loading, ignore
+    if (loadingItems[key]) return;
     if (!empresa?.id) return;
+
     setLoadingItems((prev) => ({ ...prev, [key]: true }));
 
     try {
@@ -179,10 +181,9 @@ export default function RelatorioCaixaPage() {
         headers: { "x-empresa-id": String(empresa.id) },
       });
       const json = await res.json();
-      if (json.success) {
-        setExpandedItems((prev) => ({ ...prev, [key]: json.data?.lancamentos ?? [] }));
+      if (json.success && json.data?.lancamentos) {
+        setExpandedItems((prev) => ({ ...prev, [key]: json.data.lancamentos }));
       } else {
-        console.error("Erro ao buscar detalhes:", json.error);
         setExpandedItems((prev) => ({ ...prev, [key]: [] }));
       }
     } catch (e) {
@@ -191,7 +192,7 @@ export default function RelatorioCaixaPage() {
     } finally {
       setLoadingItems((prev) => ({ ...prev, [key]: false }));
     }
-  }, [empresa?.id, dataInicio, dataFim]);
+  }
 
   const visaoOpcoes: { valor: TipoVisao; label: string }[] = [
     { valor: "agrupado", label: "Agrupado" },
@@ -242,7 +243,7 @@ export default function RelatorioCaixaPage() {
                         <td style={{ textAlign: "center", width: 40 }}>
                           <button
                             type="button"
-                            onClick={() => fetchDetalhes(itemKey, { contaId: String(c.contaId) })}
+                            onClick={() => handleExpand(itemKey, { contaId: String(c.contaId) })}
                             style={{
                               background: "none",
                               border: "1px solid #d1d5db",
@@ -371,7 +372,7 @@ export default function RelatorioCaixaPage() {
                     <td style={{ textAlign: "center", width: 40 }}>
                       <button
                         type="button"
-                        onClick={() => fetchDetalhes(itemKey, { dataExata: d.data })}
+                        onClick={() => handleExpand(itemKey, { dataExata: d.data })}
                         style={{
                           background: "none",
                           border: "1px solid #d1d5db",
