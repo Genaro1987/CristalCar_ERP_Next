@@ -113,7 +113,8 @@ export default function LancamentosPage() {
     setFormHistorico(item.historico);
     setFormContaId(String(item.contaId));
     setFormCentroId(item.centroCustoId ? String(item.centroCustoId) : "");
-    setFormValor(String(Math.abs(item.valor)));
+    const absVal = Math.abs(item.valor);
+    setFormValor(absVal > 0 ? absVal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "");
     setFormTipo(item.tipo);
     setFormDocumento(item.documento ?? "");
     setFormPessoaId(item.pessoaId ? String(item.pessoaId) : "");
@@ -273,11 +274,34 @@ export default function LancamentosPage() {
     []
   );
 
+  // Máscara de moeda para o campo Valor
+  const formatarValorInput = (valor: string): string => {
+    const num = parseFloat(valor);
+    if (isNaN(num) || num === 0) return "";
+    return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const handleValorChange = (raw: string) => {
+    const limpo = raw.replace(/[^\d,]/g, "");
+    setFormValor(limpo);
+  };
+
+  const handleValorBlur = () => {
+    const num = parseFloat(formValor.replace(/\./g, "").replace(",", "."));
+    if (isNaN(num)) { setFormValor(""); return; }
+    setFormValor(formatarValorInput(String(num)));
+  };
+
+  const handleValorFocus = () => {
+    const num = parseFloat(formValor.replace(/\./g, "").replace(",", "."));
+    if (!isNaN(num) && num > 0) setFormValor(String(num).replace(".", ","));
+  };
+
   // Salvar lançamento individual
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!empresa?.id) return;
-    const valorNum = Number(formValor) || 0;
+    const valorNum = parseFloat(formValor.replace(/\./g, "").replace(",", ".")) || 0;
     const valorFinal = formTipo === "Saída" ? -Math.abs(valorNum) : Math.abs(valorNum);
     const payload = {
       id: selecionado?.id,
@@ -410,6 +434,7 @@ export default function LancamentosPage() {
                 </header>
 
                 <form className="form" onSubmit={handleSalvar}>
+                  {/* Linha 1: Data | Tipo */}
                   <div className="form-grid two-columns">
                     <div className="form-group">
                       <label htmlFor="lanc-data">Data *</label>
@@ -422,25 +447,6 @@ export default function LancamentosPage() {
                         required
                       />
                     </div>
-                    <div className="form-group">
-                      <label htmlFor="lanc-pessoa">
-                        {formTipo === "Entrada" ? "Cliente" : "Fornecedor"}
-                      </label>
-                      <select
-                        id="lanc-pessoa"
-                        className="form-input"
-                        value={formPessoaId}
-                        onChange={(e) => handlePessoaChange(e.target.value)}
-                      >
-                        <option value="">Selecione</option>
-                        {pessoasFiltradas.map((p) => (
-                          <option key={p.id} value={p.id}>{p.nome}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="form-grid two-columns">
                     <div className="form-group">
                       <label htmlFor="lanc-tipo">Tipo *</label>
                       <select
@@ -456,6 +462,28 @@ export default function LancamentosPage() {
                         <option value="Entrada">Entrada (Recebimento)</option>
                       </select>
                     </div>
+                  </div>
+
+                  {/* Linha 2: Cliente/Fornecedor (largura total) */}
+                  <div className="form-group">
+                    <label htmlFor="lanc-pessoa">
+                      {formTipo === "Entrada" ? "Cliente" : "Fornecedor"}
+                    </label>
+                    <select
+                      id="lanc-pessoa"
+                      className="form-input"
+                      value={formPessoaId}
+                      onChange={(e) => handlePessoaChange(e.target.value)}
+                    >
+                      <option value="">Selecione</option>
+                      {pessoasFiltradas.map((p) => (
+                        <option key={p.id} value={p.id}>{p.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Linha 3: Plano de conta | Centro de custo */}
+                  <div className="form-grid two-columns">
                     <div className="form-group">
                       <label htmlFor="lanc-conta">Plano de conta *</label>
                       <select
@@ -471,38 +499,6 @@ export default function LancamentosPage() {
                         ))}
                       </select>
                     </div>
-                  </div>
-
-                  <div className="form-grid two-columns">
-                    <div className="form-group">
-                      <label htmlFor="lanc-historico">Histórico *</label>
-                      <input
-                        id="lanc-historico"
-                        className="form-input"
-                        value={formHistorico}
-                        onChange={(e) => setFormHistorico(e.target.value)}
-                        placeholder="Descrição do lançamento"
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="lanc-valor">Valor *</label>
-                      <input
-                        id="lanc-valor"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className="form-input"
-                        value={formValor}
-                        onChange={(e) => setFormValor(e.target.value)}
-                        placeholder="0,00"
-                        style={{ textAlign: "right" }}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-grid two-columns">
                     <div className="form-group">
                       <label htmlFor="lanc-centro">Centro de custo</label>
                       <select
@@ -517,19 +513,21 @@ export default function LancamentosPage() {
                         ))}
                       </select>
                     </div>
-                    <div className="form-group">
-                      <label htmlFor="lanc-doc">Documento</label>
-                      <input
-                        id="lanc-doc"
-                        className="form-input"
-                        value={formDocumento}
-                        onChange={(e) => setFormDocumento(e.target.value)}
-                        placeholder="NF, recibo, referência"
-                      />
-                    </div>
                   </div>
 
+                  {/* Linha 4: Histórico | Placa */}
                   <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="lanc-historico">Histórico *</label>
+                      <input
+                        id="lanc-historico"
+                        className="form-input"
+                        value={formHistorico}
+                        onChange={(e) => setFormHistorico(e.target.value)}
+                        placeholder="Descrição do lançamento"
+                        required
+                      />
+                    </div>
                     <div className="form-group">
                       <label htmlFor="lanc-placa">Placa / Veículo</label>
                       <input
@@ -539,6 +537,42 @@ export default function LancamentosPage() {
                         onChange={(e) => setFormPlaca(e.target.value.toUpperCase())}
                         placeholder="ABC-1234"
                         style={{ textTransform: "uppercase" }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Linha 5: Valor (moeda) | Documento */}
+                  <div className="form-grid two-columns">
+                    <div className="form-group">
+                      <label htmlFor="lanc-valor">Valor *</label>
+                      <div style={{ position: "relative" }}>
+                        <span style={{
+                          position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
+                          color: "#6b7280", fontSize: "0.85rem", pointerEvents: "none",
+                        }}>R$</span>
+                        <input
+                          id="lanc-valor"
+                          type="text"
+                          inputMode="decimal"
+                          className="form-input"
+                          value={formValor}
+                          onChange={(e) => handleValorChange(e.target.value)}
+                          onBlur={handleValorBlur}
+                          onFocus={handleValorFocus}
+                          placeholder="0,00"
+                          style={{ textAlign: "right", paddingLeft: 36 }}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="lanc-doc">Documento</label>
+                      <input
+                        id="lanc-doc"
+                        className="form-input"
+                        value={formDocumento}
+                        onChange={(e) => setFormDocumento(e.target.value)}
+                        placeholder="NF, recibo, referência"
                       />
                     </div>
                   </div>
@@ -616,16 +650,16 @@ export default function LancamentosPage() {
                     <p>Ajuste o período ou adicione um novo lançamento.</p>
                   </div>
                 ) : (
-                  <table className="data-table mobile-cards" style={{ fontSize: "0.84rem" }}>
+                  <table className="data-table mobile-cards" style={{ fontSize: "0.78rem" }}>
                     <thead>
                       <tr>
-                        <th style={{ whiteSpace: "nowrap", width: 82 }}>Data</th>
-                        <th style={{ minWidth: 150 }}>Histórico</th>
-                        <th style={{ minWidth: 140 }}>Conta</th>
-                        <th style={{ whiteSpace: "nowrap", width: 68 }}>Tipo</th>
-                        <th style={{ textAlign: "right", whiteSpace: "nowrap", width: 105 }}>Valor</th>
-                        <th style={{ textAlign: "center", whiteSpace: "nowrap", width: 78 }}>Placa</th>
-                        <th style={{ textAlign: "center", minWidth: 80 }}>Documento</th>
+                        <th style={{ whiteSpace: "nowrap", width: 76 }}>Data</th>
+                        <th>Histórico</th>
+                        <th>Conta</th>
+                        <th style={{ whiteSpace: "nowrap", width: 62 }}>Tipo</th>
+                        <th style={{ textAlign: "right", whiteSpace: "nowrap", width: 95 }}>Valor</th>
+                        <th style={{ textAlign: "center", whiteSpace: "nowrap", width: 72 }}>Placa</th>
+                        <th style={{ textAlign: "center", whiteSpace: "nowrap", width: 80 }}>Documento</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -646,7 +680,7 @@ export default function LancamentosPage() {
                           <td data-label="Histórico">
                             {item.historico}
                             {item.pessoaNome && (
-                              <span style={{ display: "block", fontSize: "0.76rem", color: "#6b7280" }}>
+                              <span style={{ display: "block", fontSize: "0.7rem", color: "#6b7280" }}>
                                 {item.pessoaNome}
                               </span>
                             )}
