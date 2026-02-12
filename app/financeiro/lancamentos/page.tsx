@@ -82,6 +82,14 @@ export default function LancamentosPage() {
   const [formPlaca, setFormPlaca] = useState("");
   const [salvando, setSalvando] = useState(false);
 
+  // Modal cadastro rápido de pessoa
+  const [modalPessoa, setModalPessoa] = useState(false);
+  const [novaPessoaNome, setNovaPessoaNome] = useState("");
+  const [novaPessoaDoc, setNovaPessoaDoc] = useState("");
+  const [novaPessoaTipo, setNovaPessoaTipo] = useState<"CLIENTE" | "FORNECEDOR" | "AMBOS">("AMBOS");
+  const [novaPessoaTel, setNovaPessoaTel] = useState("");
+  const [salvandoPessoa, setSalvandoPessoa] = useState(false);
+
   // Modal lote salário/férias
   const [modalLote, setModalLote] = useState(false);
   const [loteFuncs, setLoteFuncs] = useState<{ id: string; nome: string; selecionado: boolean; valor: string }[]>([]);
@@ -399,6 +407,53 @@ export default function LancamentosPage() {
     }
   };
 
+  // Abrir modal de cadastro rápido de pessoa
+  const abrirModalPessoa = () => {
+    setNovaPessoaNome("");
+    setNovaPessoaDoc("");
+    setNovaPessoaTipo(formTipo === "Entrada" ? "CLIENTE" : formTipo === "Saída" ? "FORNECEDOR" : "AMBOS");
+    setNovaPessoaTel("");
+    setModalPessoa(true);
+  };
+
+  // Salvar nova pessoa via modal
+  const handleSalvarPessoa = async () => {
+    if (!empresa?.id || !novaPessoaNome.trim()) return;
+    setSalvandoPessoa(true);
+    try {
+      const res = await fetch("/api/cadastros/pessoas", {
+        method: "POST",
+        headers: { ...headersPadrao, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: novaPessoaNome.trim(),
+          documento: novaPessoaDoc || null,
+          tipo: novaPessoaTipo,
+          telefone: novaPessoaTel || null,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        const novaPessoa: PessoaOption = {
+          id: json.id,
+          nome: novaPessoaNome.trim(),
+          tipo: novaPessoaTipo,
+          contaReceitaId: null,
+          contaDespesaId: null,
+        };
+        setPessoas((prev) => [...prev, novaPessoa]);
+        setFormPessoaId(String(json.id));
+        setModalPessoa(false);
+        setNotification({ type: "success", message: `${novaPessoaTipo === "CLIENTE" ? "Cliente" : novaPessoaTipo === "FORNECEDOR" ? "Fornecedor" : "Pessoa"} cadastrado(a) com sucesso` });
+      } else {
+        setNotification({ type: "error", message: json.error || "Erro ao cadastrar" });
+      }
+    } catch {
+      setNotification({ type: "error", message: "Erro de conexão" });
+    } finally {
+      setSalvandoPessoa(false);
+    }
+  };
+
   const contasDespesaParaLote = useMemo(
     () => planoContas.filter((c) => c.natureza === "DESPESA"),
     [planoContas]
@@ -464,22 +519,34 @@ export default function LancamentosPage() {
                     </div>
                   </div>
 
-                  {/* Linha 2: Cliente/Fornecedor (largura total) */}
+                  {/* Linha 2: Cliente/Fornecedor + botão novo */}
                   <div className="form-group">
                     <label htmlFor="lanc-pessoa">
                       {formTipo === "Entrada" ? "Cliente" : "Fornecedor"}
                     </label>
-                    <select
-                      id="lanc-pessoa"
-                      className="form-input"
-                      value={formPessoaId}
-                      onChange={(e) => handlePessoaChange(e.target.value)}
-                    >
-                      <option value="">Selecione</option>
-                      {pessoasFiltradas.map((p) => (
-                        <option key={p.id} value={p.id}>{p.nome}</option>
-                      ))}
-                    </select>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <select
+                        id="lanc-pessoa"
+                        className="form-input"
+                        value={formPessoaId}
+                        onChange={(e) => handlePessoaChange(e.target.value)}
+                        style={{ flex: 1 }}
+                      >
+                        <option value="">Selecione</option>
+                        {pessoasFiltradas.map((p) => (
+                          <option key={p.id} value={p.id}>{p.nome}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={abrirModalPessoa}
+                        className="button button-secondary"
+                        title={`Cadastrar novo ${formTipo === "Entrada" ? "cliente" : "fornecedor"}`}
+                        style={{ padding: "6px 10px", fontSize: "1rem", lineHeight: 1, flexShrink: 0 }}
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
 
                   {/* Linha 3: Plano de conta | Centro de custo */}
@@ -650,16 +717,15 @@ export default function LancamentosPage() {
                     <p>Ajuste o período ou adicione um novo lançamento.</p>
                   </div>
                 ) : (
-                  <table className="data-table mobile-cards" style={{ fontSize: "0.72rem", tableLayout: "fixed", width: "100%" }}>
+                  <table className="data-table mobile-cards" style={{ fontSize: "0.7rem" }}>
                     <thead>
                       <tr>
-                        <th style={{ whiteSpace: "nowrap", width: 72 }}>Data</th>
-                        <th style={{ width: "auto" }}>Histórico</th>
-                        <th style={{ whiteSpace: "nowrap", width: 120 }}>Conta</th>
-                        <th style={{ whiteSpace: "nowrap", width: 52 }}>Tipo</th>
-                        <th style={{ textAlign: "right", whiteSpace: "nowrap", width: 88 }}>Valor</th>
-                        <th style={{ textAlign: "center", whiteSpace: "nowrap", width: 80 }}>Placa</th>
-                        <th style={{ textAlign: "center", whiteSpace: "nowrap", width: 70 }}>Doc</th>
+                        <th style={{ whiteSpace: "nowrap" }}>Data</th>
+                        <th>Histórico</th>
+                        <th>Conta</th>
+                        <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>Valor</th>
+                        <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Placa</th>
+                        <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Doc</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -674,30 +740,28 @@ export default function LancamentosPage() {
                         >
                           <td data-label="Data" style={{ whiteSpace: "nowrap" }}>
                             {item.data && item.data.length >= 10
-                              ? `${item.data.substring(8,10)}/${item.data.substring(5,7)}/${item.data.substring(0,4)}`
+                              ? `${item.data.substring(8,10)}/${item.data.substring(5,7)}`
                               : item.data}
                           </td>
-                          <td data-label="Histórico" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <td data-label="Histórico" style={{ maxWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {item.historico}
                             {item.pessoaNome && (
-                              <span style={{ display: "block", fontSize: "0.65rem", color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              <span style={{ display: "block", fontSize: "0.63rem", color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis" }}>
                                 {item.pessoaNome}
                               </span>
                             )}
                           </td>
-                          <td data-label="Conta" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.conta}</td>
-                          <td data-label="Tipo">
-                            <span className={item.tipo === "Entrada" ? "badge badge-success" : "badge badge-danger"} style={{ fontSize: "0.68rem", padding: "1px 5px" }}>
-                              {item.tipo === "Entrada" ? "Ent" : "Saí"}
-                            </span>
+                          <td data-label="Conta" style={{ whiteSpace: "nowrap" }}>{item.conta}</td>
+                          <td data-label="Valor" style={{
+                            fontWeight: 600, textAlign: "right", whiteSpace: "nowrap",
+                            color: item.tipo === "Entrada" ? "#16a34a" : "#dc2626",
+                          }}>
+                            {item.tipo === "Entrada" ? "+" : "-"}{formatadorMoeda.format(Math.abs(item.valor))}
                           </td>
-                          <td data-label="Valor" style={{ fontWeight: 600, textAlign: "right", whiteSpace: "nowrap" }}>
-                            {formatadorMoeda.format(Math.abs(item.valor))}
-                          </td>
-                          <td data-label="Placa" style={{ textAlign: "center", whiteSpace: "nowrap", fontFamily: "monospace", letterSpacing: "-0.5px" }}>
+                          <td data-label="Placa" style={{ textAlign: "center", whiteSpace: "nowrap" }}>
                             {item.placa || "-"}
                           </td>
-                          <td data-label="Doc" style={{ textAlign: "center", color: "#6b7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          <td data-label="Doc" style={{ textAlign: "center", color: "#6b7280", whiteSpace: "nowrap" }}>
                             {item.documento || "-"}
                           </td>
                         </tr>
@@ -711,6 +775,91 @@ export default function LancamentosPage() {
           </div>
         </main>
         </PaginaProtegida>
+
+        {/* Modal cadastro rápido de pessoa */}
+        {modalPessoa && (
+          <div style={{
+            position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+          }}>
+            <div style={{
+              backgroundColor: "#fff", borderRadius: 12, padding: 24,
+              width: "90%", maxWidth: 440,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}>
+              <h2 style={{ margin: "0 0 4px", fontSize: "1.1rem" }}>
+                Novo {novaPessoaTipo === "CLIENTE" ? "Cliente" : novaPessoaTipo === "FORNECEDOR" ? "Fornecedor" : "Cadastro"}
+              </h2>
+              <p style={{ color: "#6b7280", fontSize: "0.82rem", margin: "0 0 16px" }}>
+                Cadastro rápido. Dados complementares podem ser preenchidos depois.
+              </p>
+
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label>Nome / Razão Social *</label>
+                <input
+                  className="form-input"
+                  value={novaPessoaNome}
+                  onChange={(e) => setNovaPessoaNome(e.target.value)}
+                  placeholder="Nome completo ou razão social"
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div className="form-group">
+                  <label>CPF / CNPJ</label>
+                  <input
+                    className="form-input"
+                    value={novaPessoaDoc}
+                    onChange={(e) => setNovaPessoaDoc(e.target.value)}
+                    placeholder="Documento"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Tipo *</label>
+                  <select
+                    className="form-input"
+                    value={novaPessoaTipo}
+                    onChange={(e) => setNovaPessoaTipo(e.target.value as "CLIENTE" | "FORNECEDOR" | "AMBOS")}
+                  >
+                    <option value="FORNECEDOR">Fornecedor</option>
+                    <option value="CLIENTE">Cliente</option>
+                    <option value="AMBOS">Ambos</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label>Telefone</label>
+                <input
+                  className="form-input"
+                  value={novaPessoaTel}
+                  onChange={(e) => setNovaPessoaTel(e.target.value)}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => setModalPessoa(false)}
+                  disabled={salvandoPessoa}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={handleSalvarPessoa}
+                  disabled={salvandoPessoa || !novaPessoaNome.trim()}
+                >
+                  {salvandoPessoa ? "Salvando..." : "Cadastrar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal lote salário/férias */}
         {modalLote && (
