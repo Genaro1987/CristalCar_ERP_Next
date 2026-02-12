@@ -4,7 +4,7 @@ import LayoutShell from "@/components/LayoutShell";
 import { HeaderBar } from "@/components/HeaderBar";
 import { PaginaProtegida } from "@/components/PaginaProtegida";
 import { NotificationBar } from "@/components/NotificationBar";
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { useRequerEmpresaSelecionada } from "@/app/_hooks/useRequerEmpresaSelecionada";
 import { useTelaFinanceira } from "@/app/financeiro/_hooks/useTelaFinanceira";
@@ -276,6 +276,85 @@ export default function LancamentosPage() {
       return true;
     });
   }, [busca, lancamentos]);
+
+  // Ordenação da tabela
+  type SortKey = "data" | "historico" | "conta" | "valor" | "placa" | "documento";
+  const [sortKey, setSortKey] = useState<SortKey>("data");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "data" ? "desc" : "asc");
+    }
+  };
+
+  const dadosOrdenados = useMemo(() => {
+    const arr = [...dadosFiltrados];
+    const dir = sortDir === "asc" ? 1 : -1;
+    arr.sort((a, b) => {
+      let va: string | number = "";
+      let vb: string | number = "";
+      switch (sortKey) {
+        case "data": va = a.data; vb = b.data; break;
+        case "historico": va = a.historico.toLowerCase(); vb = b.historico.toLowerCase(); break;
+        case "conta": va = a.conta.toLowerCase(); vb = b.conta.toLowerCase(); break;
+        case "valor": va = Math.abs(a.valor); vb = Math.abs(b.valor); return (va - vb) * dir;
+        case "placa": va = a.placa || ""; vb = b.placa || ""; break;
+        case "documento": va = a.documento || ""; vb = b.documento || ""; break;
+      }
+      if (va < vb) return -1 * dir;
+      if (va > vb) return 1 * dir;
+      return 0;
+    });
+    return arr;
+  }, [dadosFiltrados, sortKey, sortDir]);
+
+  const sortIcon = (key: SortKey) => {
+    if (sortKey !== key) return " \u2195";
+    return sortDir === "asc" ? " \u2191" : " \u2193";
+  };
+
+  // Colunas redimensionáveis
+  const colDefs: { key: SortKey; label: string; initWidth: number }[] = [
+    { key: "data", label: "Data", initWidth: 62 },
+    { key: "historico", label: "Histórico", initWidth: 0 },
+    { key: "conta", label: "Conta", initWidth: 130 },
+    { key: "valor", label: "Valor", initWidth: 100 },
+    { key: "placa", label: "Placa", initWidth: 78 },
+    { key: "documento", label: "Doc", initWidth: 68 },
+  ];
+
+  const [colWidths, setColWidths] = useState<number[]>(() => colDefs.map((c) => c.initWidth));
+  const resizingRef = useRef<{ colIdx: number; startX: number; startW: number } | null>(null);
+
+  const onResizeStart = useCallback((e: React.MouseEvent, colIdx: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const th = (e.target as HTMLElement).parentElement;
+    const startW = th ? th.getBoundingClientRect().width : colWidths[colIdx];
+    resizingRef.current = { colIdx, startX: e.clientX, startW };
+
+    const onMove = (ev: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const diff = ev.clientX - resizingRef.current.startX;
+      const newW = Math.max(40, resizingRef.current.startW + diff);
+      setColWidths((prev) => {
+        const next = [...prev];
+        next[resizingRef.current!.colIdx] = newW;
+        return next;
+      });
+    };
+    const onUp = () => {
+      resizingRef.current = null;
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [colWidths]);
 
   const formatadorMoeda = useMemo(
     () => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }),
@@ -672,7 +751,7 @@ export default function LancamentosPage() {
                   <h2>Lançamentos cadastrados</h2>
                   <p>
                     {periodo
-                      ? `${dadosFiltrados.length} lançamento(s) em ${periodo.substring(5,7)}/${periodo.substring(0,4)}`
+                      ? `${dadosOrdenados.length} lançamento(s) em ${periodo.substring(5,7)}/${periodo.substring(0,4)}`
                       : "Selecione um período para visualizar."}
                   </p>
                 </header>
@@ -711,25 +790,47 @@ export default function LancamentosPage() {
                   <div className="empty-state">
                     <p>Carregando lançamentos...</p>
                   </div>
-                ) : dadosFiltrados.length === 0 ? (
+                ) : dadosOrdenados.length === 0 ? (
                   <div className="empty-state">
                     <strong>Nenhum lançamento encontrado</strong>
                     <p>Ajuste o período ou adicione um novo lançamento.</p>
                   </div>
                 ) : (
-                  <table className="data-table mobile-cards" style={{ fontSize: "0.7rem" }}>
+                  <table className="data-table mobile-cards" style={{ fontSize: "0.7rem", tableLayout: "fixed", width: "100%" }}>
+                    <colgroup>
+                      {colDefs.map((col, i) => (
+                        <col key={col.key} style={colWidths[i] > 0 ? { width: colWidths[i] } : undefined} />
+                      ))}
+                    </colgroup>
                     <thead>
                       <tr>
-                        <th style={{ whiteSpace: "nowrap" }}>Data</th>
-                        <th>Histórico</th>
-                        <th>Conta</th>
-                        <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>Valor</th>
-                        <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Placa</th>
-                        <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Doc</th>
+                        {colDefs.map((col, i) => {
+                          const align = col.key === "valor" ? "right" : col.key === "placa" || col.key === "documento" ? "center" : "left";
+                          return (
+                            <th
+                              key={col.key}
+                              onClick={() => handleSort(col.key)}
+                              style={{
+                                whiteSpace: "nowrap", cursor: "pointer", userSelect: "none",
+                                textAlign: align, position: "relative", paddingRight: 10,
+                              }}
+                              title={`Ordenar por ${col.label}`}
+                            >
+                              {col.label}{sortIcon(col.key)}
+                              <span
+                                onMouseDown={(e) => onResizeStart(e, i)}
+                                style={{
+                                  position: "absolute", right: 0, top: 0, bottom: 0, width: 5,
+                                  cursor: "col-resize", zIndex: 1,
+                                }}
+                              />
+                            </th>
+                          );
+                        })}
                       </tr>
                     </thead>
                     <tbody>
-                      {dadosFiltrados.map((item) => (
+                      {dadosOrdenados.map((item) => (
                         <tr
                           key={item.id}
                           onClick={() => preencherForm(item)}
@@ -743,7 +844,7 @@ export default function LancamentosPage() {
                               ? `${item.data.substring(8,10)}/${item.data.substring(5,7)}`
                               : item.data}
                           </td>
-                          <td data-label="Histórico" style={{ maxWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <td data-label="Histórico" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {item.historico}
                             {item.pessoaNome && (
                               <span style={{ display: "block", fontSize: "0.63rem", color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -751,7 +852,7 @@ export default function LancamentosPage() {
                               </span>
                             )}
                           </td>
-                          <td data-label="Conta" style={{ whiteSpace: "nowrap" }}>{item.conta}</td>
+                          <td data-label="Conta" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.conta}</td>
                           <td data-label="Valor" style={{
                             fontWeight: 600, textAlign: "right", whiteSpace: "nowrap",
                             color: item.tipo === "Entrada" ? "#16a34a" : "#dc2626",
@@ -761,7 +862,7 @@ export default function LancamentosPage() {
                           <td data-label="Placa" style={{ textAlign: "center", whiteSpace: "nowrap" }}>
                             {item.placa || "-"}
                           </td>
-                          <td data-label="Doc" style={{ textAlign: "center", color: "#6b7280", whiteSpace: "nowrap" }}>
+                          <td data-label="Doc" style={{ textAlign: "center", color: "#6b7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {item.documento || "-"}
                           </td>
                         </tr>
