@@ -71,9 +71,19 @@ export default function LogAuditoriaPage() {
   const [revertendoId, setRevertendoId] = useState<number | null>(null);
   const [revertendo, setRevertendo] = useState(false);
 
+  // Controle: so carrega quando usuario aplica filtro explicitamente
+  const [filtroAplicado, setFiltroAplicado] = useState(false);
+
+  const temFiltro = filtroTabela || filtroOperacao || filtroDataInicio || filtroDataFim || filtroBusca;
+
   const carregar = useCallback(async () => {
     if (!empresa?.id) return;
+    if (!temFiltro) {
+      setNotification({ type: "info", message: "Aplique ao menos um filtro para consultar o log." });
+      return;
+    }
     setCarregando(true);
+    setFiltroAplicado(true);
 
     try {
       const params = new URLSearchParams();
@@ -102,11 +112,12 @@ export default function LogAuditoriaPage() {
     } finally {
       setCarregando(false);
     }
-  }, [empresa?.id, filtroTabela, filtroOperacao, filtroDataInicio, filtroDataFim, filtroBusca, pagina]);
+  }, [empresa?.id, filtroTabela, filtroOperacao, filtroDataInicio, filtroDataFim, filtroBusca, pagina, temFiltro]);
 
+  // Recarregar apenas quando muda pagina (se ja tem filtro aplicado)
   useEffect(() => {
-    carregar();
-  }, [carregar]);
+    if (filtroAplicado && temFiltro) carregar();
+  }, [pagina]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 
@@ -316,7 +327,7 @@ export default function LogAuditoriaPage() {
                     {registros.length === 0 && (
                       <tr>
                         <td colSpan={8} style={{ textAlign: "center", color: "#9ca3af", padding: 24 }}>
-                          {carregando ? "Carregando..." : "Nenhum registro encontrado"}
+                          {carregando ? "Carregando..." : !filtroAplicado ? "Aplique um filtro e clique em Atualizar para consultar" : "Nenhum registro encontrado"}
                         </td>
                       </tr>
                     )}

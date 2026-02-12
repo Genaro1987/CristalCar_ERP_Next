@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useEmpresaSelecionada } from "@/app/_hooks/useEmpresaSelecionada";
 import { usePermissoes } from "@/app/_hooks/usePermissoes";
 import Image from "next/image";
+
+const SIDEBAR_SCROLL_KEY = "sidebar-scroll-top";
 
 type SecaoMenu = {
   label: string;
@@ -29,6 +31,22 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
   const pathname = usePathname();
   const { empresa } = useEmpresaSelecionada();
   const { podeAcessar, permissoesCarregadas, perfilNome } = usePermissoes();
+  const sidebarRef = useRef<HTMLElement>(null);
+
+  // Restaurar posicao do scroll ao montar
+  useEffect(() => {
+    const el = sidebarRef.current;
+    if (!el) return;
+    const saved = sessionStorage.getItem(SIDEBAR_SCROLL_KEY);
+    if (saved) el.scrollTop = Number(saved);
+  }, []);
+
+  // Salvar posicao do scroll antes de navegar
+  const handleNavegar = useCallback(() => {
+    const el = sidebarRef.current;
+    if (el) sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(el.scrollTop));
+    onNavegar?.();
+  }, [onNavegar]);
 
   const secoesMenu: SecaoMenu[] = useMemo(
     () => [
@@ -217,7 +235,7 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
   const sidebarClass = mobileAberta ? "sidebar sidebar-mobile-open" : "sidebar";
 
   return (
-    <aside className={sidebarClass}>
+    <aside className={sidebarClass} ref={sidebarRef}>
       <div className="sidebar-top">
         <div className="sidebar-logo-block">
           {empresa?.logoUrl ? (
@@ -254,7 +272,7 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
                       key={item.rota}
                       href={item.rota}
                       className={ativo ? "sidebar-nav-item active" : "sidebar-nav-item"}
-                      onClick={onNavegar}
+                      onClick={handleNavegar}
                     >
                       {item.label}
                     </Link>
@@ -270,7 +288,7 @@ export function Sidebar({ mobileAberta, onNavegar }: SidebarProps) {
             <Link
               href="/ajuda"
               className={isAjuda ? "sidebar-nav-item active" : "sidebar-nav-item"}
-              onClick={onNavegar}
+              onClick={handleNavegar}
             >
               Ajuda
             </Link>

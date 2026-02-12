@@ -280,6 +280,10 @@ export async function GET(request: NextRequest) {
   const dataInicio = params.get("dataInicio");
   const dataFim = params.get("dataFim");
 
+  if (!mesInicio && !mesFim && !dataInicio && !dataFim) {
+    return NextResponse.json({ success: false, error: "Informe mesInicio/mesFim ou dataInicio/dataFim" }, { status: 400 });
+  }
+
   try {
     const linhasResult = await db.execute({
       sql: `

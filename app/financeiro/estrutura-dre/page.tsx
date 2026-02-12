@@ -458,35 +458,7 @@ export default function EstruturaDrePage() {
 
           <div className="departamentos-page">
             <div className="split-view">
-              {/* LEFT: Tree */}
-              <section className="split-view-panel">
-                <div className="section-header">
-                  <div>
-                    <h2>Arvore da estrutura do DRE</h2>
-                    <p>Estruture linhas e conecte contas para garantir o fechamento correto do resultado.</p>
-                  </div>
-                  <button type="button" className="button button-primary" onClick={() => handleNovo()}>
-                    Nova linha
-                  </button>
-                </div>
-
-                <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
-
-                <div className="tree-container" style={{ marginTop: 12 }}>
-                  {carregando ? (
-                    <div className="empty-state"><p>Carregando estrutura DRE...</p></div>
-                  ) : arvoreFiltrada.length === 0 ? (
-                    <div className="empty-state">
-                      <strong>Nenhuma linha do DRE encontrada</strong>
-                      <p>Ajuste os filtros ou cadastre uma nova linha.</p>
-                    </div>
-                  ) : (
-                    arvoreFiltrada.map((item, idx) => renderNo(item, 0, [], idx === arvoreFiltrada.length - 1))
-                  )}
-                </div>
-              </section>
-
-              {/* RIGHT: Inline Form + Linked accounts */}
+              {/* LEFT (menor): Inline Form + Linked accounts */}
               <section className="split-view-panel" ref={formRef}>
                 <header className="form-section-header">
                   <h2>{editandoId ? "Editar linha do DRE" : "Nova linha do DRE"}</h2>
@@ -738,6 +710,34 @@ export default function EstruturaDrePage() {
                     </div>
                   </div>
                 )}
+              </section>
+
+              {/* RIGHT (maior): Tree */}
+              <section className="split-view-panel">
+                <div className="section-header">
+                  <div>
+                    <h2>Arvore da estrutura do DRE</h2>
+                    <p>Estruture linhas e conecte contas para garantir o fechamento correto do resultado.</p>
+                  </div>
+                  <button type="button" className="button button-primary" onClick={() => handleNovo()}>
+                    Nova linha
+                  </button>
+                </div>
+
+                <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
+
+                <div className="tree-container" style={{ marginTop: 12 }}>
+                  {carregando ? (
+                    <div className="empty-state"><p>Carregando estrutura DRE...</p></div>
+                  ) : arvoreFiltrada.length === 0 ? (
+                    <div className="empty-state">
+                      <strong>Nenhuma linha do DRE encontrada</strong>
+                      <p>Ajuste os filtros ou cadastre uma nova linha.</p>
+                    </div>
+                  ) : (
+                    arvoreFiltrada.map((item, idx) => renderNo(item, 0, [], idx === arvoreFiltrada.length - 1))
+                  )}
+                </div>
               </section>
             </div>
           </div>

@@ -412,39 +412,7 @@ export function PlanoContasContent() {
 
           <div className="departamentos-page">
             <div className="split-view">
-              {/* LEFT: Tree view */}
-              <section className="split-view-panel">
-                <div className="section-header">
-                  <div>
-                    <h2>Arvore do plano de contas</h2>
-                    <p>Navegue pela estrutura hierarquica. Clique para editar.</p>
-                  </div>
-                  <button type="button" className="button button-primary" onClick={handleNovo}>
-                    Nova conta
-                  </button>
-                </div>
-
-                <BarraFiltros
-                  filtro={filtro}
-                  onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))}
-                  exibirNatureza
-                />
-
-                <div className="tree-container" style={{ marginTop: 12 }}>
-                  {carregandoLista ? (
-                    <div className="empty-state"><p>Buscando contas financeiras...</p></div>
-                  ) : arvoreFiltrada.length > 0 ? (
-                    arvoreFiltrada.map((item, idx) => renderNo(item, 0, [], idx === arvoreFiltrada.length - 1))
-                  ) : (
-                    <div className="empty-state">
-                      <strong>Nenhuma conta encontrada</strong>
-                      <p>Ajuste os filtros ou cadastre uma nova conta.</p>
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              {/* RIGHT: Form */}
+              {/* LEFT (menor): Form */}
               <section className="split-view-panel" ref={formRef}>
                 <header className="form-section-header">
                   <h2>{editandoId ? "Editar conta" : "Nova conta"}</h2>
@@ -570,6 +538,38 @@ export function PlanoContasContent() {
                     </div>
                   </div>
                 </form>
+              </section>
+
+              {/* RIGHT (maior): Tree view */}
+              <section className="split-view-panel">
+                <div className="section-header">
+                  <div>
+                    <h2>Arvore do plano de contas</h2>
+                    <p>Navegue pela estrutura hierarquica. Clique para editar.</p>
+                  </div>
+                  <button type="button" className="button button-primary" onClick={handleNovo}>
+                    Nova conta
+                  </button>
+                </div>
+
+                <BarraFiltros
+                  filtro={filtro}
+                  onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))}
+                  exibirNatureza
+                />
+
+                <div className="tree-container" style={{ marginTop: 12 }}>
+                  {carregandoLista ? (
+                    <div className="empty-state"><p>Buscando contas financeiras...</p></div>
+                  ) : arvoreFiltrada.length > 0 ? (
+                    arvoreFiltrada.map((item, idx) => renderNo(item, 0, [], idx === arvoreFiltrada.length - 1))
+                  ) : (
+                    <div className="empty-state">
+                      <strong>Nenhuma conta encontrada</strong>
+                      <p>Ajuste os filtros ou cadastre uma nova conta.</p>
+                    </div>
+                  )}
+                </div>
               </section>
             </div>
           </div>

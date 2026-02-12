@@ -16,6 +16,11 @@ export async function GET(request: NextRequest) {
   const limite = parseInt(request.nextUrl.searchParams.get("limite") || "100");
   const offset = parseInt(request.nextUrl.searchParams.get("offset") || "0");
 
+  // Exigir ao menos um filtro para evitar full table scan
+  if (!tabela && !operacao && !dataInicio && !dataFim && !busca) {
+    return NextResponse.json({ success: false, error: "Aplique ao menos um filtro para consultar o log" }, { status: 400 });
+  }
+
   try {
     let sql = `
       SELECT
