@@ -458,170 +458,170 @@ export default function EstruturaDrePage() {
 
           <div className="departamentos-page">
             <div className="split-view">
-              {/* LEFT (menor): Inline Form + Linked accounts */}
-              <section className="split-view-panel" ref={formRef}>
-                <header className="form-section-header">
-                  <h2>{editandoId ? "Editar linha do DRE" : "Nova linha do DRE"}</h2>
-                  <p>
-                    {editandoId
-                      ? `Editando: ${form.codigo} - ${form.nome}`
-                      : "Preencha os campos para cadastrar uma nova linha na estrutura."}
-                  </p>
-                </header>
+              {/* LEFT (menor): Form + Linked accounts card */}
+              <div className="split-view-panel" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <section ref={formRef} style={{ backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px 24px" }}>
+                  <header className="form-section-header">
+                    <h2>{editandoId ? "Editar linha do DRE" : "Nova linha do DRE"}</h2>
+                    <p>
+                      {editandoId
+                        ? `Editando: ${form.codigo} - ${form.nome}`
+                        : "Preencha os campos para cadastrar uma nova linha na estrutura."}
+                    </p>
+                  </header>
 
-                <form className="form" onSubmit={(e) => { e.preventDefault(); handleSalvar(); }}>
-                  <div className="form-grid two-columns">
-                    <div className="form-group">
-                      <label htmlFor="dre-linha-nome">Nome da linha *</label>
-                      <input
-                        id="dre-linha-nome"
-                        className="form-input"
-                        placeholder="Ex: Resultado Operacional"
-                        value={form.nome}
-                        onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="dre-linha-codigo">Codigo *</label>
-                      <input
-                        id="dre-linha-codigo"
-                        className="form-input"
-                        placeholder="1.2.1"
-                        value={form.codigo}
-                        onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="form-grid two-columns">
-                    <div className="form-group">
-                      <label htmlFor="dre-linha-natureza">Natureza</label>
-                      <select
-                        id="dre-linha-natureza"
-                        className="form-input"
-                        value={form.natureza}
-                        onChange={(e) => setForm((f) => ({ ...f, natureza: e.target.value as any, ...(e.target.value === "CALCULADO" ? { tipo: "Calculado" } : f.tipo === "Calculado" ? { tipo: "Fixo" } : {}) }))}
-                      >
-                        <option value="RECEITA">Receita</option>
-                        <option value="DESPESA">Despesa</option>
-                        <option value="CALCULADO">Calculado</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="dre-linha-tipo">Tipo</label>
-                      <select
-                        id="dre-linha-tipo"
-                        className="form-input"
-                        value={form.natureza === "CALCULADO" ? "Calculado" : form.tipo}
-                        disabled={form.natureza === "CALCULADO"}
-                        onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value }))}
-                      >
-                        <option value="Fixo">Fixo</option>
-                        <option value="Variavel">Variavel</option>
-                        <option value="Calculado">Calculado</option>
-                      </select>
-                    </div>
-                  </div>
-                  {!editandoId && (
+                  <form className="form" onSubmit={(e) => { e.preventDefault(); handleSalvar(); }}>
                     <div className="form-grid two-columns">
                       <div className="form-group">
-                        <label htmlFor="dre-linha-pai">Linha pai (opcional)</label>
-                        <select
-                          id="dre-linha-pai"
+                        <label htmlFor="dre-linha-nome">Nome da linha *</label>
+                        <input
+                          id="dre-linha-nome"
                           className="form-input"
-                          value={form.paiId ?? ""}
-                          onChange={(e) => setForm((f) => ({ ...f, paiId: e.target.value || null }))}
+                          placeholder="Ex: Resultado Operacional"
+                          value={form.nome}
+                          onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="dre-linha-codigo">Codigo *</label>
+                        <input
+                          id="dre-linha-codigo"
+                          className="form-input"
+                          placeholder="1.2.1"
+                          value={form.codigo}
+                          onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-grid two-columns">
+                      <div className="form-group">
+                        <label htmlFor="dre-linha-natureza">Natureza</label>
+                        <select
+                          id="dre-linha-natureza"
+                          className="form-input"
+                          value={form.natureza}
+                          onChange={(e) => setForm((f) => ({ ...f, natureza: e.target.value as any, ...(e.target.value === "CALCULADO" ? { tipo: "Calculado" } : f.tipo === "Calculado" ? { tipo: "Fixo" } : {}) }))}
                         >
-                          <option value="">Raiz (sem pai)</option>
-                          {opcoesLinhasPai.map((op) => (
-                            <option key={op.id} value={op.id}>{op.label}</option>
-                          ))}
+                          <option value="RECEITA">Receita</option>
+                          <option value="DESPESA">Despesa</option>
+                          <option value="CALCULADO">Calculado</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="dre-linha-tipo">Tipo</label>
+                        <select
+                          id="dre-linha-tipo"
+                          className="form-input"
+                          value={form.natureza === "CALCULADO" ? "Calculado" : form.tipo}
+                          disabled={form.natureza === "CALCULADO"}
+                          onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value }))}
+                        >
+                          <option value="Fixo">Fixo</option>
+                          <option value="Variavel">Variavel</option>
+                          <option value="Calculado">Calculado</option>
+                        </select>
+                      </div>
+                    </div>
+                    {!editandoId && (
+                      <div className="form-grid two-columns">
+                        <div className="form-group">
+                          <label htmlFor="dre-linha-pai">Linha pai (opcional)</label>
+                          <select
+                            id="dre-linha-pai"
+                            className="form-input"
+                            value={form.paiId ?? ""}
+                            onChange={(e) => setForm((f) => ({ ...f, paiId: e.target.value || null }))}
+                          >
+                            <option value="">Raiz (sem pai)</option>
+                            {opcoesLinhasPai.map((op) => (
+                              <option key={op.id} value={op.id}>{op.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group" />
+                      </div>
+                    )}
+                    {editandoId && (
+                      <div className="form-grid two-columns">
+                        <div className="form-group">
+                          <label htmlFor="dre-linha-status">Status</label>
+                          <select
+                            id="dre-linha-status"
+                            className="form-input"
+                            value={form.ativo}
+                            onChange={(e) => setForm((f) => ({ ...f, ativo: Number(e.target.value) }))}
+                          >
+                            <option value={1}>Ativo</option>
+                            <option value={0}>Inativo</option>
+                          </select>
+                        </div>
+                        <div className="form-group" />
+                      </div>
+                    )}
+                    {form.natureza === "CALCULADO" && (
+                      <div className="form-group">
+                        <label htmlFor="dre-linha-formula">Formula</label>
+                        <input
+                          id="dre-linha-formula"
+                          className="form-input"
+                          placeholder="Ex: (1 + 2) - 3 * 4 / 5"
+                          value={form.formula}
+                          onChange={(e) => setForm((f) => ({ ...f, formula: e.target.value }))}
+                        />
+                        <small style={{ color: "#6b7280", fontSize: "0.78rem", marginTop: 4, display: "block" }}>
+                          Use codigos das linhas com operadores: + - * / e parenteses ( ) para prioridade. Ex: (1 + 2) - 3
+                        </small>
+                      </div>
+                    )}
+                    <div className="form-grid two-columns">
+                      <div className="form-group">
+                        <label htmlFor="dre-linha-ref100">Referencia 100% (base para %)</label>
+                        <select
+                          id="dre-linha-ref100"
+                          className="form-input"
+                          value={form.referencia100}
+                          onChange={(e) => setForm((f) => ({ ...f, referencia100: Number(e.target.value) }))}
+                        >
+                          <option value={0}>Nao</option>
+                          <option value={1}>Sim - Esta linha sera 100% no DRE</option>
                         </select>
                       </div>
                       <div className="form-group" />
                     </div>
-                  )}
-                  {editandoId && (
-                    <div className="form-grid two-columns">
-                      <div className="form-group">
-                        <label htmlFor="dre-linha-status">Status</label>
-                        <select
-                          id="dre-linha-status"
-                          className="form-input"
-                          value={form.ativo}
-                          onChange={(e) => setForm((f) => ({ ...f, ativo: Number(e.target.value) }))}
-                        >
-                          <option value={1}>Ativo</option>
-                          <option value={0}>Inativo</option>
-                        </select>
-                      </div>
-                      <div className="form-group" />
-                    </div>
-                  )}
-                  {form.natureza === "CALCULADO" && (
                     <div className="form-group">
-                      <label htmlFor="dre-linha-formula">Formula</label>
-                      <input
-                        id="dre-linha-formula"
+                      <label htmlFor="dre-linha-descricao">Descricao</label>
+                      <textarea
+                        id="dre-linha-descricao"
                         className="form-input"
-                        placeholder="Ex: (1 + 2) - 3 * 4 / 5"
-                        value={form.formula}
-                        onChange={(e) => setForm((f) => ({ ...f, formula: e.target.value }))}
+                        style={{ minHeight: 80 }}
+                        placeholder="Explique como calcular e consolidar esta linha"
+                        value={form.descricao}
+                        onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
                       />
-                      <small style={{ color: "#6b7280", fontSize: "0.78rem", marginTop: 4, display: "block" }}>
-                        Use codigos das linhas com operadores: + - * / e parenteses ( ) para prioridade. Ex: (1 + 2) - 3
-                      </small>
                     </div>
-                  )}
-                  <div className="form-grid two-columns">
-                    <div className="form-group">
-                      <label htmlFor="dre-linha-ref100">Referencia 100% (base para %)</label>
-                      <select
-                        id="dre-linha-ref100"
-                        className="form-input"
-                        value={form.referencia100}
-                        onChange={(e) => setForm((f) => ({ ...f, referencia100: Number(e.target.value) }))}
-                      >
-                        <option value={0}>Nao</option>
-                        <option value={1}>Sim - Esta linha sera 100% no DRE</option>
-                      </select>
+                    <div className="form-actions departamentos-actions">
+                      <div className="button-row">
+                        <button type="submit" className="button button-primary" disabled={salvando}>
+                          {salvando ? "Salvando..." : editandoId ? "Atualizar" : "Salvar"}
+                        </button>
+                        <button type="button" className="button button-secondary" onClick={handleLimpar}>
+                          Limpar
+                        </button>
+                      </div>
                     </div>
-                    <div className="form-group" />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="dre-linha-descricao">Descricao</label>
-                    <textarea
-                      id="dre-linha-descricao"
-                      className="form-input"
-                      style={{ minHeight: 80 }}
-                      placeholder="Explique como calcular e consolidar esta linha"
-                      value={form.descricao}
-                      onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
-                    />
-                  </div>
-                  <div className="form-actions departamentos-actions">
-                    <div className="button-row">
-                      <button type="submit" className="button button-primary" disabled={salvando}>
-                        {salvando ? "Salvando..." : editandoId ? "Atualizar" : "Salvar"}
-                      </button>
-                      <button type="button" className="button button-secondary" onClick={handleLimpar}>
-                        Limpar
-                      </button>
-                    </div>
-                  </div>
-                </form>
+                  </form>
+                </section>
 
-                {/* Linked accounts section - only when editing */}
+                {/* Linked accounts - separate card, only when editing */}
                 {editandoId && selecionada && (
-                  <div style={{ marginTop: 24, borderTop: "1px solid #e5e7eb", paddingTop: 20 }}>
-                    <div className="section-header">
-                      <div>
-                        <h3>Contas vinculadas</h3>
-                        <p>Plano de contas conectado a esta linha do DRE.</p>
-                      </div>
-                    </div>
+                  <section style={{ backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px 24px" }}>
+                    <header className="form-section-header" style={{ marginBottom: 16 }}>
+                      <h2>Contas vinculadas</h2>
+                      <p>Plano de contas conectado a esta linha do DRE: <strong>{form.codigo} - {form.nome}</strong></p>
+                    </header>
 
                     {contasSelecionadas.length > 0 ? (
-                      <div className="detail-card">
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                         {contasSelecionadas.map((conta) => (
                           <div
                             key={conta}
@@ -634,7 +634,7 @@ export default function EstruturaDrePage() {
                               padding: "8px 12px",
                               border: "1px solid #e5e7eb",
                               borderRadius: 8,
-                              backgroundColor: "#ffffff",
+                              backgroundColor: "#f9fafb",
                               fontSize: "0.9rem",
                             }}
                           >
@@ -708,9 +708,9 @@ export default function EstruturaDrePage() {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </section>
                 )}
-              </section>
+              </div>
 
               {/* RIGHT (maior): Tree */}
               <section className="split-view-panel">
