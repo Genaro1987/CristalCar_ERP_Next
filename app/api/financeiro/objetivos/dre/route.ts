@@ -35,13 +35,26 @@ function somarFilhos(node: DreNode): DreNode {
   const mediaFilhos = filhosAtualizados.reduce((acc, f) => acc + f.media, 0);
   const objetivoFilhos = filhosAtualizados.reduce((acc, f) => acc + f.objetivo, 0);
 
-  // If node has children, its media/objetivo is the sum of children
-  // Unless it has its own direct value (leaf nodes)
   const temFilhos = filhosAtualizados.length > 0;
   const mediaFinal = temFilhos ? node.media + mediaFilhos : node.media;
   const objetivoFinal = temFilhos ? node.objetivo + objetivoFilhos : node.objetivo;
 
   return { ...node, filhos: filhosAtualizados, media: mediaFinal, objetivo: objetivoFinal };
+}
+
+function calcularMesesEntrePeriodos(periodoInicio: string, periodoFim: string): number {
+  const [anoI, mesI] = periodoInicio.split("-").map(Number);
+  const [anoF, mesF] = periodoFim.split("-").map(Number);
+  return (anoF - anoI) * 12 + (mesF - mesI) + 1;
+}
+
+function periodoParaDatas(periodoInicio: string, periodoFim: string): { dataInicio: string; dataFim: string } {
+  const [anoF, mesF] = periodoFim.split("-").map(Number);
+  const ultimoDia = new Date(anoF, mesF, 0).getDate();
+  return {
+    dataInicio: `${periodoInicio}-01`,
+    dataFim: `${periodoFim}-${String(ultimoDia).padStart(2, "0")}`,
+  };
 }
 
 /* ── GET: Load hierarchy + lancamentos + saved percentages ── */
@@ -50,18 +63,37 @@ export async function GET(request: NextRequest) {
   if (!empresaId) return respostaEmpresaNaoSelecionada();
 
   const params = request.nextUrl.searchParams;
-  const anoRef = Number(params.get("anoRef") ?? new Date().getFullYear());
-  const mesInicio = Number(params.get("mesInicio") ?? 1);
-  const mesFim = Number(params.get("mesFim") ?? new Date().getMonth() + 1);
   const anoObjetivo = Number(params.get("anoObjetivo") ?? new Date().getFullYear());
   const tipo = (params.get("tipo") ?? "ESTRUTURA_DRE") as TipoObjetivo;
 
-  const meses = mesFim >= mesInicio ? mesFim - mesInicio + 1 : 12 - mesInicio + 1 + mesFim;
-  const mmI = String(mesInicio).padStart(2, "0");
-  const mmF = String(mesFim).padStart(2, "0");
-  const ultimoDia = new Date(anoRef, mesFim, 0).getDate();
-  const dataInicio = `${anoRef}-${mmI}-01`;
-  const dataFim = `${anoRef}-${mmF}-${String(ultimoDia).padStart(2, "0")}`;
+  // New cross-year period params (YYYY-MM format)
+  const periodoInicio = params.get("periodoInicio");
+  const periodoFim = params.get("periodoFim");
+
+  // Legacy params (backward compat)
+  const anoRef = Number(params.get("anoRef") ?? new Date().getFullYear());
+  const mesInicioLegacy = Number(params.get("mesInicio") ?? 1);
+  const mesFimLegacy = Number(params.get("mesFim") ?? new Date().getMonth() + 1);
+
+  let dataInicio: string;
+  let dataFim: string;
+  let meses: number;
+
+  if (periodoInicio && periodoFim) {
+    meses = calcularMesesEntrePeriodos(periodoInicio, periodoFim);
+    const datas = periodoParaDatas(periodoInicio, periodoFim);
+    dataInicio = datas.dataInicio;
+    dataFim = datas.dataFim;
+  } else {
+    meses = mesFimLegacy >= mesInicioLegacy
+      ? mesFimLegacy - mesInicioLegacy + 1
+      : 12 - mesInicioLegacy + 1 + mesFimLegacy;
+    const mmI = String(mesInicioLegacy).padStart(2, "0");
+    const mmF = String(mesFimLegacy).padStart(2, "0");
+    const ultimoDia = new Date(anoRef, mesFimLegacy, 0).getDate();
+    dataInicio = `${anoRef}-${mmI}-01`;
+    dataFim = `${anoRef}-${mmF}-${String(ultimoDia).padStart(2, "0")}`;
+  }
 
   try {
     const divisor = Math.max(1, meses);
@@ -90,7 +122,6 @@ const carregarEstruturaDre = async (
   anoObjetivo: number,
   divisor: number
 ) => {
-  // DRE structure
   const dreResult = await db.execute({
     sql: `SELECT FIN_ESTRUTURA_DRE_ID, FIN_ESTRUTURA_DRE_PAI_ID, FIN_ESTRUTURA_DRE_CODIGO,
                  FIN_ESTRUTURA_DRE_NOME, FIN_ESTRUTURA_DRE_NATUREZA,
@@ -99,7 +130,6 @@ const carregarEstruturaDre = async (
     args: [empresaId],
   });
 
-  // DRE-to-plano-conta links
   const linksResult = await db.execute({
     sql: `SELECT FIN_ESTRUTURA_DRE_ID, FIN_PLANO_CONTA_ID
           FROM FIN_ESTRUTURA_DRE_CONTA WHERE EMPRESA_ID = ?`,
@@ -114,7 +144,6 @@ const carregarEstruturaDre = async (
     contasPorDre.get(dreId)!.push(Number(r.FIN_PLANO_CONTA_ID));
   }
 
-  // Lancamentos totals per plano conta in period
   const lancResult = await db.execute({
     sql: `SELECT FIN_PLANO_CONTA_ID, COALESCE(SUM(FIN_LANCAMENTO_VALOR), 0) as total
           FROM FIN_LANCAMENTO
@@ -129,7 +158,6 @@ const carregarEstruturaDre = async (
     totaisConta.set(Number(r.FIN_PLANO_CONTA_ID), Number(r.total ?? 0));
   }
 
-  // Saved percentages per DRE line
   const pctResult = await db.execute({
     sql: `SELECT FIN_CONTA_ID, FIN_OBJETIVO_PERCENTUAL
           FROM FIN_OBJETIVO_CONTA
@@ -183,17 +211,15 @@ const carregarPlanoContas = async (
   anoObjetivo: number,
   divisor: number
 ) => {
-  // Plano de Contas hierarchy
   const contasResult = await db.execute({
     sql: `SELECT FIN_PLANO_CONTA_ID, FIN_PLANO_CONTA_PAI_ID, FIN_PLANO_CONTA_CODIGO,
                  FIN_PLANO_CONTA_NOME, FIN_PLANO_CONTA_NATUREZA
           FROM FIN_PLANO_CONTA
-          WHERE ID_EMPRESA = ? AND FIN_PLANO_CONTA_ATIVO = 1
+          WHERE EMPRESA_ID = ? AND FIN_PLANO_CONTA_ATIVO = 1
           ORDER BY FIN_PLANO_CONTA_ORDEM ASC`,
     args: [empresaId],
   });
 
-  // Lancamentos totals per plano conta in period (direct, no link table)
   const lancResult = await db.execute({
     sql: `SELECT FIN_PLANO_CONTA_ID, COALESCE(SUM(FIN_LANCAMENTO_VALOR), 0) as total
           FROM FIN_LANCAMENTO
@@ -208,7 +234,6 @@ const carregarPlanoContas = async (
     totaisConta.set(Number(r.FIN_PLANO_CONTA_ID), Number(r.total ?? 0));
   }
 
-  // Saved percentages
   const pctResult = await db.execute({
     sql: `SELECT FIN_CONTA_ID, FIN_OBJETIVO_PERCENTUAL
           FROM FIN_OBJETIVO_CONTA
@@ -259,17 +284,15 @@ const carregarCentroCusto = async (
   anoObjetivo: number,
   divisor: number
 ) => {
-  // Centro de Custo hierarchy
   const ccResult = await db.execute({
     sql: `SELECT FIN_CENTRO_CUSTO_ID, FIN_CENTRO_CUSTO_PAI_ID, FIN_CENTRO_CUSTO_CODIGO,
                  FIN_CENTRO_CUSTO_NOME
           FROM FIN_CENTRO_CUSTO
-          WHERE ID_EMPRESA = ? AND FIN_CENTRO_CUSTO_ATIVO = 1
+          WHERE EMPRESA_ID = ? AND FIN_CENTRO_CUSTO_ATIVO = 1
           ORDER BY FIN_CENTRO_CUSTO_ORDEM ASC`,
     args: [empresaId],
   });
 
-  // Lancamentos totals per centro custo in period
   const lancResult = await db.execute({
     sql: `SELECT FIN_CENTRO_CUSTO_ID, COALESCE(SUM(FIN_LANCAMENTO_VALOR), 0) as total
           FROM FIN_LANCAMENTO
@@ -285,7 +308,6 @@ const carregarCentroCusto = async (
     totaisCc.set(Number(r.FIN_CENTRO_CUSTO_ID), Number(r.total ?? 0));
   }
 
-  // Saved percentages
   const pctResult = await db.execute({
     sql: `SELECT FIN_CONTA_ID, FIN_OBJETIVO_PERCENTUAL
           FROM FIN_OBJETIVO_CONTA
@@ -351,7 +373,6 @@ export async function POST(request: NextRequest) {
   const tipoObjetivo: TipoObjetivo = tipo ?? "ESTRUTURA_DRE";
 
   try {
-    // Save percentages per line
     for (let i = 0; i < pcts.length; i++) {
       const p = pcts[i];
       await db.execute({
@@ -363,12 +384,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create/update FIN_OBJETIVO parent record for integration with Objetivos Semanais
     if (tipoPeriodo && refPeriodo) {
       const titulo = `Objetivo ${periodoLabel || refPeriodo}`;
       const periodoDb = tipoPeriodo === "mensal" ? "Mensal" : tipoPeriodo === "trimestral" ? "Trimestral" : "Anual";
 
-      // Check if objective already exists for this period
       const existente = await db.execute({
         sql: `SELECT FIN_OBJETIVO_ID FROM FIN_OBJETIVO
               WHERE ID_EMPRESA = ? AND FIN_OBJETIVO_TIPO_PERIODO = ? AND FIN_OBJETIVO_REF_PERIODO = ?`,
@@ -376,7 +395,6 @@ export async function POST(request: NextRequest) {
       });
 
       if (existente.rows.length > 0) {
-        // Update existing
         const id = (existente.rows[0] as any).FIN_OBJETIVO_ID;
         await db.execute({
           sql: `UPDATE FIN_OBJETIVO SET
@@ -388,7 +406,6 @@ export async function POST(request: NextRequest) {
           args: [titulo, valorTotal ?? 0, valorTotal ?? 0, id, empresaId],
         });
       } else {
-        // Insert new
         await db.execute({
           sql: `INSERT INTO FIN_OBJETIVO (
                   FIN_OBJETIVO_TITULO, FIN_OBJETIVO_PERIODO, FIN_OBJETIVO_META,

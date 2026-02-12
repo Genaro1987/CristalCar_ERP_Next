@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   const dataFim = params.get("dataFim");
   const visao = params.get("visao") ?? "agrupado"; // agrupado, detalhado, diario
   const busca = params.get("busca") ?? "";
+  const contaId = params.get("contaId");
 
   if (!dataInicio || !dataFim) {
     return NextResponse.json({ success: false, error: "dataInicio e dataFim obrigatorios" }, { status: 400 });
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
       const args: any[] = [empresaId, dataInicio, dataFim];
 
       if (busca.trim().length >= 3) {
-        sql += ` AND l.FIN_LANCAMENTO_DESCRICAO LIKE ?`;
+        sql += ` AND l.FIN_LANCAMENTO_HISTORICO LIKE ?`;
         args.push(`%${busca.trim()}%`);
       }
 
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
         SELECT
           l.FIN_LANCAMENTO_ID as id,
           l.FIN_LANCAMENTO_DATA as data,
-          l.FIN_LANCAMENTO_DESCRICAO as descricao,
+          l.FIN_LANCAMENTO_HISTORICO as descricao,
           l.FIN_LANCAMENTO_VALOR as valor,
           l.FIN_LANCAMENTO_PLACA as placa,
           p.FIN_PLANO_CONTA_ID as contaId,
@@ -99,13 +100,24 @@ export async function GET(request: NextRequest) {
       `;
       const args: any[] = [empresaId, dataInicio, dataFim];
 
+      if (contaId) {
+        sql += ` AND l.FIN_PLANO_CONTA_ID = ?`;
+        args.push(Number(contaId));
+      }
+
+      const dataExata = params.get("dataExata");
+      if (dataExata) {
+        sql += ` AND l.FIN_LANCAMENTO_DATA = ?`;
+        args.push(dataExata);
+      }
+
       if (busca.trim().length >= 3) {
-        sql += ` AND (l.FIN_LANCAMENTO_DESCRICAO LIKE ? OR l.FIN_LANCAMENTO_PLACA LIKE ? OR COALESCE(pes.CAD_PESSOA_NOME, '') LIKE ?)`;
+        sql += ` AND (l.FIN_LANCAMENTO_HISTORICO LIKE ? OR l.FIN_LANCAMENTO_PLACA LIKE ? OR COALESCE(pes.CAD_PESSOA_NOME, '') LIKE ?)`;
         const bLike = `%${busca.trim()}%`;
         args.push(bLike, bLike, bLike);
       }
 
-      sql += ` ORDER BY l.FIN_LANCAMENTO_DATA DESC, l.FIN_LANCAMENTO_ID DESC LIMIT 500`;
+      sql += ` ORDER BY l.FIN_LANCAMENTO_DATA DESC, l.FIN_LANCAMENTO_ID DESC LIMIT 200`;
 
       const result = await db.execute({ sql, args });
 

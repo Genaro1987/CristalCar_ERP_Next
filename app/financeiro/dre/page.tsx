@@ -330,7 +330,7 @@ export default function DrePage() {
     return lista;
   }, [anoAtual]);
 
-  const [mesInicio, setMesInicio] = useState(`${anoAtual}-01`);
+  const [mesInicio, setMesInicio] = useState(`${anoAtual}-${String(mesAtualNum).padStart(2, "0")}`);
   const [mesFim, setMesFim] = useState(`${anoAtual}-${String(mesAtualNum).padStart(2, "0")}`);
 
   useEffect(() => {

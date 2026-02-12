@@ -29,7 +29,8 @@ type ChartType = "bar" | "line" | "pie" | "doughnut";
 
 type ResumoCarteira = { empresa: string; saldo: number; entradas: number; saidas: number };
 type Indicador = { titulo: string; valor: string; descricao: string };
-type Alertas = { entradasPeriodo: number; saidasPeriodo: number; vencidos: number };
+type TopGasto = { contaId: number; contaNome: string; contaCodigo: string; total: number };
+type Alertas = { entradasPeriodo: number; saidasPeriodo: number; topGastos: TopGasto[] };
 
 interface ContaAnalise {
   contaId: number;
@@ -218,10 +219,12 @@ export default function FinanceiroDashboardPage() {
   const [activeTab, setActiveTab] = useState<TabId>("geral");
   const [dataInicio, setDataInicio] = useState(defaultDataInicio);
   const [dataFim, setDataFim] = useState(defaultDataFim);
+  // Periodo ativo: only updates when user clicks "Atualizar" (prevents auto-fetch on period change)
+  const [periodoAtivo, setPeriodoAtivo] = useState({ inicio: defaultDataInicio(), fim: defaultDataFim() });
 
   const [carteira, setCarteira] = useState<ResumoCarteira[]>([]);
   const [indicadores, setIndicadores] = useState<Indicador[]>([]);
-  const [alertas, setAlertas] = useState<Alertas>({ entradasPeriodo: 0, saidasPeriodo: 0, vencidos: 0 });
+  const [alertas, setAlertas] = useState<Alertas>({ entradasPeriodo: 0, saidasPeriodo: 0, topGastos: [] });
   const [carregandoGeral, setCarregandoGeral] = useState(true);
 
   const [receitasData, setReceitasData] = useState<any>(null);
@@ -240,7 +243,7 @@ export default function FinanceiroDashboardPage() {
   const [cruzamentoData, setCruzamentoData] = useState<any>(null);
   const [chartTypeGraficos, setChartTypeGraficos] = useState<ChartType>("line");
   const [carregandoGraficos, setCarregandoGraficos] = useState(false);
-  const [filtroOrigem, setFiltroOrigem] = useState<"TODOS" | "PLANO_CONTAS" | "DRE">("TODOS");
+  const [filtroOrigem, setFiltroOrigem] = useState<"PLANO_CONTAS" | "DRE">("PLANO_CONTAS");
   const [buscaCruzamento, setBuscaCruzamento] = useState("");
 
   // Edit modal
@@ -252,6 +255,7 @@ export default function FinanceiroDashboardPage() {
   const [lancamentos, setLancamentos] = useState<LancamentoItem[]>([]);
   const [buscaLancamentos, setBuscaLancamentos] = useState("");
   const [contaIdFiltro, setContaIdFiltro] = useState<number | null>(null);
+  const [contaNomeFiltro, setContaNomeFiltro] = useState<string>("");
   const [carregandoLancamentos, setCarregandoLancamentos] = useState(false);
   const [mostrarLancamentos, setMostrarLancamentos] = useState(false);
 
@@ -262,18 +266,22 @@ export default function FinanceiroDashboardPage() {
   }, [empresa?.id]);
 
   const fetchAnalise = useCallback(async (tipo: string, extra?: Record<string, string>) => {
-    const params = new URLSearchParams({ dataInicio, dataFim, tipo, ...extra });
+    const params = new URLSearchParams({ dataInicio: periodoAtivo.inicio, dataFim: periodoAtivo.fim, tipo, ...extra });
     const res = await fetch(`/api/financeiro/dashboard/analise?${params}`, { headers });
     const json = await res.json();
     return json?.success ? json.data : null;
-  }, [dataInicio, dataFim, headers]);
+  }, [periodoAtivo.inicio, periodoAtivo.fim, headers]);
+
+  const handleAtualizar = () => {
+    setPeriodoAtivo({ inicio: dataInicio, fim: dataFim });
+  };
 
   useEffect(() => {
     if (!empresa?.id) return;
     const load = async () => {
       setCarregandoGeral(true);
       try {
-        const params = new URLSearchParams({ dataInicio, dataFim });
+        const params = new URLSearchParams({ dataInicio: periodoAtivo.inicio, dataFim: periodoAtivo.fim });
         const res = await fetch(`/api/financeiro/dashboard?${params}`, { headers });
         const json = await res.json();
         if (json?.success) {
@@ -285,7 +293,7 @@ export default function FinanceiroDashboardPage() {
       finally { setCarregandoGeral(false); }
     };
     load();
-  }, [empresa?.id, dataInicio, dataFim, headers]);
+  }, [empresa?.id, periodoAtivo.inicio, periodoAtivo.fim, headers]);
 
   useEffect(() => {
     if (!empresa?.id || activeTab !== "geral") return;
@@ -319,17 +327,34 @@ export default function FinanceiroDashboardPage() {
       .then((d) => { setCruzamentoData(d); setCarregandoGraficos(false); });
   }, [empresa?.id, activeTab, contasSelecionadas, fetchAnalise]);
 
-  // Load lancamentos for detail view
-  const carregarLancamentos = useCallback(async (busca?: string, contaId?: number | null) => {
+  // Load lancamentos - direct fetch instead of going through fetchAnalise to avoid stale closures
+  async function carregarLancamentos(busca?: string, contaId?: number | null) {
     if (!empresa?.id) return;
     setCarregandoLancamentos(true);
-    const extra: Record<string, string> = {};
-    if (busca && busca.trim().length >= 3) extra.busca = busca.trim();
-    if (contaId) extra.contaId = String(contaId);
-    const data = await fetchAnalise("lancamentos", extra);
-    if (data) setLancamentos(data);
-    setCarregandoLancamentos(false);
-  }, [empresa?.id, fetchAnalise]);
+    try {
+      const params = new URLSearchParams({
+        dataInicio: periodoAtivo.inicio,
+        dataFim: periodoAtivo.fim,
+        tipo: "lancamentos",
+      });
+      if (busca && busca.trim().length >= 3) params.set("busca", busca.trim());
+      if (contaId) params.set("contaId", String(contaId));
+      const res = await fetch(`/api/financeiro/dashboard/analise?${params}`, {
+        headers: { "x-empresa-id": String(empresa.id) },
+      });
+      const json = await res.json();
+      if (json?.success && json.data) {
+        setLancamentos(json.data);
+      } else {
+        setLancamentos([]);
+      }
+    } catch (e) {
+      console.error("Erro ao carregar lancamentos:", e);
+      setLancamentos([]);
+    } finally {
+      setCarregandoLancamentos(false);
+    }
+  }
 
   const carteiraSelecionada = useMemo(
     () => carteira[0] || { empresa: "", saldo: 0, entradas: 0, saidas: 0 },
@@ -338,18 +363,15 @@ export default function FinanceiroDashboardPage() {
 
   const periodoLabel = (() => {
     try {
-      const di = new Date(dataInicio + "T00:00:00");
-      const df = new Date(dataFim + "T00:00:00");
+      const di = new Date(periodoAtivo.inicio + "T00:00:00");
+      const df = new Date(periodoAtivo.fim + "T00:00:00");
       const fmtD = (d: Date) => `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
       return `${fmtD(di)} a ${fmtD(df)}`;
     } catch { return "Periodo"; }
   })();
 
   const contasFiltradas = useMemo(() => {
-    let lista = contasDisponiveis;
-    if (filtroOrigem !== "TODOS") {
-      lista = lista.filter((c) => c.origem === filtroOrigem);
-    }
+    let lista = contasDisponiveis.filter((c) => c.origem === filtroOrigem);
     if (buscaCruzamento.trim().length >= 3) {
       const b = buscaCruzamento.toLowerCase();
       lista = lista.filter((c) => `${c.codigo} ${c.nome}`.toLowerCase().includes(b));
@@ -409,7 +431,7 @@ export default function FinanceiroDashboardPage() {
       const json = await resp.json();
       if (json.success) {
         setLancamentoEditando(null);
-        if (mostrarLancamentos) carregarLancamentos(buscaLancamentos, contaIdFiltro);
+        if (mostrarLancamentos) { carregarLancamentos(buscaLancamentos, contaIdFiltro); }
         if (activeTab === "receitas") {
           setCarregandoReceitas(true);
           fetchAnalise("receitas").then((d) => { setReceitasData(d); setCarregandoReceitas(false); });
@@ -425,10 +447,12 @@ export default function FinanceiroDashboardPage() {
     }
   };
 
-  const handleVerLancamentos = (contaId?: number) => {
+  const handleVerLancamentos = (contaId?: number, contaNome?: string) => {
     setContaIdFiltro(contaId ?? null);
+    setContaNomeFiltro(contaNome ?? "");
     setMostrarLancamentos(true);
-    carregarLancamentos(buscaLancamentos, contaId ?? null);
+    setBuscaLancamentos("");
+    carregarLancamentos("", contaId ?? null);
   };
 
   const tabs: { id: TabId; label: string }[] = [
@@ -567,7 +591,7 @@ export default function FinanceiroDashboardPage() {
                             type="button"
                             className="button button-secondary button-compact"
                             style={{ fontSize: "0.7rem", padding: "2px 6px" }}
-                            onClick={() => handleVerLancamentos(c.contaId)}
+                            onClick={() => handleVerLancamentos(c.contaId, `${c.contaCodigo ? c.contaCodigo + " " : ""}${c.conta}`)}
                           >
                             Ver
                           </button>
@@ -627,6 +651,14 @@ export default function FinanceiroDashboardPage() {
                 <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>a</span>
                 <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="form-input" style={{ fontSize: "0.8rem", padding: "4px 6px", flex: 1, minWidth: 110 }} />
               </div>
+              <button
+                type="button"
+                className="button button-primary button-compact"
+                onClick={handleAtualizar}
+                style={{ fontSize: "0.8rem", padding: "6px 16px", marginTop: 2 }}
+              >
+                Atualizar
+              </button>
             </div>
           </section>
 
@@ -689,36 +721,63 @@ export default function FinanceiroDashboardPage() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   <div className="panel">
-                    <h3 style={{ margin: "0 0 12px", fontSize: "0.95rem", fontWeight: 600 }}>Atencao Necessaria</h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                      <div className="detail-card" style={{ borderLeft: "4px solid #dc2626", padding: "12px 16px" }}>
-                        <span className="detail-label" style={{ color: "#dc2626" }}>Contas Vencidas</span>
-                        <strong style={{ fontSize: "1.15rem", color: "#991b1b" }}>{formatMoney(alertas.vencidos)}</strong>
+                    <h3 style={{ margin: "0 0 12px", fontSize: "0.95rem", fontWeight: 600 }}>5 Maiores Gastos</h3>
+                    {alertas.topGastos && alertas.topGastos.length > 0 ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {alertas.topGastos.map((g, idx) => (
+                          <div
+                            key={g.contaId}
+                            className="detail-card"
+                            style={{
+                              borderLeft: `4px solid ${CORES[idx % CORES.length]}`,
+                              padding: "10px 14px",
+                              cursor: "pointer",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                            onClick={() => {
+                              setActiveTab("despesas");
+                              setMostrarLancamentos(true);
+                              setContaIdFiltro(g.contaId);
+                              setContaNomeFiltro(`${g.contaCodigo ? g.contaCodigo + " " : ""}${g.contaNome}`);
+                              setBuscaLancamentos("");
+                              carregarLancamentos("", g.contaId);
+                            }}
+                          >
+                            <div style={{ flex: 1 }}>
+                              <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#374151" }}>
+                                {g.contaCodigo ? `${g.contaCodigo} ` : ""}{g.contaNome}
+                              </span>
+                            </div>
+                            <strong style={{ fontSize: "0.95rem", color: "#dc2626", whiteSpace: "nowrap", marginLeft: 8 }}>
+                              {formatMoney(g.total)}
+                            </strong>
+                          </div>
+                        ))}
                       </div>
-                      <div className="detail-card" style={{ borderLeft: "4px solid #f59e0b", padding: "12px 16px" }}>
-                        <span className="detail-label" style={{ color: "#d97706" }}>Saidas Previstas</span>
-                        <strong style={{ fontSize: "1.15rem", color: "#92400e" }}>{formatMoney(alertas.saidasPeriodo)}</strong>
-                      </div>
-                    </div>
+                    ) : (
+                      <p style={{ color: "#6b7280", fontSize: "0.85rem" }}>Nenhum gasto no periodo.</p>
+                    )}
                   </div>
                   <div className="panel">
                     <h3 style={{ margin: "0 0 12px", fontSize: "0.95rem", fontWeight: 600 }}>Movimentacao por Empresa</h3>
                     <table className="data-table mobile-cards">
                       <thead>
                         <tr>
-                          <th>Empresa</th>
-                          <th style={{ textAlign: "right" }}>Entradas</th>
-                          <th style={{ textAlign: "right" }}>Saidas</th>
-                          <th style={{ textAlign: "right" }}>Resultado</th>
+                          <th style={{ textAlign: "center" }}>Empresa</th>
+                          <th style={{ textAlign: "center" }}>Entradas</th>
+                          <th style={{ textAlign: "center" }}>Saidas</th>
+                          <th style={{ textAlign: "center" }}>Resultado</th>
                         </tr>
                       </thead>
                       <tbody>
                         {carteira.map((c, i) => (
                           <tr key={i}>
-                            <td data-label="Empresa" style={{ fontWeight: 600 }}>{c.empresa}</td>
-                            <td data-label="Entradas" style={{ color: "#059669" }}>{formatMoney(c.entradas)}</td>
-                            <td data-label="Saidas" style={{ color: "#dc2626" }}>{formatMoney(c.saidas)}</td>
-                            <td data-label="Resultado" style={{ fontWeight: 700 }}>{formatMoney(c.entradas - c.saidas)}</td>
+                            <td data-label="Empresa" style={{ fontWeight: 600, textAlign: "center" }}>{c.empresa}</td>
+                            <td data-label="Entradas" style={{ color: "#059669", textAlign: "center" }}>{formatMoney(c.entradas)}</td>
+                            <td data-label="Saidas" style={{ color: "#dc2626", textAlign: "center" }}>{formatMoney(c.saidas)}</td>
+                            <td data-label="Resultado" style={{ fontWeight: 700, textAlign: "center", color: (c.entradas - c.saidas) >= 0 ? "#059669" : "#dc2626" }}>{formatMoney(c.entradas - c.saidas)}</td>
                           </tr>
                         ))}
                         {carteira.length === 0 && !carregandoGeral && (
@@ -746,14 +805,50 @@ export default function FinanceiroDashboardPage() {
             {/* Lancamentos detail view */}
             {mostrarLancamentos && (activeTab === "receitas" || activeTab === "despesas") && (
               <section className="panel">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600 }}>
-                      Lancamentos {contaIdFiltro ? "(conta filtrada)" : ""}
-                    </h3>
-                    <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#6b7280" }}>
-                      Clique em um lancamento para editar
-                    </p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <button
+                        type="button"
+                        className="button button-secondary button-compact"
+                        onClick={() => { setMostrarLancamentos(false); setContaIdFiltro(null); setContaNomeFiltro(""); }}
+                        style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+                      >
+                        Voltar
+                      </button>
+                      <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>
+                        Movimentos Detalhados
+                      </h3>
+                    </div>
+                    {contaNomeFiltro && (
+                      <div style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        marginTop: 6,
+                        padding: "6px 12px",
+                        backgroundColor: activeTab === "receitas" ? "#ecfdf5" : "#fef2f2",
+                        border: `1px solid ${activeTab === "receitas" ? "#a7f3d0" : "#fecaca"}`,
+                        borderRadius: 6,
+                        fontSize: "0.82rem",
+                      }}>
+                        <span style={{ color: "#6b7280" }}>Conta:</span>
+                        <strong style={{ color: activeTab === "receitas" ? "#065f46" : "#991b1b" }}>{contaNomeFiltro}</strong>
+                        <button
+                          type="button"
+                          onClick={() => { setContaIdFiltro(null); setContaNomeFiltro(""); carregarLancamentos(buscaLancamentos, null); }}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "1rem", padding: 0, lineHeight: 1 }}
+                          title="Remover filtro de conta"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    )}
+                    {!contaNomeFiltro && (
+                      <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#6b7280" }}>
+                        Todos os movimentos do periodo - clique em um lancamento para editar
+                      </p>
+                    )}
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <input
@@ -768,20 +863,44 @@ export default function FinanceiroDashboardPage() {
                       }}
                       style={{ width: 280, fontSize: "0.82rem", padding: "6px 10px" }}
                     />
-                    <button
-                      type="button"
-                      className="button button-secondary button-compact"
-                      onClick={() => { setMostrarLancamentos(false); setContaIdFiltro(null); }}
-                    >
-                      Voltar
-                    </button>
                   </div>
                 </div>
+
+                {/* Summary cards */}
+                {!carregandoLancamentos && lancamentos.length > 0 && (
+                  <div className="summary-cards" style={{ marginBottom: 16 }}>
+                    <div className="summary-card" style={{ padding: "10px 14px" }}>
+                      <span className="summary-label" style={{ fontSize: "0.72rem" }}>Lancamentos</span>
+                      <strong className="summary-value" style={{ fontSize: "1.1rem" }}>{lancamentos.length}</strong>
+                    </div>
+                    <div className="summary-card" style={{ padding: "10px 14px" }}>
+                      <span className="summary-label" style={{ fontSize: "0.72rem" }}>Total Entradas</span>
+                      <strong className="summary-value" style={{ fontSize: "1rem", color: "#059669" }}>
+                        {formatMoney(lancamentos.filter((l) => l.valor >= 0).reduce((a, l) => a + l.valor, 0))}
+                      </strong>
+                    </div>
+                    <div className="summary-card" style={{ padding: "10px 14px" }}>
+                      <span className="summary-label" style={{ fontSize: "0.72rem" }}>Total Saidas</span>
+                      <strong className="summary-value" style={{ fontSize: "1rem", color: "#dc2626" }}>
+                        {formatMoney(Math.abs(lancamentos.filter((l) => l.valor < 0).reduce((a, l) => a + l.valor, 0)))}
+                      </strong>
+                    </div>
+                    <div className="summary-card" style={{ padding: "10px 14px" }}>
+                      <span className="summary-label" style={{ fontSize: "0.72rem" }}>Resultado</span>
+                      <strong className="summary-value" style={{
+                        fontSize: "1rem",
+                        color: lancamentos.reduce((a, l) => a + l.valor, 0) >= 0 ? "#059669" : "#dc2626",
+                      }}>
+                        {formatMoney(lancamentos.reduce((a, l) => a + l.valor, 0))}
+                      </strong>
+                    </div>
+                  </div>
+                )}
 
                 {carregandoLancamentos ? (
                   <div className="empty-state">Carregando lancamentos...</div>
                 ) : lancamentos.length === 0 ? (
-                  <div className="empty-state">Nenhum lancamento encontrado.</div>
+                  <div className="empty-state">Nenhum lancamento encontrado no periodo.</div>
                 ) : (
                   <div style={{ overflowX: "auto" }}>
                     <table className="data-table mobile-cards">
@@ -835,7 +954,7 @@ export default function FinanceiroDashboardPage() {
                   </div>
 
                   <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
-                    {(["TODOS", "PLANO_CONTAS", "DRE"] as const).map((f) => (
+                    {(["PLANO_CONTAS", "DRE"] as const).map((f) => (
                       <button
                         key={f}
                         type="button"
@@ -843,7 +962,7 @@ export default function FinanceiroDashboardPage() {
                         onClick={() => setFiltroOrigem(f)}
                         style={{ fontSize: "0.75rem" }}
                       >
-                        {f === "TODOS" ? "Todas" : f === "PLANO_CONTAS" ? "Plano de Contas" : "DRE"}
+                        {f === "PLANO_CONTAS" ? "Plano de Contas" : "DRE"}
                       </button>
                     ))}
                     <input

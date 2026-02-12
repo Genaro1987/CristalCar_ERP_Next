@@ -320,14 +320,16 @@ async function importarLancamentos(
       continue;
     }
 
-    let dataFormatada = dataStr;
-    if (dataStr.includes("/")) {
-      const partes = dataStr.split("/");
+    // Strip time portion before parsing: "06/02/2026 17:09" → "06/02/2026"
+    const dataSemHora = dataStr.split(/[\sT]/)[0];
+    let dataFormatada = dataSemHora;
+    if (dataSemHora.includes("/")) {
+      const partes = dataSemHora.split("/");
       if (partes.length === 3) {
         dataFormatada = `${partes[2]}-${partes[1].padStart(2, "0")}-${partes[0].padStart(2, "0")}`;
       }
-    } else if (/^\d{2}-\d{2}-\d{4}$/.test(dataStr)) {
-      const partes = dataStr.split("-");
+    } else if (/^\d{2}-\d{2}-\d{4}$/.test(dataSemHora)) {
+      const partes = dataSemHora.split("-");
       dataFormatada = `${partes[2]}-${partes[1]}-${partes[0]}`;
     }
 
@@ -429,6 +431,9 @@ async function importarLancamentosFinanceiros(
     const valorFinal = natureza === "DESPESA" ? -Math.abs(valorNum) : Math.abs(valorNum);
 
     const historico = lanc.descricao || lanc.codigo || "";
+    // Normalize dates: strip time portions if present
+    const dataMovNorm = lanc.dataMovimento.split(/[\sT]/)[0];
+    const dataIncNorm = (lanc.dataInclusao || new Date().toISOString().split("T")[0]).split(/[\sT]/)[0];
 
     try {
       const resultado = await db.execute({
@@ -438,13 +443,13 @@ async function importarLancamentosFinanceiros(
           FIN_LANCAMENTO_STATUS, FIN_LANCAMENTO_CRIADO_EM, EMPRESA_ID
         ) VALUES (?, ?, ?, ?, ?, ?, 'confirmado', ?, ?)`,
         args: [
-          lanc.dataMovimento,
+          dataMovNorm,
           historico,
           valorFinal,
           lanc.contaId,
           lanc.codigo || null,
           lanc.placa || null,
-          lanc.dataInclusao || new Date().toISOString().split("T")[0],
+          dataIncNorm,
           empresaId,
         ],
       });

@@ -458,7 +458,160 @@ export default function EstruturaDrePage() {
 
           <div className="departamentos-page">
             <div className="split-view">
-              {/* LEFT: Tree */}
+              {/* LEFT (menor): Form */}
+              <section className="split-view-panel" ref={formRef}>
+                  <header className="form-section-header">
+                    <h2>{editandoId ? "Editar linha do DRE" : "Nova linha do DRE"}</h2>
+                    <p>
+                      {editandoId
+                        ? `Editando: ${form.codigo} - ${form.nome}`
+                        : "Preencha os campos para cadastrar uma nova linha na estrutura."}
+                    </p>
+                  </header>
+
+                  <form className="form" onSubmit={(e) => { e.preventDefault(); handleSalvar(); }}>
+                    <div className="form-grid two-columns">
+                      <div className="form-group">
+                        <label htmlFor="dre-linha-nome">Nome da linha *</label>
+                        <input
+                          id="dre-linha-nome"
+                          className="form-input"
+                          placeholder="Ex: Resultado Operacional"
+                          value={form.nome}
+                          onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="dre-linha-codigo">Codigo *</label>
+                        <input
+                          id="dre-linha-codigo"
+                          className="form-input"
+                          placeholder="1.2.1"
+                          value={form.codigo}
+                          onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-grid two-columns">
+                      <div className="form-group">
+                        <label htmlFor="dre-linha-natureza">Natureza</label>
+                        <select
+                          id="dre-linha-natureza"
+                          className="form-input"
+                          value={form.natureza}
+                          onChange={(e) => setForm((f) => ({ ...f, natureza: e.target.value as any, ...(e.target.value === "CALCULADO" ? { tipo: "Calculado" } : f.tipo === "Calculado" ? { tipo: "Fixo" } : {}) }))}
+                        >
+                          <option value="RECEITA">Receita</option>
+                          <option value="DESPESA">Despesa</option>
+                          <option value="CALCULADO">Calculado</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="dre-linha-tipo">Tipo</label>
+                        <select
+                          id="dre-linha-tipo"
+                          className="form-input"
+                          value={form.natureza === "CALCULADO" ? "Calculado" : form.tipo}
+                          disabled={form.natureza === "CALCULADO"}
+                          onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value }))}
+                        >
+                          <option value="Fixo">Fixo</option>
+                          <option value="Variavel">Variavel</option>
+                          <option value="Calculado">Calculado</option>
+                        </select>
+                      </div>
+                    </div>
+                    {!editandoId && (
+                      <div className="form-grid two-columns">
+                        <div className="form-group">
+                          <label htmlFor="dre-linha-pai">Linha pai (opcional)</label>
+                          <select
+                            id="dre-linha-pai"
+                            className="form-input"
+                            value={form.paiId ?? ""}
+                            onChange={(e) => setForm((f) => ({ ...f, paiId: e.target.value || null }))}
+                          >
+                            <option value="">Raiz (sem pai)</option>
+                            {opcoesLinhasPai.map((op) => (
+                              <option key={op.id} value={op.id}>{op.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group" />
+                      </div>
+                    )}
+                    {editandoId && (
+                      <div className="form-grid two-columns">
+                        <div className="form-group">
+                          <label htmlFor="dre-linha-status">Status</label>
+                          <select
+                            id="dre-linha-status"
+                            className="form-input"
+                            value={form.ativo}
+                            onChange={(e) => setForm((f) => ({ ...f, ativo: Number(e.target.value) }))}
+                          >
+                            <option value={1}>Ativo</option>
+                            <option value={0}>Inativo</option>
+                          </select>
+                        </div>
+                        <div className="form-group" />
+                      </div>
+                    )}
+                    {form.natureza === "CALCULADO" && (
+                      <div className="form-group">
+                        <label htmlFor="dre-linha-formula">Formula</label>
+                        <input
+                          id="dre-linha-formula"
+                          className="form-input"
+                          placeholder="Ex: (1 + 2) - 3 * 4 / 5"
+                          value={form.formula}
+                          onChange={(e) => setForm((f) => ({ ...f, formula: e.target.value }))}
+                        />
+                        <small style={{ color: "#6b7280", fontSize: "0.78rem", marginTop: 4, display: "block" }}>
+                          Use codigos das linhas com operadores: + - * / e parenteses ( ) para prioridade. Ex: (1 + 2) - 3
+                        </small>
+                      </div>
+                    )}
+                    <div className="form-grid two-columns">
+                      <div className="form-group">
+                        <label htmlFor="dre-linha-ref100">Referencia 100% (base para %)</label>
+                        <select
+                          id="dre-linha-ref100"
+                          className="form-input"
+                          value={form.referencia100}
+                          onChange={(e) => setForm((f) => ({ ...f, referencia100: Number(e.target.value) }))}
+                        >
+                          <option value={0}>Nao</option>
+                          <option value={1}>Sim - Esta linha sera 100% no DRE</option>
+                        </select>
+                      </div>
+                      <div className="form-group" />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="dre-linha-descricao">Descricao</label>
+                      <textarea
+                        id="dre-linha-descricao"
+                        className="form-input"
+                        style={{ minHeight: 80 }}
+                        placeholder="Explique como calcular e consolidar esta linha"
+                        value={form.descricao}
+                        onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-actions departamentos-actions">
+                      <div className="button-row">
+                        <button type="submit" className="button button-primary" disabled={salvando}>
+                          {salvando ? "Salvando..." : editandoId ? "Atualizar" : "Salvar"}
+                        </button>
+                        <button type="button" className="button button-secondary" onClick={handleLimpar}>
+                          Limpar
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+              </section>
+
+              {/* RIGHT (maior): Tree */}
               <section className="split-view-panel">
                 <div className="section-header">
                   <div>
@@ -485,261 +638,163 @@ export default function EstruturaDrePage() {
                   )}
                 </div>
               </section>
+            </div>
 
-              {/* RIGHT: Inline Form + Linked accounts */}
-              <section className="split-view-panel" ref={formRef}>
-                <header className="form-section-header">
-                  <h2>{editandoId ? "Editar linha do DRE" : "Nova linha do DRE"}</h2>
-                  <p>
-                    {editandoId
-                      ? `Editando: ${form.codigo} - ${form.nome}`
-                      : "Preencha os campos para cadastrar uma nova linha na estrutura."}
-                  </p>
-                </header>
+            {/* Contas vinculadas - independent full-width card, only when editing */}
+            {editandoId && selecionada && (
+              <section className="panel" style={{ marginTop: 16, padding: 0, overflow: "hidden" }}>
+                {/* Card header */}
+                <div style={{
+                  padding: "16px 24px",
+                  backgroundColor: "#f8fafc",
+                  borderBottom: "1px solid #e5e7eb",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Contas vinculadas</h2>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#64748b" }}>
+                      Linha: <strong>{form.codigo} - {form.nome}</strong>
+                    </p>
+                  </div>
+                  <span style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minWidth: 28,
+                    height: 28,
+                    borderRadius: 14,
+                    backgroundColor: contasSelecionadas.length > 0 ? "#dbeafe" : "#f3f4f6",
+                    color: contasSelecionadas.length > 0 ? "#1d4ed8" : "#6b7280",
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    padding: "0 8px",
+                  }}>
+                    {contasSelecionadas.length}
+                  </span>
+                </div>
 
-                <form className="form" onSubmit={(e) => { e.preventDefault(); handleSalvar(); }}>
-                  <div className="form-grid two-columns">
-                    <div className="form-group">
-                      <label htmlFor="dre-linha-nome">Nome da linha *</label>
-                      <input
-                        id="dre-linha-nome"
-                        className="form-input"
-                        placeholder="Ex: Resultado Operacional"
-                        value={form.nome}
-                        onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="dre-linha-codigo">Codigo *</label>
-                      <input
-                        id="dre-linha-codigo"
-                        className="form-input"
-                        placeholder="1.2.1"
-                        value={form.codigo}
-                        onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="form-grid two-columns">
-                    <div className="form-group">
-                      <label htmlFor="dre-linha-natureza">Natureza</label>
-                      <select
-                        id="dre-linha-natureza"
-                        className="form-input"
-                        value={form.natureza}
-                        onChange={(e) => setForm((f) => ({ ...f, natureza: e.target.value as any, ...(e.target.value === "CALCULADO" ? { tipo: "Calculado" } : f.tipo === "Calculado" ? { tipo: "Fixo" } : {}) }))}
-                      >
-                        <option value="RECEITA">Receita</option>
-                        <option value="DESPESA">Despesa</option>
-                        <option value="CALCULADO">Calculado</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="dre-linha-tipo">Tipo</label>
-                      <select
-                        id="dre-linha-tipo"
-                        className="form-input"
-                        value={form.natureza === "CALCULADO" ? "Calculado" : form.tipo}
-                        disabled={form.natureza === "CALCULADO"}
-                        onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value }))}
-                      >
-                        <option value="Fixo">Fixo</option>
-                        <option value="Variavel">Variavel</option>
-                        <option value="Calculado">Calculado</option>
-                      </select>
-                    </div>
-                  </div>
-                  {!editandoId && (
-                    <div className="form-grid two-columns">
-                      <div className="form-group">
-                        <label htmlFor="dre-linha-pai">Linha pai (opcional)</label>
-                        <select
-                          id="dre-linha-pai"
-                          className="form-input"
-                          value={form.paiId ?? ""}
-                          onChange={(e) => setForm((f) => ({ ...f, paiId: e.target.value || null }))}
-                        >
-                          <option value="">Raiz (sem pai)</option>
-                          {opcoesLinhasPai.map((op) => (
-                            <option key={op.id} value={op.id}>{op.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group" />
-                    </div>
-                  )}
-                  {editandoId && (
-                    <div className="form-grid two-columns">
-                      <div className="form-group">
-                        <label htmlFor="dre-linha-status">Status</label>
-                        <select
-                          id="dre-linha-status"
-                          className="form-input"
-                          value={form.ativo}
-                          onChange={(e) => setForm((f) => ({ ...f, ativo: Number(e.target.value) }))}
-                        >
-                          <option value={1}>Ativo</option>
-                          <option value={0}>Inativo</option>
-                        </select>
-                      </div>
-                      <div className="form-group" />
-                    </div>
-                  )}
-                  {form.natureza === "CALCULADO" && (
-                    <div className="form-group">
-                      <label htmlFor="dre-linha-formula">Formula</label>
-                      <input
-                        id="dre-linha-formula"
-                        className="form-input"
-                        placeholder="Ex: (1 + 2) - 3 * 4 / 5"
-                        value={form.formula}
-                        onChange={(e) => setForm((f) => ({ ...f, formula: e.target.value }))}
-                      />
-                      <small style={{ color: "#6b7280", fontSize: "0.78rem", marginTop: 4, display: "block" }}>
-                        Use codigos das linhas com operadores: + - * / e parenteses ( ) para prioridade. Ex: (1 + 2) - 3
-                      </small>
-                    </div>
-                  )}
-                  <div className="form-grid two-columns">
-                    <div className="form-group">
-                      <label htmlFor="dre-linha-ref100">Referencia 100% (base para %)</label>
-                      <select
-                        id="dre-linha-ref100"
-                        className="form-input"
-                        value={form.referencia100}
-                        onChange={(e) => setForm((f) => ({ ...f, referencia100: Number(e.target.value) }))}
-                      >
-                        <option value={0}>Nao</option>
-                        <option value={1}>Sim - Esta linha sera 100% no DRE</option>
-                      </select>
-                    </div>
-                    <div className="form-group" />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="dre-linha-descricao">Descricao</label>
-                    <textarea
-                      id="dre-linha-descricao"
-                      className="form-input"
-                      style={{ minHeight: 80 }}
-                      placeholder="Explique como calcular e consolidar esta linha"
-                      value={form.descricao}
-                      onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
-                    />
-                  </div>
-                  <div className="form-actions departamentos-actions">
-                    <div className="button-row">
-                      <button type="submit" className="button button-primary" disabled={salvando}>
-                        {salvando ? "Salvando..." : editandoId ? "Atualizar" : "Salvar"}
-                      </button>
-                      <button type="button" className="button button-secondary" onClick={handleLimpar}>
-                        Limpar
-                      </button>
-                    </div>
-                  </div>
-                </form>
-
-                {/* Linked accounts section - only when editing */}
-                {editandoId && selecionada && (
-                  <div style={{ marginTop: 24, borderTop: "1px solid #e5e7eb", paddingTop: 20 }}>
-                    <div className="section-header">
-                      <div>
-                        <h3>Contas vinculadas</h3>
-                        <p>Plano de contas conectado a esta linha do DRE.</p>
-                      </div>
-                    </div>
-
+                {/* Two-column layout: linked accounts + search */}
+                <div style={{ padding: "16px 24px", display: "flex", gap: 24, flexWrap: "wrap" }}>
+                  {/* Left: Currently linked accounts */}
+                  <div style={{ flex: "1 1 300px", minWidth: 0 }}>
+                    <h3 style={{ margin: "0 0 10px", fontSize: "0.85rem", fontWeight: 600, color: "#374151" }}>
+                      Contas associadas ({contasSelecionadas.length})
+                    </h3>
                     {contasSelecionadas.length > 0 ? (
-                      <div className="detail-card">
-                        {contasSelecionadas.map((conta) => (
-                          <div
-                            key={conta}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              flexWrap: "wrap",
-                              gap: 8,
-                              padding: "8px 12px",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: 8,
-                              backgroundColor: "#ffffff",
-                              fontSize: "0.9rem",
-                            }}
-                          >
-                            <span style={{ minWidth: 0, wordBreak: "break-word", flex: 1 }}>{conta}</span>
-                            <button
-                              type="button"
-                              className="button button-secondary button-compact"
-                              style={{ flexShrink: 0 }}
-                              onClick={() => handleDesvincularConta(conta)}
-                              disabled={salvandoVinculo}
-                            >
-                              Remover
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="empty-state"><p>Nenhuma conta associada a esta linha.</p></div>
-                    )}
-
-                    <div style={{ marginTop: 16 }}>
-                      <label htmlFor="dre-busca-conta" className="detail-label">Vincular nova conta</label>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
-                        <input
-                          id="dre-busca-conta"
-                          className="form-input"
-                          placeholder="Buscar pelo codigo ou nome"
-                          value={contaBusca}
-                          onChange={(e) => setContaBusca(e.target.value)}
-                          style={{ flex: 1 }}
-                        />
-                        <span style={{ fontSize: "0.75rem", color: "#6b7280", whiteSpace: "nowrap" }}>
-                          {contasFiltradas.length} conta(s)
-                        </span>
-                      </div>
-                      <div style={{ maxHeight: 240, overflowY: "auto", marginTop: 8, border: "1px solid #e5e7eb", borderRadius: 8, backgroundColor: "#fafafa" }}>
-                        {contasFiltradas.length === 0 ? (
-                          <div style={{ padding: "12px 14px", fontSize: "0.82rem", color: "#6b7280", textAlign: "center" }}>
-                            {contaBusca.trim() ? "Nenhuma conta encontrada" : "Todas as contas ja estao vinculadas"}
-                          </div>
-                        ) : (
-                          contasFiltradas.map((conta) => (
-                            <button
-                              key={conta.id}
-                              type="button"
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 280, overflowY: "auto" }}>
+                        {contasSelecionadas.map((conta, idx) => {
+                          const partes = conta.split(" ");
+                          const codigo = partes[0] ?? "";
+                          const nome = partes.slice(1).join(" ");
+                          return (
+                            <div
+                              key={conta}
                               style={{
                                 display: "flex",
                                 alignItems: "center",
-                                gap: 8,
-                                width: "100%",
-                                padding: "8px 12px",
-                                border: "none",
-                                borderBottom: "1px solid #f3f4f6",
-                                backgroundColor: "transparent",
-                                cursor: "pointer",
-                                textAlign: "left",
-                                fontSize: "0.82rem",
-                                color: "#1e40af",
-                                transition: "background-color 0.15s",
+                                gap: 10,
+                                padding: "10px 14px",
+                                border: "1px solid #e5e7eb",
+                                borderRadius: 8,
+                                backgroundColor: "#fff",
+                                fontSize: "0.85rem",
+                                borderLeft: `3px solid ${idx % 2 === 0 ? "#3b82f6" : "#8b5cf6"}`,
                               }}
-                              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#dbeafe"; }}
-                              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}
-                              onClick={() => handleVincularConta(conta.id)}
-                              disabled={salvandoVinculo}
                             >
-                              <span style={{ color: "#059669", fontWeight: 700, fontSize: "0.9rem", flexShrink: 0 }}>+</span>
-                              <span style={{ fontWeight: 600, minWidth: 60, flexShrink: 0 }}>{conta.codigo}</span>
-                              <span style={{ color: "#374151" }}>{conta.label.replace(conta.codigo + " ", "")}</span>
-                            </button>
-                          ))
-                        )}
+                              <span style={{ fontWeight: 700, color: "#374151", minWidth: 50, flexShrink: 0 }}>{codigo}</span>
+                              <span style={{ flex: 1, color: "#4b5563", minWidth: 0, wordBreak: "break-word" }}>{nome}</span>
+                              <button
+                                type="button"
+                                className="button button-secondary button-compact"
+                                style={{ flexShrink: 0, fontSize: "0.75rem", color: "#dc2626" }}
+                                onClick={() => handleDesvincularConta(conta)}
+                                disabled={salvandoVinculo}
+                              >
+                                Remover
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
+                    ) : (
+                      <div style={{
+                        padding: "20px 16px",
+                        textAlign: "center",
+                        color: "#9ca3af",
+                        fontSize: "0.85rem",
+                        backgroundColor: "#fafafa",
+                        borderRadius: 8,
+                        border: "1px dashed #d1d5db",
+                      }}>
+                        Nenhuma conta associada a esta linha.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Divider */}
+                  <div style={{ width: 1, backgroundColor: "#e5e7eb", alignSelf: "stretch", flexShrink: 0 }} />
+
+                  {/* Right: Search and link new accounts */}
+                  <div style={{ flex: "1 1 300px", minWidth: 0 }}>
+                    <h3 style={{ margin: "0 0 10px", fontSize: "0.85rem", fontWeight: 600, color: "#374151" }}>
+                      Vincular nova conta
+                    </h3>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                      <input
+                        id="dre-busca-conta"
+                        className="form-input"
+                        placeholder="Buscar pelo codigo ou nome..."
+                        value={contaBusca}
+                        onChange={(e) => setContaBusca(e.target.value)}
+                        style={{ flex: 1 }}
+                      />
+                      <span style={{ fontSize: "0.75rem", color: "#6b7280", whiteSpace: "nowrap" }}>
+                        {contasFiltradas.length} disponivel(is)
+                      </span>
+                    </div>
+                    <div style={{ maxHeight: 240, overflowY: "auto", border: "1px solid #e5e7eb", borderRadius: 8, backgroundColor: "#fafafa" }}>
+                      {contasFiltradas.length === 0 ? (
+                        <div style={{ padding: "14px 16px", fontSize: "0.82rem", color: "#6b7280", textAlign: "center" }}>
+                          {contaBusca.trim() ? "Nenhuma conta encontrada" : "Todas as contas ja estao vinculadas"}
+                        </div>
+                      ) : (
+                        contasFiltradas.map((conta) => (
+                          <button
+                            key={conta.id}
+                            type="button"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              width: "100%",
+                              padding: "8px 12px",
+                              border: "none",
+                              borderBottom: "1px solid #f3f4f6",
+                              backgroundColor: "transparent",
+                              cursor: "pointer",
+                              textAlign: "left",
+                              fontSize: "0.82rem",
+                              color: "#1e40af",
+                              transition: "background-color 0.15s",
+                            }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#dbeafe"; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}
+                            onClick={() => handleVincularConta(conta.id)}
+                            disabled={salvandoVinculo}
+                          >
+                            <span style={{ color: "#059669", fontWeight: 700, fontSize: "0.9rem", flexShrink: 0 }}>+</span>
+                            <span style={{ fontWeight: 600, minWidth: 60, flexShrink: 0 }}>{conta.codigo}</span>
+                            <span style={{ color: "#374151" }}>{conta.label.replace(conta.codigo + " ", "")}</span>
+                          </button>
+                        ))
+                      )}
                     </div>
                   </div>
-                )}
+                </div>
               </section>
-            </div>
+            )}
           </div>
         </main>
         </PaginaProtegida>

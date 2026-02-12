@@ -63,7 +63,7 @@ const FORM_VAZIO: FormPessoa = {
 const TIPO_LABELS: Record<string, string> = {
   CLIENTE: "Cliente",
   FORNECEDOR: "Fornecedor",
-  AMBOS: "Cliente e Fornecedor",
+  AMBOS: "Ambos",
 };
 
 export default function PessoasPage() {
@@ -81,6 +81,11 @@ export default function PessoasPage() {
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "ativos" | "inativos">("ativos");
   const [confirmExcluir, setConfirmExcluir] = useState<{ item: Pessoa; msg: string } | null>(null);
   const [planoContas, setPlanoContas] = useState<PlanoContaOpt[]>([]);
+
+  // Inline edit state
+  const [editandoInline, setEditandoInline] = useState<number | null>(null);
+  const [inlineForm, setInlineForm] = useState<Partial<FormPessoa>>({});
+  const [salvandoInline, setSalvandoInline] = useState(false);
 
   const headers = useMemo(() => {
     const h: Record<string, string> = { "Content-Type": "application/json" };
@@ -126,7 +131,7 @@ export default function PessoasPage() {
       if (filtroStatus === "inativos" && p.CAD_PESSOA_ATIVO) return false;
       if (filtroTipo && p.CAD_PESSOA_TIPO !== filtroTipo && p.CAD_PESSOA_TIPO !== "AMBOS") return false;
       if (b) {
-        const texto = `${p.CAD_PESSOA_NOME} ${p.CAD_PESSOA_DOCUMENTO ?? ""}`.toLowerCase();
+        const texto = `${p.CAD_PESSOA_NOME} ${p.CAD_PESSOA_DOCUMENTO ?? ""} ${p.CAD_PESSOA_TELEFONE ?? ""} ${p.CAD_PESSOA_EMAIL ?? ""}`.toLowerCase();
         if (!texto.includes(b)) return false;
       }
       return true;
@@ -150,6 +155,7 @@ export default function PessoasPage() {
       contaReceitaId: p.CAD_PESSOA_CONTA_RECEITA_ID ? String(p.CAD_PESSOA_CONTA_RECEITA_ID) : "",
       contaDespesaId: p.CAD_PESSOA_CONTA_DESPESA_ID ? String(p.CAD_PESSOA_CONTA_DESPESA_ID) : "",
     });
+    setEditandoInline(null);
   };
 
   const handleLimpar = () => {
@@ -204,6 +210,53 @@ export default function PessoasPage() {
     }
   };
 
+  // Inline edit handlers
+  const handleIniciarInline = (p: Pessoa) => {
+    setEditandoInline(p.CAD_PESSOA_ID);
+    setInlineForm({
+      telefone: p.CAD_PESSOA_TELEFONE ?? "",
+      email: p.CAD_PESSOA_EMAIL ?? "",
+      documento: p.CAD_PESSOA_DOCUMENTO ?? "",
+    });
+  };
+
+  const handleSalvarInline = async (pessoaId: number) => {
+    if (!empresa?.id) return;
+    setSalvandoInline(true);
+    try {
+      const pessoa = pessoas.find((p) => p.CAD_PESSOA_ID === pessoaId);
+      if (!pessoa) return;
+      const body = {
+        nome: pessoa.CAD_PESSOA_NOME,
+        documento: inlineForm.documento ?? pessoa.CAD_PESSOA_DOCUMENTO ?? "",
+        tipo: pessoa.CAD_PESSOA_TIPO,
+        endereco: pessoa.CAD_PESSOA_ENDERECO ?? "",
+        cidade: pessoa.CAD_PESSOA_CIDADE ?? "",
+        uf: pessoa.CAD_PESSOA_UF ?? "",
+        cep: pessoa.CAD_PESSOA_CEP ?? "",
+        telefone: inlineForm.telefone ?? pessoa.CAD_PESSOA_TELEFONE ?? "",
+        email: inlineForm.email ?? pessoa.CAD_PESSOA_EMAIL ?? "",
+        observacao: pessoa.CAD_PESSOA_OBSERVACAO ?? "",
+        ativo: pessoa.CAD_PESSOA_ATIVO,
+        contaReceitaId: pessoa.CAD_PESSOA_CONTA_RECEITA_ID ? String(pessoa.CAD_PESSOA_CONTA_RECEITA_ID) : "",
+        contaDespesaId: pessoa.CAD_PESSOA_CONTA_DESPESA_ID ? String(pessoa.CAD_PESSOA_CONTA_DESPESA_ID) : "",
+      };
+      const resp = await fetch(`/api/cadastros/pessoas?id=${pessoaId}`, { method: "PUT", headers, body: JSON.stringify(body) });
+      const json = await resp.json();
+      if (json.success) {
+        setNotification({ type: "success", message: "Contato atualizado" });
+        setEditandoInline(null);
+        await carregarPessoas();
+      } else {
+        setNotification({ type: "error", message: json.error || "Erro ao salvar" });
+      }
+    } catch {
+      setNotification({ type: "error", message: "Erro de conexao." });
+    } finally {
+      setSalvandoInline(false);
+    }
+  };
+
   return (
     <LayoutShell>
       <div className="page-container financeiro-page">
@@ -219,118 +272,64 @@ export default function PessoasPage() {
           {notification && <NotificationBar type={notification.type} message={notification.message} />}
 
           <div className="departamentos-page">
-            <div className="split-view">
-              {/* LEFT: List */}
-              <section className="split-view-panel">
-                <div className="section-header">
-                  <div>
-                    <h2>Cadastros</h2>
-                    <p>Clientes, fornecedores ou ambos. Clique para editar.</p>
-                  </div>
-                  <button type="button" className="button button-primary" onClick={handleLimpar}>Novo</button>
-                </div>
-
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-                  <input
-                    className="form-input"
-                    placeholder="Buscar por nome ou documento"
-                    value={busca}
-                    onChange={(e) => setBusca(e.target.value)}
-                    style={{ flex: 1, minWidth: 200 }}
-                  />
-                  <select className="form-input" value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} style={{ width: 140 }}>
-                    <option value="">Todos os tipos</option>
-                    <option value="CLIENTE">Cliente</option>
-                    <option value="FORNECEDOR">Fornecedor</option>
-                    <option value="AMBOS">Ambos</option>
-                  </select>
-                  <select className="form-input" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as any)} style={{ width: 120 }}>
-                    <option value="ativos">Ativos</option>
-                    <option value="inativos">Inativos</option>
-                    <option value="todos">Todos</option>
-                  </select>
-                </div>
-
-                <div style={{ maxHeight: 600, overflowY: "auto" }}>
-                  {carregando ? (
-                    <div className="empty-state"><p>Carregando...</p></div>
-                  ) : pessoasFiltradas.length === 0 ? (
-                    <div className="empty-state"><strong>Nenhum cadastro encontrado</strong><p>Ajuste os filtros ou cadastre um novo.</p></div>
-                  ) : (
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Nome</th>
-                          <th style={{ width: 140 }}>Documento</th>
-                          <th style={{ width: 120, textAlign: "center" }}>Tipo</th>
-                          <th style={{ width: 80 }}>Acoes</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pessoasFiltradas.map((p) => (
-                          <tr
-                            key={p.CAD_PESSOA_ID}
-                            onClick={() => handleEditar(p)}
-                            style={{ cursor: "pointer", backgroundColor: editandoId === p.CAD_PESSOA_ID ? "#fff7ed" : undefined }}
-                          >
-                            <td style={{ fontWeight: 600 }}>
-                              {p.CAD_PESSOA_NOME}
-                              {!p.CAD_PESSOA_ATIVO && <span className="badge badge-danger" style={{ marginLeft: 6, fontSize: "0.65rem" }}>Inativo</span>}
-                            </td>
-                            <td style={{ fontSize: "0.82rem", color: "#6b7280" }}>{p.CAD_PESSOA_DOCUMENTO || "—"}</td>
-                            <td style={{ textAlign: "center" }}>
-                              <span className="badge" style={{
-                                backgroundColor: p.CAD_PESSOA_TIPO === "CLIENTE" ? "#dbeafe" : p.CAD_PESSOA_TIPO === "FORNECEDOR" ? "#fee2e2" : "#d1fae5",
-                                color: p.CAD_PESSOA_TIPO === "CLIENTE" ? "#1e40af" : p.CAD_PESSOA_TIPO === "FORNECEDOR" ? "#991b1b" : "#065f46",
-                              }}>
-                                {TIPO_LABELS[p.CAD_PESSOA_TIPO]}
-                              </span>
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                className="button button-danger button-compact"
-                                onClick={(e) => { e.stopPropagation(); setConfirmExcluir({ item: p, msg: `Excluir "${p.CAD_PESSOA_NOME}"?` }); }}
-                              >
-                                Excluir
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </section>
-
-              {/* RIGHT: Form */}
+            <div className="split-view" style={{ gridTemplateColumns: "minmax(280px, 1fr) minmax(0, 2.5fr)" }}>
+              {/* LEFT (menor): Form */}
               <section className="split-view-panel">
                 <header className="form-section-header">
                   <h2>{editandoId ? "Editar cadastro" : "Novo cadastro"}</h2>
-                  <p>{editandoId ? `Editando: ${form.nome}` : "Preencha os dados para cadastrar cliente, fornecedor ou ambos."}</p>
+                  <p>{editandoId ? `Editando: ${form.nome}` : "Preencha os dados do cliente ou fornecedor."}</p>
                 </header>
 
                 <form className="form" onSubmit={handleSalvar}>
+                  <div className="form-group">
+                    <label htmlFor="pes-nome">Nome / Razao Social *</label>
+                    <input id="pes-nome" className="form-input" value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Nome completo ou razao social" required />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="pes-doc">CPF / CNPJ</label>
+                    <input id="pes-doc" className="form-input" value={form.documento} onChange={(e) => setForm((f) => ({ ...f, documento: e.target.value }))} placeholder="000.000.000-00" />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="pes-tipo">Tipo *</label>
+                    <select id="pes-tipo" className="form-input" value={form.tipo} onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value as any }))}>
+                      <option value="AMBOS">Cliente e Fornecedor</option>
+                      <option value="CLIENTE">Cliente</option>
+                      <option value="FORNECEDOR">Fornecedor</option>
+                    </select>
+                  </div>
                   <div className="form-grid two-columns">
                     <div className="form-group">
-                      <label htmlFor="pes-nome">Nome / Razao Social *</label>
-                      <input id="pes-nome" className="form-input" value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Nome completo ou razao social" required />
+                      <label htmlFor="pes-tel">Telefone</label>
+                      <input id="pes-tel" className="form-input" value={form.telefone} onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="pes-doc">CPF / CNPJ</label>
-                      <input id="pes-doc" className="form-input" value={form.documento} onChange={(e) => setForm((f) => ({ ...f, documento: e.target.value }))} placeholder="000.000.000-00 ou 00.000.000/0000-00" />
+                      <label htmlFor="pes-email">E-mail</label>
+                      <input id="pes-email" type="email" className="form-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@exemplo.com" />
                     </div>
                   </div>
 
+                  <div className="form-group">
+                    <label htmlFor="pes-end">Endereco</label>
+                    <input id="pes-end" className="form-input" value={form.endereco} onChange={(e) => setForm((f) => ({ ...f, endereco: e.target.value }))} placeholder="Rua, numero, complemento" />
+                  </div>
                   <div className="form-grid two-columns">
                     <div className="form-group">
-                      <label htmlFor="pes-tipo">Tipo *</label>
-                      <select id="pes-tipo" className="form-input" value={form.tipo} onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value as any }))}>
-                        <option value="AMBOS">Cliente e Fornecedor</option>
-                        <option value="CLIENTE">Cliente</option>
-                        <option value="FORNECEDOR">Fornecedor</option>
-                      </select>
+                      <label htmlFor="pes-cidade">Cidade</label>
+                      <input id="pes-cidade" className="form-input" value={form.cidade} onChange={(e) => setForm((f) => ({ ...f, cidade: e.target.value }))} />
                     </div>
+                    <div className="form-grid two-columns">
+                      <div className="form-group">
+                        <label htmlFor="pes-uf">UF</label>
+                        <input id="pes-uf" className="form-input" value={form.uf} onChange={(e) => setForm((f) => ({ ...f, uf: e.target.value }))} maxLength={2} style={{ textTransform: "uppercase" }} />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="pes-cep">CEP</label>
+                        <input id="pes-cep" className="form-input" value={form.cep} onChange={(e) => setForm((f) => ({ ...f, cep: e.target.value }))} placeholder="00000-000" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {editandoId && (
                     <div className="form-group">
                       <label htmlFor="pes-status">Status</label>
                       <select id="pes-status" className="form-input" value={form.ativo} onChange={(e) => setForm((f) => ({ ...f, ativo: Number(e.target.value) }))}>
@@ -338,7 +337,7 @@ export default function PessoasPage() {
                         <option value={0}>Inativo</option>
                       </select>
                     </div>
-                  </div>
+                  )}
 
                   {(form.tipo === "CLIENTE" || form.tipo === "AMBOS") && (
                     <div className="form-group">
@@ -364,39 +363,6 @@ export default function PessoasPage() {
                   )}
 
                   <div className="form-group">
-                    <label htmlFor="pes-end">Endereco</label>
-                    <input id="pes-end" className="form-input" value={form.endereco} onChange={(e) => setForm((f) => ({ ...f, endereco: e.target.value }))} placeholder="Rua, numero, complemento" />
-                  </div>
-
-                  <div className="form-grid two-columns">
-                    <div className="form-group">
-                      <label htmlFor="pes-cidade">Cidade</label>
-                      <input id="pes-cidade" className="form-input" value={form.cidade} onChange={(e) => setForm((f) => ({ ...f, cidade: e.target.value }))} />
-                    </div>
-                    <div className="form-grid two-columns">
-                      <div className="form-group">
-                        <label htmlFor="pes-uf">UF</label>
-                        <input id="pes-uf" className="form-input" value={form.uf} onChange={(e) => setForm((f) => ({ ...f, uf: e.target.value }))} maxLength={2} style={{ textTransform: "uppercase" }} />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="pes-cep">CEP</label>
-                        <input id="pes-cep" className="form-input" value={form.cep} onChange={(e) => setForm((f) => ({ ...f, cep: e.target.value }))} placeholder="00000-000" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="form-grid two-columns">
-                    <div className="form-group">
-                      <label htmlFor="pes-tel">Telefone</label>
-                      <input id="pes-tel" className="form-input" value={form.telefone} onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="pes-email">E-mail</label>
-                      <input id="pes-email" type="email" className="form-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@exemplo.com" />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
                     <label htmlFor="pes-obs">Observacoes</label>
                     <textarea id="pes-obs" className="form-input" style={{ minHeight: 60 }} value={form.observacao} onChange={(e) => setForm((f) => ({ ...f, observacao: e.target.value }))} />
                   </div>
@@ -410,6 +376,167 @@ export default function PessoasPage() {
                     </div>
                   </div>
                 </form>
+              </section>
+
+              {/* RIGHT (maior): List with inline editing */}
+              <section className="split-view-panel">
+                <div className="section-header">
+                  <div>
+                    <h2>Cadastros ({pessoasFiltradas.length})</h2>
+                    <p>Clientes, fornecedores ou ambos. Clique para editar no formulario ou edite contato direto na tabela.</p>
+                  </div>
+                  <button type="button" className="button button-primary" onClick={handleLimpar}>Novo</button>
+                </div>
+
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+                  <input
+                    className="form-input"
+                    placeholder="Buscar por nome, documento, telefone ou email"
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    style={{ flex: 1, minWidth: 200 }}
+                  />
+                  <select className="form-input" value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} style={{ width: 140 }}>
+                    <option value="">Todos os tipos</option>
+                    <option value="CLIENTE">Cliente</option>
+                    <option value="FORNECEDOR">Fornecedor</option>
+                    <option value="AMBOS">Ambos</option>
+                  </select>
+                  <select className="form-input" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as any)} style={{ width: 120 }}>
+                    <option value="ativos">Ativos</option>
+                    <option value="inativos">Inativos</option>
+                    <option value="todos">Todos</option>
+                  </select>
+                </div>
+
+                <div style={{ overflowX: "auto", maxHeight: 700, overflowY: "auto" }}>
+                  {carregando ? (
+                    <div className="empty-state"><p>Carregando...</p></div>
+                  ) : pessoasFiltradas.length === 0 ? (
+                    <div className="empty-state"><strong>Nenhum cadastro encontrado</strong><p>Ajuste os filtros ou cadastre um novo.</p></div>
+                  ) : (
+                    <table className="data-table">
+                      <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
+                        <tr>
+                          <th style={{ textAlign: "left" }}>Nome</th>
+                          <th style={{ width: 130 }}>Documento</th>
+                          <th style={{ width: 90, textAlign: "center" }}>Tipo</th>
+                          <th style={{ width: 140, borderLeft: "2px solid #d1d5db" }}>Telefone</th>
+                          <th style={{ width: 180 }}>E-mail</th>
+                          <th style={{ width: 100, textAlign: "center" }}>Acoes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pessoasFiltradas.map((p) => {
+                          const isInline = editandoInline === p.CAD_PESSOA_ID;
+                          return (
+                            <tr
+                              key={p.CAD_PESSOA_ID}
+                              style={{
+                                cursor: "pointer",
+                                backgroundColor: editandoId === p.CAD_PESSOA_ID ? "#fff7ed" : isInline ? "#eff6ff" : undefined,
+                              }}
+                            >
+                              <td
+                                style={{ fontWeight: 600 }}
+                                onClick={() => handleEditar(p)}
+                              >
+                                {p.CAD_PESSOA_NOME}
+                                {!p.CAD_PESSOA_ATIVO && <span className="badge badge-danger" style={{ marginLeft: 6, fontSize: "0.65rem" }}>Inativo</span>}
+                              </td>
+                              <td
+                                style={{ fontSize: "0.82rem", color: "#6b7280" }}
+                                onClick={() => handleEditar(p)}
+                              >
+                                {p.CAD_PESSOA_DOCUMENTO || "\u2014"}
+                              </td>
+                              <td style={{ textAlign: "center" }} onClick={() => handleEditar(p)}>
+                                <span className="badge" style={{
+                                  backgroundColor: p.CAD_PESSOA_TIPO === "CLIENTE" ? "#dbeafe" : p.CAD_PESSOA_TIPO === "FORNECEDOR" ? "#fee2e2" : "#d1fae5",
+                                  color: p.CAD_PESSOA_TIPO === "CLIENTE" ? "#1e40af" : p.CAD_PESSOA_TIPO === "FORNECEDOR" ? "#991b1b" : "#065f46",
+                                }}>
+                                  {TIPO_LABELS[p.CAD_PESSOA_TIPO]}
+                                </span>
+                              </td>
+                              {/* Editable contact columns with visible divider */}
+                              <td style={{ borderLeft: "2px solid #d1d5db", padding: "4px 6px" }}>
+                                {isInline ? (
+                                  <input
+                                    className="form-input"
+                                    value={inlineForm.telefone ?? ""}
+                                    onChange={(e) => setInlineForm((f) => ({ ...f, telefone: e.target.value }))}
+                                    style={{ fontSize: "0.8rem", padding: "3px 6px", width: "100%" }}
+                                    placeholder="(00) 00000-0000"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                ) : (
+                                  <span
+                                    style={{ fontSize: "0.82rem", color: p.CAD_PESSOA_TELEFONE ? "#374151" : "#d1d5db", cursor: "text" }}
+                                    onClick={(e) => { e.stopPropagation(); handleIniciarInline(p); }}
+                                    title="Clique para editar"
+                                  >
+                                    {p.CAD_PESSOA_TELEFONE || "\u2014"}
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ padding: "4px 6px" }}>
+                                {isInline ? (
+                                  <input
+                                    className="form-input"
+                                    value={inlineForm.email ?? ""}
+                                    onChange={(e) => setInlineForm((f) => ({ ...f, email: e.target.value }))}
+                                    style={{ fontSize: "0.8rem", padding: "3px 6px", width: "100%" }}
+                                    placeholder="email@exemplo.com"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                ) : (
+                                  <span
+                                    style={{ fontSize: "0.82rem", color: p.CAD_PESSOA_EMAIL ? "#374151" : "#d1d5db", cursor: "text" }}
+                                    onClick={(e) => { e.stopPropagation(); handleIniciarInline(p); }}
+                                    title="Clique para editar"
+                                  >
+                                    {p.CAD_PESSOA_EMAIL || "\u2014"}
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ textAlign: "center" }}>
+                                {isInline ? (
+                                  <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+                                    <button
+                                      type="button"
+                                      className="button button-primary button-compact"
+                                      style={{ fontSize: "0.7rem", padding: "2px 8px" }}
+                                      onClick={(e) => { e.stopPropagation(); handleSalvarInline(p.CAD_PESSOA_ID); }}
+                                      disabled={salvandoInline}
+                                    >
+                                      Salvar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="button button-secondary button-compact"
+                                      style={{ fontSize: "0.7rem", padding: "2px 6px" }}
+                                      onClick={(e) => { e.stopPropagation(); setEditandoInline(null); }}
+                                    >
+                                      X
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="button button-danger button-compact"
+                                    onClick={(e) => { e.stopPropagation(); setConfirmExcluir({ item: p, msg: `Excluir "${p.CAD_PESSOA_NOME}"?` }); }}
+                                  >
+                                    Excluir
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
               </section>
             </div>
           </div>

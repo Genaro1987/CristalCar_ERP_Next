@@ -340,35 +340,7 @@ export default function CentroCustoPage() {
 
           <div className="departamentos-page">
             <div className="split-view">
-              {/* LEFT: Tree */}
-              <section className="split-view-panel">
-                <div className="section-header">
-                  <div>
-                    <h2>Estrutura de centros de custo</h2>
-                    <p>Organize agrupamentos e mantenha a hierarquia alinhada ao orcamento.</p>
-                  </div>
-                  <button type="button" className="button button-primary" onClick={handleNovo}>
-                    Novo
-                  </button>
-                </div>
-
-                <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
-
-                <div className="tree-container" style={{ marginTop: 12 }}>
-                  {carregando ? (
-                    <div className="empty-state"><p>Carregando centros de custo...</p></div>
-                  ) : arvoreFiltrada.length === 0 ? (
-                    <div className="empty-state">
-                      <strong>Nenhum centro de custo encontrado</strong>
-                      <p>Ajuste os filtros ou cadastre um novo centro.</p>
-                    </div>
-                  ) : (
-                    arvoreFiltrada.map((item, idx) => renderNo(item, 0, [], idx === arvoreFiltrada.length - 1))
-                  )}
-                </div>
-              </section>
-
-              {/* RIGHT: Form */}
+              {/* LEFT (menor): Form */}
               <section className="split-view-panel" ref={formRef}>
                 <header className="form-section-header">
                   <h2>{editandoId ? "Editar centro de custo" : "Novo centro de custo"}</h2>
@@ -458,6 +430,34 @@ export default function CentroCustoPage() {
                     </div>
                   </div>
                 </form>
+              </section>
+
+              {/* RIGHT (maior): Tree */}
+              <section className="split-view-panel">
+                <div className="section-header">
+                  <div>
+                    <h2>Estrutura de centros de custo</h2>
+                    <p>Organize agrupamentos e mantenha a hierarquia alinhada ao orcamento.</p>
+                  </div>
+                  <button type="button" className="button button-primary" onClick={handleNovo}>
+                    Novo
+                  </button>
+                </div>
+
+                <BarraFiltros filtro={filtro} onFiltroChange={(novo) => setFiltro((f) => ({ ...f, ...novo }))} />
+
+                <div className="tree-container" style={{ marginTop: 12 }}>
+                  {carregando ? (
+                    <div className="empty-state"><p>Carregando centros de custo...</p></div>
+                  ) : arvoreFiltrada.length === 0 ? (
+                    <div className="empty-state">
+                      <strong>Nenhum centro de custo encontrado</strong>
+                      <p>Ajuste os filtros ou cadastre um novo centro.</p>
+                    </div>
+                  ) : (
+                    arvoreFiltrada.map((item, idx) => renderNo(item, 0, [], idx === arvoreFiltrada.length - 1))
+                  )}
+                </div>
               </section>
             </div>
           </div>
