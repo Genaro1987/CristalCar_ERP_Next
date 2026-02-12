@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       const args: any[] = [empresaId, dataInicio, dataFim];
 
       if (busca.trim().length >= 3) {
-        sql += ` AND l.FIN_LANCAMENTO_DESCRICAO LIKE ?`;
+        sql += ` AND l.FIN_LANCAMENTO_HISTORICO LIKE ?`;
         args.push(`%${busca.trim()}%`);
       }
 
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
         SELECT
           l.FIN_LANCAMENTO_ID as id,
           l.FIN_LANCAMENTO_DATA as data,
-          l.FIN_LANCAMENTO_DESCRICAO as descricao,
+          l.FIN_LANCAMENTO_HISTORICO as descricao,
           l.FIN_LANCAMENTO_VALOR as valor,
           l.FIN_LANCAMENTO_PLACA as placa,
           p.FIN_PLANO_CONTA_ID as contaId,
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
       }
 
       if (busca.trim().length >= 3) {
-        sql += ` AND (l.FIN_LANCAMENTO_DESCRICAO LIKE ? OR l.FIN_LANCAMENTO_PLACA LIKE ? OR COALESCE(pes.CAD_PESSOA_NOME, '') LIKE ?)`;
+        sql += ` AND (l.FIN_LANCAMENTO_HISTORICO LIKE ? OR l.FIN_LANCAMENTO_PLACA LIKE ? OR COALESCE(pes.CAD_PESSOA_NOME, '') LIKE ?)`;
         const bLike = `%${busca.trim()}%`;
         args.push(bLike, bLike, bLike);
       }
