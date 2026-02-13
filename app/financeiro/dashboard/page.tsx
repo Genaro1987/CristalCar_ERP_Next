@@ -259,6 +259,12 @@ export default function FinanceiroDashboardPage() {
   const [carregandoLancamentos, setCarregandoLancamentos] = useState(false);
   const [mostrarLancamentos, setMostrarLancamentos] = useState(false);
 
+  // Conta Reserva tracking
+  const [reservaContas, setReservaContas] = useState<{ id: number; nome: string; codigo: string; natureza: string }[]>([]);
+  const [reservaContaId, setReservaContaId] = useState<number | null>(null);
+  const [reservaData, setReservaData] = useState<any>(null);
+  const [carregandoReserva, setCarregandoReserva] = useState(false);
+
   const headers = useMemo(() => {
     const h: Record<string, string> = {};
     if (empresa?.id) h["x-empresa-id"] = String(empresa.id);
@@ -316,6 +322,21 @@ export default function FinanceiroDashboardPage() {
     if (!empresa?.id || activeTab !== "graficos") return;
     fetchAnalise("contas").then((d) => d && setContasDisponiveis(d));
   }, [empresa?.id, activeTab, fetchAnalise]);
+
+  // Load conta reserva accounts list and data
+  useEffect(() => {
+    if (!empresa?.id || activeTab !== "geral") return;
+    const extra: Record<string, string> = {};
+    if (reservaContaId) extra.contaId = String(reservaContaId);
+    if (reservaContaId) setCarregandoReserva(true);
+    fetchAnalise("saldo-reserva", extra).then((d) => {
+      if (d) {
+        if (d.contas) setReservaContas(d.contas);
+        setReservaData(d);
+      }
+      setCarregandoReserva(false);
+    });
+  }, [empresa?.id, activeTab, fetchAnalise, reservaContaId]);
 
   useEffect(() => {
     if (!empresa?.id || activeTab !== "graficos" || contasSelecionadas.length === 0) {
@@ -688,6 +709,7 @@ export default function FinanceiroDashboardPage() {
 
           <div style={{ marginTop: 16 }}>
             {activeTab === "geral" && (
+              <>
               <div className="split-view">
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   <div className="panel">
@@ -796,6 +818,161 @@ export default function FinanceiroDashboardPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Acompanhamento Conta Reserva */}
+              <section className="panel" style={{ marginTop: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600 }}>Acompanhamento Conta Reserva</h3>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#6b7280" }}>
+                      Selecione uma conta para acompanhar o saldo no periodo
+                    </p>
+                  </div>
+                  <select
+                    className="form-input"
+                    value={reservaContaId ?? ""}
+                    onChange={(e) => setReservaContaId(e.target.value ? Number(e.target.value) : null)}
+                    style={{ width: 280, fontSize: "0.82rem", padding: "6px 10px" }}
+                  >
+                    <option value="">Selecione a conta...</option>
+                    {reservaContas.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.codigo ? `${c.codigo} - ` : ""}{c.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {!reservaContaId && (
+                  <div style={{
+                    padding: "32px 16px",
+                    textAlign: "center",
+                    color: "#9ca3af",
+                    fontSize: "0.85rem",
+                    border: "2px dashed #e5e7eb",
+                    borderRadius: 8,
+                  }}>
+                    Selecione uma conta acima para visualizar o acompanhamento de saldo
+                  </div>
+                )}
+
+                {reservaContaId && carregandoReserva && (
+                  <div className="empty-state">Carregando dados da conta...</div>
+                )}
+
+                {reservaContaId && !carregandoReserva && reservaData && (
+                  <>
+                    <div className="summary-cards" style={{ marginBottom: 16 }}>
+                      <div className="summary-card" style={{ padding: "10px 14px", background: "linear-gradient(135deg, #1e40af, #1e3a8a)", color: "#fff" }}>
+                        <span className="summary-label" style={{ color: "#93c5fd", fontSize: "0.72rem" }}>Saldo Acumulado</span>
+                        <strong className="summary-value" style={{ fontSize: "1.1rem", color: "#fff" }}>
+                          {formatMoney(reservaData.saldoAtual ?? 0)}
+                        </strong>
+                      </div>
+                      <div className="summary-card" style={{ padding: "10px 14px" }}>
+                        <span className="summary-label" style={{ fontSize: "0.72rem" }}>Entradas</span>
+                        <strong className="summary-value" style={{ fontSize: "1rem", color: "#059669" }}>
+                          {formatMoney(reservaData.totalEntradas ?? 0)}
+                        </strong>
+                      </div>
+                      <div className="summary-card" style={{ padding: "10px 14px" }}>
+                        <span className="summary-label" style={{ fontSize: "0.72rem" }}>Saidas</span>
+                        <strong className="summary-value" style={{ fontSize: "1rem", color: "#dc2626" }}>
+                          {formatMoney(reservaData.totalSaidas ?? 0)}
+                        </strong>
+                      </div>
+                      <div className="summary-card" style={{ padding: "10px 14px" }}>
+                        <span className="summary-label" style={{ fontSize: "0.72rem" }}>Movimentos</span>
+                        <strong className="summary-value" style={{ fontSize: "1.1rem" }}>
+                          {(reservaData.evolucao ?? []).length}
+                        </strong>
+                        <span style={{ fontSize: "0.7rem", color: "#9ca3af" }}>meses</span>
+                      </div>
+                    </div>
+
+                    {(reservaData.evolucao ?? []).length > 0 ? (
+                      <>
+                        <RenderChart
+                          tipo="line"
+                          labels={(reservaData.evolucao ?? []).map((e: any) => e.label)}
+                          datasets={[
+                            {
+                              label: "Saldo Acumulado",
+                              data: (reservaData.evolucao ?? []).map((e: any) => e.saldoAcumulado),
+                              borderColor: "#1e40af",
+                              backgroundColor: "#1e40af",
+                            },
+                            {
+                              label: "Entradas",
+                              data: (reservaData.evolucao ?? []).map((e: any) => e.entradas),
+                              borderColor: "#059669",
+                              backgroundColor: "#059669",
+                            },
+                            {
+                              label: "Saidas",
+                              data: (reservaData.evolucao ?? []).map((e: any) => e.saidas),
+                              borderColor: "#dc2626",
+                              backgroundColor: "#dc2626",
+                            },
+                          ]}
+                          height={260}
+                        />
+                        <div style={{ overflowX: "auto", marginTop: 12 }}>
+                          <table className="data-table mobile-cards">
+                            <thead>
+                              <tr>
+                                <th style={{ textAlign: "left" }}>Mes</th>
+                                <th style={{ textAlign: "right" }}>Entradas</th>
+                                <th style={{ textAlign: "right" }}>Saidas</th>
+                                <th style={{ textAlign: "right" }}>Saldo Mes</th>
+                                <th style={{ textAlign: "right" }}>Saldo Acumulado</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(reservaData.evolucao ?? []).map((e: any) => (
+                                <tr key={e.mes}>
+                                  <td data-label="Mes" style={{ fontWeight: 600 }}>{e.label}</td>
+                                  <td data-label="Entradas" style={{ textAlign: "right", color: "#059669" }}>{formatMoney(e.entradas)}</td>
+                                  <td data-label="Saidas" style={{ textAlign: "right", color: "#dc2626" }}>{formatMoney(e.saidas)}</td>
+                                  <td data-label="Saldo Mes" style={{ textAlign: "right", fontWeight: 600, color: e.saldo >= 0 ? "#059669" : "#dc2626" }}>
+                                    {formatMoney(e.saldo)}
+                                  </td>
+                                  <td data-label="Acumulado" style={{ textAlign: "right", fontWeight: 700, color: e.saldoAcumulado >= 0 ? "#1e40af" : "#dc2626" }}>
+                                    {formatMoney(e.saldoAcumulado)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            <tfoot>
+                              <tr style={{ fontWeight: 700, borderTop: "2px solid #e5e7eb", backgroundColor: "#f3f4f6" }}>
+                                <td>TOTAL</td>
+                                <td style={{ textAlign: "right", color: "#059669" }}>{formatMoney(reservaData.totalEntradas ?? 0)}</td>
+                                <td style={{ textAlign: "right", color: "#dc2626" }}>{formatMoney(reservaData.totalSaidas ?? 0)}</td>
+                                <td style={{ textAlign: "right", fontWeight: 700, color: (reservaData.saldoAtual ?? 0) >= 0 ? "#059669" : "#dc2626" }}>
+                                  {formatMoney(reservaData.saldoAtual ?? 0)}
+                                </td>
+                                <td></td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{
+                        padding: "24px 16px",
+                        textAlign: "center",
+                        color: "#9ca3af",
+                        fontSize: "0.85rem",
+                        border: "2px dashed #e5e7eb",
+                        borderRadius: 8,
+                      }}>
+                        Nenhum movimento encontrado para esta conta no periodo selecionado
+                      </div>
+                    )}
+                  </>
+                )}
+              </section>
+              </>
             )}
 
             {activeTab === "receitas" && !mostrarLancamentos && renderAnaliseTab(receitasData, carregandoReceitas, chartTypeReceitas, setChartTypeReceitas, "Receitas", "#059669", buscaReceitas, setBuscaReceitas)}

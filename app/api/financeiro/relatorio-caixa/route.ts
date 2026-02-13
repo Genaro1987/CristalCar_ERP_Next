@@ -53,13 +53,16 @@ export async function GET(request: NextRequest) {
           COALESCE(SUM(l.FIN_LANCAMENTO_VALOR), 0) as saldo,
           COUNT(*) as qtd
         FROM FIN_LANCAMENTO l
+        JOIN FIN_PLANO_CONTA p ON p.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID AND p.EMPRESA_ID = l.EMPRESA_ID
+        LEFT JOIN CAD_PESSOA pes ON pes.CAD_PESSOA_ID = l.FIN_LANCAMENTO_PESSOA_ID
         WHERE l.EMPRESA_ID = ? AND l.FIN_LANCAMENTO_DATA >= ? AND l.FIN_LANCAMENTO_DATA <= ?
       `;
       const args: any[] = [empresaId, dataInicio, dataFim];
 
       if (busca.trim().length >= 3) {
-        sql += ` AND l.FIN_LANCAMENTO_HISTORICO LIKE ?`;
-        args.push(`%${busca.trim()}%`);
+        sql += ` AND (l.FIN_LANCAMENTO_HISTORICO LIKE ? OR l.FIN_LANCAMENTO_PLACA LIKE ? OR p.FIN_PLANO_CONTA_NOME LIKE ? OR COALESCE(pes.CAD_PESSOA_NOME, '') LIKE ?)`;
+        const bLike = `%${busca.trim()}%`;
+        args.push(bLike, bLike, bLike, bLike);
       }
 
       sql += ` GROUP BY l.FIN_LANCAMENTO_DATA ORDER BY l.FIN_LANCAMENTO_DATA DESC`;
@@ -140,26 +143,36 @@ export async function GET(request: NextRequest) {
     }
 
     // Default: agrupado (grouped by account with tree)
-    const result = await db.execute({
-      sql: `
-        SELECT
-          p.FIN_PLANO_CONTA_ID as contaId,
-          p.FIN_PLANO_CONTA_NOME as contaNome,
-          p.FIN_PLANO_CONTA_CODIGO as contaCodigo,
-          p.FIN_PLANO_CONTA_NATUREZA as natureza,
-          p.FIN_PLANO_CONTA_PAI_ID as paiId,
-          COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR >= 0 THEN l.FIN_LANCAMENTO_VALOR ELSE 0 END), 0) as receitas,
-          COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR < 0 THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as despesas,
-          COALESCE(SUM(l.FIN_LANCAMENTO_VALOR), 0) as saldo,
-          COUNT(*) as qtd
-        FROM FIN_LANCAMENTO l
-        JOIN FIN_PLANO_CONTA p ON p.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID AND p.EMPRESA_ID = l.EMPRESA_ID
-        WHERE l.EMPRESA_ID = ? AND l.FIN_LANCAMENTO_DATA >= ? AND l.FIN_LANCAMENTO_DATA <= ?
-        GROUP BY p.FIN_PLANO_CONTA_ID, p.FIN_PLANO_CONTA_NOME, p.FIN_PLANO_CONTA_CODIGO, p.FIN_PLANO_CONTA_NATUREZA, p.FIN_PLANO_CONTA_PAI_ID
-        ORDER BY p.FIN_PLANO_CONTA_CODIGO
-      `,
-      args: [empresaId, dataInicio, dataFim],
-    });
+    let sqlAgrupado = `
+      SELECT
+        p.FIN_PLANO_CONTA_ID as contaId,
+        p.FIN_PLANO_CONTA_NOME as contaNome,
+        p.FIN_PLANO_CONTA_CODIGO as contaCodigo,
+        p.FIN_PLANO_CONTA_NATUREZA as natureza,
+        p.FIN_PLANO_CONTA_PAI_ID as paiId,
+        COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR >= 0 THEN l.FIN_LANCAMENTO_VALOR ELSE 0 END), 0) as receitas,
+        COALESCE(SUM(CASE WHEN l.FIN_LANCAMENTO_VALOR < 0 THEN ABS(l.FIN_LANCAMENTO_VALOR) ELSE 0 END), 0) as despesas,
+        COALESCE(SUM(l.FIN_LANCAMENTO_VALOR), 0) as saldo,
+        COUNT(*) as qtd
+      FROM FIN_LANCAMENTO l
+      JOIN FIN_PLANO_CONTA p ON p.FIN_PLANO_CONTA_ID = l.FIN_PLANO_CONTA_ID AND p.EMPRESA_ID = l.EMPRESA_ID
+      LEFT JOIN CAD_PESSOA pes ON pes.CAD_PESSOA_ID = l.FIN_LANCAMENTO_PESSOA_ID
+      WHERE l.EMPRESA_ID = ? AND l.FIN_LANCAMENTO_DATA >= ? AND l.FIN_LANCAMENTO_DATA <= ?
+    `;
+    const argsAgrupado: any[] = [empresaId, dataInicio, dataFim];
+
+    if (busca.trim().length >= 3) {
+      sqlAgrupado += ` AND (l.FIN_LANCAMENTO_HISTORICO LIKE ? OR l.FIN_LANCAMENTO_PLACA LIKE ? OR p.FIN_PLANO_CONTA_NOME LIKE ? OR COALESCE(pes.CAD_PESSOA_NOME, '') LIKE ?)`;
+      const bLike = `%${busca.trim()}%`;
+      argsAgrupado.push(bLike, bLike, bLike, bLike);
+    }
+
+    sqlAgrupado += `
+      GROUP BY p.FIN_PLANO_CONTA_ID, p.FIN_PLANO_CONTA_NOME, p.FIN_PLANO_CONTA_CODIGO, p.FIN_PLANO_CONTA_NATUREZA, p.FIN_PLANO_CONTA_PAI_ID
+      ORDER BY p.FIN_PLANO_CONTA_CODIGO
+    `;
+
+    const result = await db.execute({ sql: sqlAgrupado, args: argsAgrupado });
 
     const contas = (result.rows as any[]).map((r) => {
       const rootParent = getRootParent(Number(r.contaId));
